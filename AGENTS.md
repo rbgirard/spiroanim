@@ -6,6 +6,22 @@
 - Three.js and editor-related functionality will primarily run on the client.
 - Use custom UI components rather than Vuetify or another full UI framework.
 
+# Project Structure
+
+- Use `@/*` as the single source alias for `src/*`. Prefer explicit paths such as `@/components/ui/BaseButton.vue` or `@/features/editor/types` instead of adding aliases for each top-level directory.
+- Keep route-level components in `src/views`. Views should primarily compose layouts and features rather than contain substantial business logic.
+- Keep broadly reusable presentation components in `src/components`, with low-level controlled primitives in `src/components/ui`, application-shell components in `src/components/layout`, and reusable icon infrastructure in `src/components/icons`.
+- Keep application-wide composables in `src/composables` and application-wide Pinia stores in `src/stores`. Code owned by one feature belongs with that feature instead.
+- Keep substantial product functionality under `src/features/<feature>`. A feature may contain its own `components`, `composables`, `stores`, `types`, `math`, and `workers` when those items are not meaningfully shared.
+- Keep shared domain and cross-feature types in `src/types`. Keep feature-specific types beside their feature and continue to use authoritative library types directly.
+- Keep shared pure geometry, vector, quaternion, curve, interpolation, animation, and numeric logic in `src/math`.
+- Keep persistence, serialization, file import/export, and other external-effect boundaries in `src/services`.
+- Keep small, pure, broadly reusable helpers in `src/utils`. Prefer a more specific feature, math, service, or worker location whenever one applies.
+- Keep shared workers and worker infrastructure in `src/workers`. Place a worker used by only one feature under that feature, and keep its typed message contracts and client adapter beside it.
+- Keep build, generated-declaration, global-type, and similar infrastructure in `src/sys` as described below.
+- Do not introduce vague overlapping directories such as `common`, `shared`, `helpers`, `managers`, `models`, or `controllers` without an approved, clearly distinct responsibility.
+- Create feature subdirectories only when corresponding code exists. Do not add speculative layers or barrel files solely to mirror the directory structure.
+
 # Core Dependencies
 
 - Runtime dependencies include Vue 3, Vue Router, Pinia, `pinia-plugin-persistedstate`, VueUse (`@vueuse/core`), Three.js, and `@mdi/js`.
@@ -68,7 +84,7 @@
 
 # Component Standards
 
-- Reusable components currently belong in `src/components`. The repository does not yet have a dedicated base-UI subdirectory; follow an established local structure rather than inventing one for a single component.
+- Reusable components belong in `src/components`. Place low-level controlled UI primitives in `src/components/ui`, layout and application-shell components in `src/components/layout`, and feature-owned components under their feature.
 - Keep UI components focused, reusable, and presentational where practical. Prefer controlled components using props and emitted events.
 - Low-level reusable UI components must not import application stores. Feature-specific components may use stores only when that dependency is part of their documented responsibility.
 - Prefer semantic native HTML and avoid unnecessary wrappers.
@@ -140,6 +156,19 @@
 - Keep this file focused on durable agent instructions. Put detailed architecture in `ARCHITECTURE.md` or an appropriate file under `docs/`.
 - Add nested `AGENTS.md` files only for meaningful local rules, and include only additions or overrides for that directory.
 - When a preference is declared a permanent convention, record it in the appropriate documentation instead of relying on conversation history.
+
+# Legacy Code Migration
+
+- Treat code imported or converted from the old system as source material, not as an architectural template for the new application.
+- Before placing migrated code, identify whether each responsibility is application-wide, feature-owned, route-level, presentational, pure math, an external-effect service, a worker boundary, a shared type, or system infrastructure, and place it according to the current project structure.
+- Do not preserve old directory names, module boundaries, global state, inheritance patterns, browser assumptions, or duplicated utilities merely to minimize the textual diff.
+- Prefer Vue Composition API, setup-style Pinia stores, current library TypeScript definitions, and the existing auto-import and global-type conventions when replacing old equivalents.
+- Separate reusable pure calculations from DOM, Vue, Three.js rendering, persistence, and worker orchestration while migrating code when that separation is reasonably scoped to the task.
+- Search the new repository for an existing component, composable, type, utility, math function, service, store, or worker contract before bringing over an old implementation.
+- Preserve observable behavior and validated domain rules from the old system unless the task explicitly changes them. Add focused characterization or regression tests when migration could alter meaningful behavior.
+- When old code spans multiple responsibilities, split it along the current architectural boundaries if the change is local and clear. If doing so would materially expand the task or change public behavior, explain the proposed restructuring and obtain approval first.
+- Remove obsolete compatibility scaffolding, dead code, and old-system naming created solely by the migration once it is no longer required, while avoiding unrelated cleanup.
+- In migration summaries, report important structural decisions, behavior intentionally preserved, behavior intentionally changed, and old patterns that were not carried forward.
 
 # Workflow
 
