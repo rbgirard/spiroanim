@@ -11,7 +11,7 @@ import type {
 
 declare global {
   type CSSProperties = VueCSSProperties
-  type Ref<T = unknown> = VueRef<T>
+  type Ref<T = unknown, S = T> = VueRef<T, S>
   type Component = VueComponent
   type ComponentPublicInstance = VueComponentPublicInstance
 
