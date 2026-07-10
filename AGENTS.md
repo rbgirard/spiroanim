@@ -25,6 +25,7 @@
 # Core Dependencies
 
 - Runtime dependencies include Vue 3, Vue Router, Pinia, `pinia-plugin-persistedstate`, VueUse (`@vueuse/core`), Three.js, and `@mdi/js`.
+- `pinia-plugin-persistedstate` is registered once on the application Pinia instance in `src/main.ts`. Individual stores opt into persistence through their store configuration.
 - Testing uses Vitest with jsdom, Vue Test Utils for component tests, and Playwright for end-to-end tests.
 - `unplugin-auto-import` is configured through `vite.config.ts`, using `src/sys/auto-imports.ts` as its curated source list and generating declarations under `src/sys`.
 
@@ -54,6 +55,13 @@
 - Keep business logic out of presentation components and move reusable stateful logic into composables.
 - Use Pinia for shared application state, not as a substitute for local component state.
 - Prefer setup-style Pinia stores: `defineStore(id, () => {})`.
+- Persist Pinia state only when it must survive a reload or browser restart. Persistence is opt-in per store; do not persist every store by default.
+- Prefer an explicit persisted-state `pick` list over persisting an entire store unless persistence of the complete state is deliberate and documented.
+- Persist only serializable application data. Do not persist Vue reactive internals, DOM objects, functions, workers, or Three.js instances; define an explicit serialization format when richer objects must be reconstructed.
+- Never persist credentials, access tokens, secrets, or other security-sensitive values in browser storage.
+- Treat persisted state as a versioned data contract. When changing persisted fields, keys, types, or meaning, provide an intentional migration, compatibility, or reset strategy.
+- Keep direct browser-storage access behind an explicit client boundary so stores and reusable modules remain safe for possible SSR evaluation.
+- Register Pinia plugins only in application bootstrap or an equivalent test bootstrap. Do not register `pinia-plugin-persistedstate` from individual stores or components.
 - Do not destructure reactive objects in ways that break reactivity; use `storeToRefs` where appropriate.
 - Prefer computed values or explicit events to watchers when they express the behavior more clearly.
 - Clean up event listeners, observers, animation frames, workers, and other resources when components unmount.
@@ -130,6 +138,7 @@
 
 - Use Vitest for unit tests, Vue Test Utils for Vue component tests, and Playwright for complete user workflows.
 - Add tests for new reusable utilities, composables, stores, and UI components when they contain meaningful logic, behavior, edge cases, or public contracts.
+- For persisted stores, test the observable persistence and hydration behavior, including selected fields and applicable migration or reset behavior. Isolate or clear mocked browser storage between tests so persisted data cannot leak across test cases.
 - Bug fixes should include a regression test when the behavior can be tested reliably at a reasonable cost. Otherwise, document why a test was not added.
 - Test observable behavior and public contracts, not private implementation details.
 - Keep tests deterministic and independent of execution order.
@@ -163,6 +172,7 @@
 - Before placing migrated code, identify whether each responsibility is application-wide, feature-owned, route-level, presentational, pure math, an external-effect service, a worker boundary, a shared type, or system infrastructure, and place it according to the current project structure.
 - Do not preserve old directory names, module boundaries, global state, inheritance patterns, browser assumptions, or duplicated utilities merely to minimize the textual diff.
 - Prefer Vue Composition API, setup-style Pinia stores, current library TypeScript definitions, and the existing auto-import and global-type conventions when replacing old equivalents.
+- Do not automatically carry old local-storage, cookie, or persistence behavior into a migrated Pinia store. Identify which state is genuinely durable, define its serialized contract, and use the current persisted-state conventions.
 - Separate reusable pure calculations from DOM, Vue, Three.js rendering, persistence, and worker orchestration while migrating code when that separation is reasonably scoped to the task.
 - Search the new repository for an existing component, composable, type, utility, math function, service, store, or worker contract before bringing over an old implementation.
 - Preserve observable behavior and validated domain rules from the old system unless the task explicitly changes them. Add focused characterization or regression tests when migration could alter meaningful behavior.
