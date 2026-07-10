@@ -17,6 +17,7 @@ coverage
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
 *.suo
 *.ntvs*
@@ -40,3 +41,5 @@ __screenshots__/
 
 test-results/
 playwright-report/
+
+/src/sys/auto-imports-generated.d.ts

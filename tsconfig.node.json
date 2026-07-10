@@ -6,14 +6,10 @@
     "vitest.config.*",
     "cypress.config.*",
     "playwright.config.*",
-    "eslint.config.*"
+    "eslint.config.*",
+    "src/sys/**/*"
   ],
   "compilerOptions": {
-    // Most tools use transpilation instead of Node.js's native type-stripping.
-    // Bundler mode provides a smoother developer experience.
-    "module": "preserve",
-    "moduleResolution": "bundler",
-
     // Include Node.js types and avoid accidentally including other `@types/*` packages.
     "types": ["node"],
 
@@ -22,6 +18,17 @@
 
     // `vue-tsc --build` produces a .tsbuildinfo file for incremental type-checking.
     // Specified here to keep it out of the root directory.
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+
+    "composite": true,
+
+    "module": "NodeNext",
+    "lib": ["es2022", "WebWorker"],
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    "allowImportingTsExtensions": true
   }
 }
