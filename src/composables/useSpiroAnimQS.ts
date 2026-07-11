@@ -1,4 +1,4 @@
-// src/features/spiro-anim/composables/useSpiroAnimQS.ts
+// src/composables/useSpiroAnimQS.ts
 
 import { debounce } from '@/utils/UtilFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'

@@ -10,7 +10,7 @@ import {
   PROPSR,
   PTEXT,
   PPROP,
-} from '@/math/animation/AnimStruct'
+} from '@/domain/animation/AnimStruct'
 
 import { type IndicesOf } from '@/types/SpecialTypes'
 

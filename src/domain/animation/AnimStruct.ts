@@ -1,4 +1,4 @@
-// src/math/animation/AnimStruct.ts
+// src/domain/animation/AnimStruct.ts
 
 import type {
   PointTypes,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { COLORS, GREF, GUIDES, INDPNT, PPOS, PTEXT, TTEXT } from '@/math/animation/AnimStruct'
+import { COLORS, GREF, GUIDES, INDPNT, PPOS, PTEXT, TTEXT } from '@/domain/animation/AnimStruct'
 
 describe('AnimStruct', () => {
   it('preserves stable serialized catalog ordering', () => {

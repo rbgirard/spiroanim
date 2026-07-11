@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { useSpiroAnimQS } from '@/features/spiro-anim/composables/useSpiroAnimQS'
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
 import type { RootDataFinal } from '@/types/AnimTypes'

@@ -1,6 +1,6 @@
 // src/services/query/versions/SpiroAnimQSv1.ts
 
-import { PTEXT, COLORS, TTEXT } from '@/math/animation/AnimStruct'
+import { PTEXT, COLORS, TTEXT } from '@/domain/animation/AnimStruct'
 
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'

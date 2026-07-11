@@ -1,6 +1,6 @@
 // src/math/animation/PlayerFunc.ts
 
-import { TTYPE } from '@/math/animation/AnimStruct'
+import { TTYPE } from '@/domain/animation/AnimStruct'
 
 import type { RootData, RootDataFinal, RootDataCompiled } from '@/types/AnimTypes'
 

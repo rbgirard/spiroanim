@@ -14,6 +14,8 @@
 - Keep application-wide composables in `src/composables` and application-wide Pinia stores in `src/stores`. Code owned by one feature belongs with that feature instead.
 - Keep substantial product functionality under `src/features/<feature>`. A feature may contain its own `components`, `composables`, `stores`, `types`, `math`, and `workers` when those items are not meaningfully shared.
 - Keep shared domain and cross-feature types in `src/types`. Keep feature-specific types beside their feature and continue to use authoritative library types directly.
+- Keep authoritative application-wide runtime domain definitions, constants, topology, and relationships under `src/domain/<domain>`. Keep compile-time contracts in `src/types`, reusable calculations in `src/math`, external-effect boundaries in `src/services`, and feature-owned behavior under its feature.
+- Keep `src/domain` narrowly focused on the application's core runtime vocabulary and rules. Do not use it for UI components, stores, generic utilities, framework infrastructure, or miscellaneous code that lacks a clear domain owner.
 - Determine ownership from actual consumers across the complete application rather than from the first feature or migration task that needs the code.
 - Place code under `src/features/<feature>` only when that feature meaningfully owns it and other consumers access it as part of that feature's public responsibility.
 - Do not place broadly consumed application contracts under one feature merely because that feature is their first or primary consumer.
