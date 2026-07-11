@@ -102,6 +102,36 @@
 - Add meaningful Vitest and Vue Test Utils tests for reusable UI components when they expose behavior, state, interaction, accessibility requirements, or a public contract. Cover public behavior such as props, rendering, emitted events, keyboard interaction, disabled behavior, model updates, and accessibility attributes.
 - Avoid tests coupled to private implementation details and avoid large snapshots.
 
+# Design Tokens and Styling
+
+- Treat the design-token stylesheets as the source of truth for reusable visual values.
+- Store design tokens under `src/assets/styles`.
+- Keep theme-independent tokens such as spacing, typography, radii, shadows, and motion separate from color-scheme definitions.
+- Separate primitive palette tokens from semantic color tokens. Primitive tokens describe a value, such as `--palette-blue-600`; semantic tokens describe a purpose, such as `--color-action-primary`.
+- Components must consume semantic color tokens and must not reference primitive palette tokens directly.
+- Do not use raw color values in Vue component styles unless the color represents fixed content whose meaning must not change between themes. Document such exceptions briefly.
+- Name tokens according to purpose rather than visual appearance. Prefer `--color-text-muted` over `--color-gray`.
+- Define theme variations centrally using selectors on the document root, such as `[data-theme='dark']`.
+- A theme must redefine semantic tokens without requiring theme-specific rules inside components. Do not add selectors such as `.dark .component` or `[data-theme] .component` to reusable components.
+- Set the native CSS `color-scheme` property for each supported theme.
+- Treat `system`, `light`, and `dark` as application preferences rather than component concerns.
+- Components must remain usable when no explicit theme attribute is present; default root tokens must provide the fallback theme.
+- Use CSS custom properties for values that participate in the design system. Keep a value local when it is genuinely specific to one component and unlikely to be reused or themed.
+- Prefer an existing token over adding a near-duplicate. Search the token definitions before creating one.
+- Add tokens only for demonstrated UI needs. Do not create speculative token scales or component-specific tokens without current usage.
+- Reusable UI components may define private custom properties for internal composition, but their names must be component-scoped, such as `--button-icon-gap`.
+- Introduce global component-specific semantic tokens, such as `--button-primary-background`, only when broader semantic tokens cannot express the component contract cleanly.
+- Use component variants and state selectors to map component behavior onto semantic tokens. Do not duplicate components solely to produce different colors.
+- Provide tokens for interactive states when needed, including hover, active, focus, selected, and disabled states.
+- Focus indicators must remain clearly visible in every supported theme and must not rely on color alone when additional indication is necessary.
+- Maintain sufficient text, control, focus, and boundary contrast across every supported theme.
+- Prefer logical CSS properties such as `padding-inline` and `margin-block` where practical.
+- Respect user preferences such as `prefers-reduced-motion`; do not make essential behavior depend on animation.
+- Avoid `!important` except when overriding an external boundary that cannot reasonably be controlled another way. Document the reason.
+- Do not migrate Vuetify class names, theme variables, component APIs, layout conventions, or styling abstractions into the new UI system.
+- When migrating legacy UI, preserve required behavior but redesign its styling against the current tokens and reusable components.
+- Organize global styles under `src/assets/styles` using `tokens.css` for theme-independent design values, `themes.css` for palettes and semantic color assignments, `base.css` for resets and native-element defaults, and `main.css` for ordered imports and application-level rules. Create these files only when corresponding styles exist.
+
 # Custom UI and Icons
 
 - Do not add Vuetify or another full UI framework unless explicitly requested.
