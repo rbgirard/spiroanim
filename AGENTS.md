@@ -168,6 +168,8 @@
 # Testing Standards
 
 - Use Vitest for unit tests, Vue Test Utils for Vue component tests, and Playwright for complete user workflows.
+- Place unit and component test files in an `__tests__` subdirectory under the closest owning module, feature, or component directory. Create these directories only when corresponding tests exist.
+- Reserve a root-level `tests` directory for end-to-end tests, shared test infrastructure, fixtures, and cross-feature integration tests.
 - Add tests for new reusable utilities, composables, stores, and UI components when they contain meaningful logic, behavior, edge cases, or public contracts.
 - For persisted stores, test the observable persistence and hydration behavior, including selected fields and applicable migration or reset behavior. Isolate or clear mocked browser storage between tests so persisted data cannot leak across test cases.
 - Bug fixes should include a regression test when the behavior can be tested reliably at a reasonable cost. Otherwise, document why a test was not added.
