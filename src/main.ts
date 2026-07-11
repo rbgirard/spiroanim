@@ -2,7 +2,7 @@
 // https://pictogrammers.com/library/mdi/
 // https://vtg-v3.web.app/
 
-import './assets/main.css'
+import '@/assets/styles/main.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
