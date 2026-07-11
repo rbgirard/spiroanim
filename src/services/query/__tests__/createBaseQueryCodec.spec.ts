@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createBaseQueryCodec,
   validateQueryDefinitions,
-} from '@/features/spiro-anim/serialization/query/createBaseQueryCodec'
+} from '@/services/query/createBaseQueryCodec'
 
 const definitions = {
   signed: [-2, 2, 3],

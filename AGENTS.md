@@ -14,6 +14,10 @@
 - Keep application-wide composables in `src/composables` and application-wide Pinia stores in `src/stores`. Code owned by one feature belongs with that feature instead.
 - Keep substantial product functionality under `src/features/<feature>`. A feature may contain its own `components`, `composables`, `stores`, `types`, `math`, and `workers` when those items are not meaningfully shared.
 - Keep shared domain and cross-feature types in `src/types`. Keep feature-specific types beside their feature and continue to use authoritative library types directly.
+- Determine ownership from actual consumers across the complete application rather than from the first feature or migration task that needs the code.
+- Place code under `src/features/<feature>` only when that feature meaningfully owns it and other consumers access it as part of that feature's public responsibility.
+- Do not place broadly consumed application contracts under one feature merely because that feature is their first or primary consumer.
+- Treat types for the application's central data model as shared domain types in `src/types` when they are consumed across stores, workers, serialization, rendering, services, or multiple features.
 - Keep shared pure geometry, vector, quaternion, curve, interpolation, animation, and numeric logic in `src/math`.
 - Keep persistence, serialization, file import/export, and other external-effect boundaries in `src/services`.
 - Keep small, pure, broadly reusable helpers in `src/utils`. Prefer a more specific feature, math, service, or worker location whenever one applies.
@@ -202,7 +206,7 @@
 # Legacy Code Migration
 
 - Treat code imported or converted from the old system as source material, not as an architectural template for the new application.
-- Before placing migrated code, identify whether each responsibility is application-wide, feature-owned, route-level, presentational, pure math, an external-effect service, a worker boundary, a shared type, or system infrastructure, and place it according to the current project structure.
+- Before placing migrated code, inspect its consumers across the complete legacy application and identify whether each responsibility is application-wide, feature-owned, route-level, presentational, pure math, an external-effect service, a worker boundary, a shared type, or system infrastructure. Determine ownership from the complete consumer graph rather than the immediate migration task, then place it according to the current project structure.
 - Do not preserve old directory names, module boundaries, global state, inheritance patterns, browser assumptions, or duplicated utilities merely to minimize the textual diff.
 - Prefer Vue Composition API, setup-style Pinia stores, current library TypeScript definitions, and the existing auto-import and global-type conventions when replacing old equivalents.
 - Do not automatically carry old local-storage, cookie, or persistence behavior into a migrated Pinia store. Identify which state is genuinely durable, define its serialized contract, and use the current persisted-state conventions.
@@ -210,10 +214,17 @@
 - Search the new repository for an existing component, composable, type, utility, math function, service, store, or worker contract before bringing over an old implementation.
 - Before migrating, renaming, consolidating, or removing an exported legacy symbol, search the entire legacy source tree for all consumers. Preserve or intentionally map every externally used contract, and report significant old-to-new API mappings.
 - Audit comments in every legacy file being migrated before editing it. Preserve or update comments that carry rationale, constraints, compatibility requirements, edge cases, units, ordering dependencies, or other non-obvious technical knowledge. Remove a legacy comment only when it is redundant, obsolete, misleading, or explicitly requested, and report the removal when it discards information rather than restating code.
+- Treat a legacy file's exported API, internal grouping, and comments as intentional until repository-wide consumer analysis demonstrates otherwise.
+- When a legacy module is selected for migration, migrate the complete cohesive module by default, including its externally used exports, meaningful comments, associated types, and relevant tests.
+- Do not migrate only the immediately required exports from a cohesive legacy module merely to minimize the current dependency graph.
+- Before partially migrating a legacy module, inventory all of its exports and consumers and determine whether the file contains one cohesive responsibility or several unrelated responsibilities.
+- If a legacy file clearly combines unrelated responsibilities, propose an explicit split that maps every legacy export to its intended destination.
+- Obtain approval before splitting a legacy module when the split changes ownership, naming, discoverability, public imports, or the expected migration sequence.
+- When migrating a module intact would materially expand the task, explain the dependency expansion and obtain direction rather than silently extracting a subset.
 - Preserve observable behavior and validated domain rules from the old system unless the task explicitly changes them. Add focused characterization or regression tests when migration could alter meaningful behavior.
-- When old code spans multiple responsibilities, split it along the current architectural boundaries if the change is local and clear. If doing so would materially expand the task or change public behavior, explain the proposed restructuring and obtain approval first.
+- When old code spans multiple responsibilities, prefer an approved explicit split along the current architectural boundaries. Do not split it solely to minimize the textual diff or immediate dependency graph.
 - Remove obsolete compatibility scaffolding, dead code, and old-system naming created solely by the migration once it is no longer required, while avoiding unrelated cleanup.
-- In migration summaries, report important structural decisions, behavior intentionally preserved, behavior intentionally changed, and old patterns that were not carried forward.
+- In migration summaries, report important structural decisions, behavior intentionally preserved, behavior intentionally changed, and old patterns that were not carried forward. Include an old-to-new export map whenever a legacy module was renamed, split, consolidated, or only partially migrated.
 
 # Workflow
 

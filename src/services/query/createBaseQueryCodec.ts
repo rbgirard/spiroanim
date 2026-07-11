@@ -2,7 +2,7 @@ import type {
   BaseQueryCodec,
   QueryEncodableValue,
   QueryVariableDefinition,
-} from '@/features/spiro-anim/serialization/query/types'
+} from '@/services/query/types/BaseQueryCodecTypes'
 
 // This is a custom URL-safe radix-64 alphabet, not standard Base64. Its order is part of the
 // persisted query-string format and must remain stable for existing shared URLs.
