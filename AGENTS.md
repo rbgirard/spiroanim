@@ -51,6 +51,7 @@
 # Vue Standards
 
 - Use the Composition API and `<script setup lang="ts">`.
+- Order Vue single-file component sections as `<template>` first, `<script setup lang="ts">` second, and `<style>` last. Omit any section that the component does not need without changing the relative order of the remaining sections.
 - Prefer `ref`, `computed`, and focused composables over large component scripts.
 - Keep business logic out of presentation components and move reusable stateful logic into composables.
 - Use Pinia for shared application state, not as a substitute for local component state.
