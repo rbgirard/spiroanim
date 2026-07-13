@@ -5,3 +5,20 @@
 #app {
   min-height: 100vh;
 }
+
+/* Define a class to disable scrollbar */
+.disable-scroll {
+  width: 100%;
+  overflow: hidden !important; /* Force this to override any existing styles */
+}
+
+/* Define class to disable selecting text */
+.disable-text-select {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
