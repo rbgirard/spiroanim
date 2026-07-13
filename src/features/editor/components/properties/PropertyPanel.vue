@@ -117,6 +117,8 @@ const inputStr = (name: string) => {
 <style scoped>
 .property-panel {
   box-sizing: border-box;
+  margin: calc(var(--space-1) / 2);
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-workspace-boundary));
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }

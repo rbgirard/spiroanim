@@ -190,19 +190,19 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
 
 .speed {
   position: absolute;
-  bottom: 42px;
+  bottom: 44px;
   left: 10px;
   display: grid;
   width: 70px;
   color: var(--color-text);
   font-size: 0.75rem;
-  text-align: center;
+  text-align: left;
 }
 
 .speed select {
   width: 100%;
   color: var(--color-text);
-  text-align: center;
+  text-align: left;
   background: var(--color-surface);
   border: 0;
   border-block-end: 1px solid var(--color-border);

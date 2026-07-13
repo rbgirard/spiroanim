@@ -224,9 +224,13 @@ const containerStyle = computed<CSSProperties>(() => ({
   padding: 2px;
   color: var(--color-action-primary);
   cursor: pointer;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: transparent;
+  border: 0;
   border-radius: var(--radius-sm);
+}
+
+.pane-rotate-button:hover {
+  color: var(--color-text);
 }
 
 .pane-rotate-button:focus-visible {

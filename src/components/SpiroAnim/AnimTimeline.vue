@@ -510,7 +510,7 @@ const scrollStyle = computed<CSSProperties>(() => ({
   'overflow-x': 'visible',
   'border-top': 'solid 1px',
   'border-bottom': 'solid 1px',
-  'border-color': 'var(--color-border)',
+  'border-color': 'var(--color-workspace-boundary)',
 }))
 
 const gridStyle = computed<CSSProperties>(() => ({
@@ -552,7 +552,7 @@ const cursorStyle = computed<CSSProperties>(() => ({
 .timeline-cell {
   position: relative;
   border-bottom: solid 1px;
-  border-color: var(--color-border);
+  border-color: var(--color-workspace-separator);
   overflow: visible;
 }
 .circle {

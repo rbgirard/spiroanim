@@ -263,7 +263,7 @@ const scrollStyle = computed<CSSProperties>(() => ({
   'overflow-x': 'visible',
   'border-top': 'solid 1px',
   'border-bottom': 'solid 1px',
-  'border-color': 'var(--color-border)',
+  'border-color': 'var(--color-workspace-boundary)',
 }))
 
 const gridStyle = computed<CSSProperties>(() => ({
@@ -281,10 +281,10 @@ const gridStyle = computed<CSSProperties>(() => ({
   position: sticky;
   top: 0;
   z-index: 1000;
-  background-color: var(--color-surface);
+  background-color: var(--color-editor-toolbar-background);
   padding-bottom: 1px;
   border-bottom: solid 1px;
-  border-color: var(--color-border);
+  border-color: var(--color-workspace-separator);
 }
 .container-cntrl {
   display: grid;
