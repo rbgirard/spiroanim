@@ -23,12 +23,12 @@ export const msToBeat = (ms: number, bpm: number): number => {
 
 // Millisecond start/end of animations for each prop
 export const PROPTIMES = (propData: RootDataCompiled): number[][] => {
-  const ms = Math.round(60000 / propData.bpm),
-    propTimes = new Array(propData.props.length)
+  const ms = Math.round(60000 / propData.bpm)
+  const propTimes: number[][] = Array.from({ length: propData.props.length }, () => [])
 
   // Iterate through props once
   propData.props.forEach((prop, i) => {
-    const times: number[] = new Array(prop.anim.length)
+    const times = Array.from({ length: prop.anim.length }, () => 0)
     let currentStart = 0
 
     // Iterate through each animation in the prop

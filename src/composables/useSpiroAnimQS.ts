@@ -224,7 +224,7 @@ export async function useSpiroAnimQS(
             const ipad = pad / 3
             const bits = VDEF[MOVE_KEY][2]
             ret['move'] = [
-              decodeMove(sub.substring(ipad * 0, ipad * 1), bits),
+              decodeMove(sub.substring(0, ipad), bits),
               decodeMove(sub.substring(ipad * 1, ipad * 2), bits),
               decodeMove(sub.substring(ipad * 2, ipad * 3), bits),
             ]

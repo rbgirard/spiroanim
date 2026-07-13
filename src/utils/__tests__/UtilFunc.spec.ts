@@ -19,7 +19,7 @@ describe('UtilFunc', () => {
 
   it('debounces repeated calls with the latest arguments', () => {
     vi.useFakeTimers()
-    const callback = vi.fn()
+    const callback = vi.fn<(value: string) => void>()
     const wrapped = debounce(callback, 50)
 
     wrapped('first')
@@ -31,7 +31,7 @@ describe('UtilFunc', () => {
 
   it('supports leading and trailing immediate debounce behavior', () => {
     vi.useFakeTimers()
-    const callback = vi.fn()
+    const callback = vi.fn<(value: string) => void>()
     const wrapped = debounceImmediate(callback, 50)
 
     wrapped('first')
@@ -44,8 +44,8 @@ describe('UtilFunc', () => {
   it('supports leading and trailing throttle variants', () => {
     vi.useFakeTimers()
     vi.setSystemTime(100)
-    const leading = vi.fn()
-    const trailing = vi.fn()
+    const leading = vi.fn<(...args: unknown[]) => void>()
+    const trailing = vi.fn<(...args: unknown[]) => void>()
     const leadingWrapped = throttle(leading, 50)
     const trailingWrapped = throttleTrailing(trailing, 50)
 

@@ -10,7 +10,7 @@ describe('isBrowserSupported', () => {
 
   it('accepts a browser with the required rendering features', () => {
     const canvas = document.createElement('canvas')
-    canvas.transferControlToOffscreen = vi.fn()
+    canvas.transferControlToOffscreen = vi.fn<() => OffscreenCanvas>()
     vi.spyOn(canvas, 'getContext').mockReturnValue({} as WebGL2RenderingContext)
 
     vi.spyOn(document, 'createElement').mockReturnValue(canvas)
@@ -21,7 +21,7 @@ describe('isBrowserSupported', () => {
 
   it('rejects a browser without WebGL 2 support', () => {
     const canvas = document.createElement('canvas')
-    canvas.transferControlToOffscreen = vi.fn()
+    canvas.transferControlToOffscreen = vi.fn<() => OffscreenCanvas>()
     vi.spyOn(canvas, 'getContext').mockReturnValue(null)
 
     vi.spyOn(document, 'createElement').mockReturnValue(canvas)
