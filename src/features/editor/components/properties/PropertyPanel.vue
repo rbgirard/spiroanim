@@ -115,6 +115,12 @@ const inputStr = (name: string) => {
 </script>
 
 <style scoped>
+.property-panel {
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 .title {
   padding: 8px 0 8px 25px;
   margin: 0;
