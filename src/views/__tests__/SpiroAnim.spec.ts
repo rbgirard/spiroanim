@@ -43,7 +43,12 @@ describe('SpiroAnim view', () => {
 
     const wrapper = mount(SpiroAnim, {
       attachTo: document.body,
-      global: { plugins: [pinia, router] },
+      global: {
+        plugins: [pinia, router],
+        stubs: {
+          Player: { template: '<div>Player</div>' },
+        },
+      },
     })
     await flushPromises()
 
