@@ -4,7 +4,7 @@
     <div class="panel">
       <div v-if="props.data !== undefined" class="container colb">
         <template v-for="(v, i) in props.vals" :key="'ct' + i">
-          <BaseTooltip :disabled="!showTooltips">
+          <BaseTooltip class="property-label-tooltip" :disabled="!showTooltips">
             <template #activator="{ props: tooltipProps }">
               <div v-bind="tooltipProps" class="col1">{{ v.text }}:</div>
             </template>
@@ -171,7 +171,13 @@ const inputStr = (name: string) => {
   border-style: solid;
 }
 .col1 {
+  box-sizing: border-box;
+  width: 100%;
   border-width: 1px 0 0 1px;
+}
+
+.property-label-tooltip {
+  width: 100%;
 }
 .col2,
 .form-container {

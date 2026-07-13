@@ -30,6 +30,7 @@ describe('PropertyPanel', () => {
     const details = wrapper.get('details')
     const properties = usePropertiesStore('property-panel')
 
+    expect(wrapper.get('.property-label-tooltip > .col1').text()).toBe('Paths:')
     expect(details.attributes('open')).toBeUndefined()
     ;(details.element as HTMLDetailsElement).open = true
     await details.trigger('toggle')
