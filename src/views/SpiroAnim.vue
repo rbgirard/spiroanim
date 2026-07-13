@@ -1,3 +1,3 @@
 <template>
-  <main aria-label="SpiroAnim"></main>
+  <main aria-label="SpiroAnim">TEST</main>
 </template>

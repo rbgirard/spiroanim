@@ -1,0 +1,1 @@
+import{a as e,h as t}from"./runtime-core.esm-bundler-CHoaGRYZ.js";import{t as n}from"./_plugin-vue_export-helper-BDNMzG2s.js";var r={},i={"aria-label":`SpiroAnim`};function a(n,r){return t(),e(`main`,i)}var o=n(r,[[`render`,a]]);export{o as default};

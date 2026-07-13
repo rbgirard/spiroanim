@@ -1,15 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+import { paneSplits } from '@/composables/useMainRoute'
 import { isBrowserSupported } from '@/services/browserSupport'
-
-// TODO: This shouldn't be defined here. Its defined in legacy @/composables/SpiroAnim/useMainRoute
-const paneNames = ['play', 'time', 'edit'] as const
-const paneSplitAliases = paneNames.flatMap((left) =>
-  paneNames.filter((right) => left !== right).map((right) => `/${left}-${right}`),
-)
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  //history: createWebHistory('/spiroanim/'), // Replace with your subdirectory path
   routes: [
     {
       path: '/app',
@@ -17,7 +13,7 @@ const router = createRouter({
       component: isBrowserSupported()
         ? () => import('@/views/SpiroAnim.vue')
         : () => import('@/views/BrowserSupport.vue'),
-      alias: ['/', '/player', '/timeline', '/editor', ...paneSplitAliases],
+      alias: ['/', '/player', '/timeline', '/editor', ...paneSplits],
     },
     {
       path: '/:pathMatch(.*)*',
