@@ -3,7 +3,7 @@
     <canvas ref="eCanvas" :style="canvasStyle" />
     <Controls :store="props.store" />
     <span class="fps">{{ fps }}</span>
-    <BaseTooltip :disabled="!showTooltips">
+    <BaseTooltip class="aspect-tooltip" :disabled="!showTooltips" placement="bottom">
       <template #activator="{ props: tooltipProps }">
         <span v-bind="tooltipProps" class="aspect">
           <span :style="{ color: aspect.color.value }">{{ aspectLabel.ratioText }}</span>
@@ -359,11 +359,15 @@ const containerStyle = computed<CSSProperties>(() => ({
   right: 10px;
   top: 26px;
 }
+.aspect-tooltip {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  z-index: 2;
+}
+
 .aspect {
   color: var(--color-text-muted);
   font-size: 14px;
-  position: absolute;
-  right: 10px;
-  top: 6px;
 }
 </style>

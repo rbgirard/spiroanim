@@ -1,7 +1,13 @@
 <template>
   <span class="tooltip-root">
     <slot name="activator" :props="activatorProps" />
-    <span v-if="visible && !disabled" :id="tooltipId" class="tooltip-content" role="tooltip">
+    <span
+      v-if="visible && !disabled"
+      :id="tooltipId"
+      class="tooltip-content"
+      :class="`tooltip-content--${placement}`"
+      role="tooltip"
+    >
       <slot name="html">
         <span>{{ text }}</span>
       </slot>
@@ -17,11 +23,13 @@ const props = withDefaults(
     text?: string
     disabled?: boolean
     delay?: number
+    placement?: 'top' | 'bottom'
   }>(),
   {
     text: '',
     disabled: false,
     delay: 1000,
+    placement: 'top',
   },
 )
 
@@ -65,7 +73,6 @@ defineExpose({ hide })
 
 .tooltip-content {
   position: absolute;
-  bottom: calc(100% + var(--space-2));
   left: 50%;
   z-index: 1100;
   width: max-content;
@@ -77,5 +84,13 @@ defineExpose({ hide })
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   transform: translateX(-50%);
+}
+
+.tooltip-content--top {
+  bottom: calc(100% + var(--space-2));
+}
+
+.tooltip-content--bottom {
+  top: calc(100% + var(--space-2));
 }
 </style>
