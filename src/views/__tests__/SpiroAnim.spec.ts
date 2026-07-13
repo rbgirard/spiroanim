@@ -47,6 +47,7 @@ describe('SpiroAnim view', () => {
         plugins: [pinia, router],
         stubs: {
           Player: { template: '<div>Player</div>' },
+          Timeline: { template: '<div>Timeline</div>' },
         },
       },
     })
