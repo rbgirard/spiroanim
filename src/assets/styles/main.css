@@ -6,6 +6,27 @@
   min-height: 100vh;
 }
 
+/* Shared thin scrollbars used by the editor and timeline. */
+.scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-text-muted) var(--color-surface);
+}
+
+.scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-text-muted);
+  border: 2px solid var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
 /* Define a class to disable scrollbar */
 .disable-scroll {
   width: 100%;
