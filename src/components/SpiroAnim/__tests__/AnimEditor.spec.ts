@@ -47,10 +47,10 @@ describe('AnimEditor', () => {
     const paneStore = useEditorPaneStore()
     expect(paneStore.parents).toEqual({ properties: 'top', timeline: 'bottom' })
 
-    await wrapper.get('button[aria-label="Swap editor views"]').trigger('click')
+    await wrapper.get('button[aria-label="Swap Editor Views"]').trigger('click')
     expect(paneStore.parents).toEqual({ properties: 'bottom', timeline: 'top' })
 
     await wrapper.setProps({ vtl: true })
-    expect(wrapper.find('button[aria-label="Swap editor views"]').exists()).toBe(false)
+    expect(wrapper.find('button[aria-label="Swap Editor Views"]').exists()).toBe(false)
   })
 })

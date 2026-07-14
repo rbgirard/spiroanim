@@ -1,17 +1,19 @@
 <template>
-  <button
-    v-bind="attrs"
-    ref="iconEl"
-    aria-label="Resize"
-    class="pane-splitter"
-    title="Resize"
-    type="button"
-    :style="iconStyle"
-    @click.prevent
-    @mousedown.prevent="dragStart"
-  >
-    <BaseIcon :path="icon" />
-  </button>
+  <AppTooltip text="Resize" :style="iconStyle">
+    <template #activator="{ props: tooltipProps }">
+      <button
+        v-bind="{ ...attrs, ...tooltipProps }"
+        ref="iconEl"
+        aria-label="Resize"
+        class="pane-splitter"
+        type="button"
+        @click.prevent
+        @mousedown.prevent="dragStart"
+      >
+        <BaseIcon :path="icon" />
+      </button>
+    </template>
+  </AppTooltip>
 </template>
 
 <script setup lang="ts">
@@ -19,10 +21,13 @@
 
 import { mdiArrowSplitVertical, mdiArrowSplitHorizontal, mdiCloseOctagonOutline } from '@mdi/js'
 
+import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { useSplitHandle } from '@/composables/useSplitHandle'
 
 const attrs = useAttrs()
+
+defineOptions({ inheritAttrs: false })
 
 const props = withDefaults(
   defineProps<{

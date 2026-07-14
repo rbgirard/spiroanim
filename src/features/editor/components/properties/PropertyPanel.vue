@@ -4,12 +4,12 @@
     <div class="panel">
       <div v-if="props.data !== undefined" class="container colb">
         <template v-for="(v, i) in props.vals" :key="'ct' + i">
-          <BaseTooltip class="property-label-tooltip" :disabled="!showTooltips">
+          <AppTooltip class="property-label-tooltip">
             <template #activator="{ props: tooltipProps }">
               <div v-bind="tooltipProps" class="col1">{{ v.text }}:</div>
             </template>
             <template #html><slot :name="v.name" /></template>
-          </BaseTooltip>
+          </AppTooltip>
           <div class="col2 val-container">
             <button
               class="propval"
@@ -45,10 +45,9 @@
   </details>
 </template>
 <script setup lang="ts">
-import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { useProperties, STRING, VALUE, FALL } from '@/features/editor/composables/useProperties'
-import { useViewportStore } from '@/stores/useViewportStore'
 import type { DynamicVal, ValRetType, SetterFunc } from '@/types/AnimTypes'
 
 import { mdiTrashCanOutline } from '@mdi/js'
@@ -90,7 +89,6 @@ const props = withDefaults(
 )
 
 const { propClass, pINPUT, pEXPANDED } = useProperties(props.store)
-const { showTooltips } = storeToRefs(useViewportStore())
 const expanded = computed(() => pEXPANDED.value[props.panel]?.includes(props.panel) ?? false)
 
 const onToggle = (event: Event) => {

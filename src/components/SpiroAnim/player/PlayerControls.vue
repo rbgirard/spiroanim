@@ -1,7 +1,7 @@
 <template>
   <Progress :store="props.store">
     <template #play>
-      <BaseTooltip text="Play / Pause" :disabled="!showTooltips">
+      <AppTooltip text="Play / Pause">
         <template #activator="{ props: tooltipProps }">
           <button
             v-bind="tooltipProps"
@@ -13,10 +13,10 @@
             <BaseIcon :path="playIcon" size="30" />
           </button>
         </template>
-      </BaseTooltip>
+      </AppTooltip>
     </template>
     <template #mode>
-      <BaseTooltip text="Select Mode" :disabled="!showTooltips">
+      <AppTooltip text="Select Mode">
         <template #activator="{ props: tooltipProps }">
           <button
             v-bind="tooltipProps"
@@ -29,11 +29,11 @@
             <BaseIcon :path="modeIcon" size="30" />
           </button>
         </template>
-      </BaseTooltip>
+      </AppTooltip>
     </template>
   </Progress>
 
-  <BaseTooltip class="btnCenter" text="Center Camera" :disabled="!showTooltips">
+  <AppTooltip class="btnCenter" text="Center Camera">
     <template #activator="{ props: tooltipProps }">
       <button
         v-bind="tooltipProps"
@@ -45,8 +45,8 @@
         <BaseIcon :path="mdiImageFilterCenterFocusWeak" size="30" />
       </button>
     </template>
-  </BaseTooltip>
-  <BaseTooltip class="btnTracer" text="Tracer Mode" :disabled="!showTooltips">
+  </AppTooltip>
+  <AppTooltip class="btnTracer" text="Tracer Mode">
     <template #activator="{ props: tooltipProps }">
       <button
         v-bind="tooltipProps"
@@ -59,8 +59,8 @@
         <BaseIcon :path="tracerIcon" size="30" />
       </button>
     </template>
-  </BaseTooltip>
-  <BaseTooltip class="btnPicture" text="Save Image" :disabled="!showTooltips">
+  </AppTooltip>
+  <AppTooltip class="btnPicture" text="Save Image">
     <template #activator="{ props: tooltipProps }">
       <button
         v-bind="tooltipProps"
@@ -72,7 +72,7 @@
         <BaseIcon :path="pictureIcon" size="30" />
       </button>
     </template>
-  </BaseTooltip>
+  </AppTooltip>
 
   <label class="speed">
     <span>Speed</span>
@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import BaseIcon from '@/components/icons/BaseIcon.vue'
-import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import {
   mdiImageFilterCenterFocusWeak,
   mdiFirework,
@@ -99,7 +99,6 @@ import {
 import Progress from './PlayerProgress.vue'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
-import { useViewportStore } from '@/stores/useViewportStore'
 
 const props = defineProps<{
   store: string
@@ -109,7 +108,6 @@ const playerStore = usePlayerStore(props.store)
 const { ROOT, CURRENT } = playerStore.raw()
 const { cameraCenter, saveImage, TRACER, PLAYING, SELECTION, INDEX, UTIMES, UPDATE, SELECTED } =
   storeToRefs(playerStore)
-const { showTooltips } = storeToRefs(useViewportStore())
 
 const speedOptions = [4, 3, 2, 1, 0.5, 0.25, 0.1] as const
 const speed = ref(ROOT.value.speed)

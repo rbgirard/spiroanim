@@ -1,13 +1,10 @@
 <template>
-  <button
-    aria-label="Rotate View"
+  <PaneSwapButton
     class="pane-rotate-icon"
-    title="Rotate View"
-    type="button"
-    @click.prevent="onClick"
-  >
-    <BaseIcon :path="mdiSwapHorizontalBold" />
-  </button>
+    label="Swap Views"
+    :icon="mdiSwapHorizontalBold"
+    @click="onClick"
+  />
 </template>
 
 <script setup lang="ts">
@@ -15,7 +12,7 @@
 
 import { mdiSwapHorizontalBold } from '@mdi/js'
 
-import BaseIcon from '@/components/icons/BaseIcon.vue'
+import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import { useMainPaneStore, paneKeysMain } from '@/stores/useMainPaneStore'
 
 const props = defineProps<{
@@ -35,24 +32,5 @@ const onClick = () => {
   bottom: 10px;
   left: 1px;
   z-index: 1010;
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  place-items: center;
-  color: var(--color-action-primary);
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-sm);
-}
-
-.pane-rotate-icon:hover {
-  color: var(--color-text);
-}
-
-.pane-rotate-icon:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
 }
 </style>

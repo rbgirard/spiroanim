@@ -23,20 +23,13 @@
         :cols="tCols"
       />
     </div>
-    <BaseTooltip class="pane-rotate-icon" text="Swap Editor Views" :disabled="!showTooltips">
-      <template #activator="{ props: tooltipProps }">
-        <button
-          v-if="enabled"
-          v-bind="tooltipProps"
-          class="pane-rotate-button"
-          type="button"
-          aria-label="Swap editor views"
-          @click.prevent="onClick"
-        >
-          <BaseIcon :path="mdiSwapVerticalBold" size="30" />
-        </button>
-      </template>
-    </BaseTooltip>
+    <PaneSwapButton
+      v-if="enabled"
+      class="pane-rotate-icon"
+      label="Swap Editor Views"
+      :icon="mdiSwapVerticalBold"
+      @click="onClick"
+    />
     <PaneSplitter
       v-if="enabled"
       data-role="splitter-main"
@@ -54,15 +47,13 @@
 import Properties from '@/features/editor/components/AnimProperties.vue'
 import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
-import BaseTooltip from '@/components/ui/BaseTooltip.vue'
-import BaseIcon from '@/components/icons/BaseIcon.vue'
+import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import { mdiSwapVerticalBold } from '@mdi/js'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useEditorPaneStore } from '@/features/editor/stores/useEditorPaneStore'
-import { useViewportStore } from '@/stores/useViewportStore'
 
 const props = defineProps<{
   dim: { width: number; height: number; perc: number }
@@ -71,7 +62,6 @@ const props = defineProps<{
 }>()
 
 const dim: Readonly<typeof props.dim> = readonly(props.dim)
-const { showTooltips } = storeToRefs(useViewportStore())
 
 const splitterStore = useSplitterStore('editor', 'top', 'bottom')
 const { topWidth, topHeight, bottomWidth, bottomHeight, topPerc } = storeToRefs(splitterStore)
@@ -217,24 +207,5 @@ const containerStyle = computed<CSSProperties>(() => ({
   bottom: 10px;
   right: 11px;
   z-index: 1010;
-}
-
-.pane-rotate-button {
-  display: inline-flex;
-  padding: 2px;
-  color: var(--color-action-primary);
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-sm);
-}
-
-.pane-rotate-button:hover {
-  color: var(--color-text);
-}
-
-.pane-rotate-button:focus-visible {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: 2px;
 }
 </style>

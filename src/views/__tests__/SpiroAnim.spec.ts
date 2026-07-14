@@ -59,8 +59,8 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('Player')
     expect(wrapper.get('[data-role="right-pane"]').text()).toContain('Timeline')
     expect(wrapper.text()).not.toContain('Editor')
-    expect(wrapper.findAll('button[aria-label="Rotate View"]')).toHaveLength(2)
-    expect(wrapper.get('button[aria-label="Resize"]').attributes('title')).toBe('Resize')
+    expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
+    expect(wrapper.get('button[aria-label="Resize"]').attributes('title')).toBeUndefined()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(true)
 
     const splitter = useSplitterStore('main')

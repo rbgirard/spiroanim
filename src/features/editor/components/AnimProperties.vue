@@ -32,31 +32,29 @@
       <div :class="clsCell2">
         <div class="prop-options">
           <template v-if="pMULTI">
-            <label
-              v-for="prop in ACTIVE"
-              :key="'pc' + prop"
-              class="prop-option"
-              :title="'Prop #' + (prop + 1)"
-            >
-              <input v-model="pSELECTED[prop]" type="checkbox" @change="onSelectedChange" />
-              <span class="circle" :style="circleColor(prop)" />
-            </label>
+            <AppTooltip v-for="prop in ACTIVE" :key="'pc' + prop" :text="'Prop #' + (prop + 1)">
+              <template #activator="{ props: tooltipProps }">
+                <label v-bind="tooltipProps" class="prop-option">
+                  <input v-model="pSELECTED[prop]" type="checkbox" @change="onSelectedChange" />
+                  <span class="circle" :style="circleColor(prop)" />
+                </label>
+              </template>
+            </AppTooltip>
           </template>
           <template v-else>
-            <label
-              v-for="prop in ACTIVE"
-              :key="'pr' + prop"
-              class="prop-option"
-              :title="'Prop #' + (prop + 1)"
-            >
-              <input
-                v-model.number="pRADIO"
-                type="radio"
-                :name="'prop-radio-' + props.store"
-                :value="prop"
-              />
-              <span class="circle" :style="circleColor(prop)" />
-            </label>
+            <AppTooltip v-for="prop in ACTIVE" :key="'pr' + prop" :text="'Prop #' + (prop + 1)">
+              <template #activator="{ props: tooltipProps }">
+                <label v-bind="tooltipProps" class="prop-option">
+                  <input
+                    v-model.number="pRADIO"
+                    type="radio"
+                    :name="'prop-radio-' + props.store"
+                    :value="prop"
+                  />
+                  <span class="circle" :style="circleColor(prop)" />
+                </label>
+              </template>
+            </AppTooltip>
           </template>
         </div>
       </div>
@@ -83,6 +81,7 @@ import Advanced from './properties/panels/AdvancedPanel.vue'
 import Root from './properties/panels/RootPanel.vue'
 import Base from './properties/panels/BasesPanel.vue'
 import Manage from './properties/panels/ManagePanel.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
 import { mdiRewindOutline, mdiFastForwardOutline, mdiUndoVariant } from '@mdi/js'

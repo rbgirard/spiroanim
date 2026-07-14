@@ -3,7 +3,7 @@
     <canvas ref="eCanvas" :style="canvasStyle" />
     <Controls :store="props.store" />
     <span class="fps">{{ fps }}</span>
-    <BaseTooltip class="aspect-tooltip" :disabled="!showTooltips" placement="bottom">
+    <AppTooltip class="aspect-tooltip" placement="bottom">
       <template #activator="{ props: tooltipProps }">
         <span v-bind="tooltipProps" class="aspect">
           <span :style="{ color: aspect.color.value }">{{ aspectLabel.ratioText }}</span>
@@ -31,13 +31,13 @@
           </div>
         </div>
       </template>
-    </BaseTooltip>
+    </AppTooltip>
   </div>
 </template>
 
 <script setup lang="ts">
 import Controls from './player/PlayerControls.vue'
-import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 
 import { useViewportStore } from '@/stores/useViewportStore'
 import { usePlayerStore /*, DEFAULT_POSITION*/ } from '@/stores/usePlayerStore'
@@ -75,7 +75,7 @@ const { send, call, on, /*register,*/ warnStr } = msgChnl
 // Send warning string to worker, gets sent back, then register it
 call('warnStr', 'Player').then(warnStr)
 
-const { isVisible, showTooltips } = storeToRefs(useViewportStore())
+const { isVisible } = storeToRefs(useViewportStore())
 
 const playerStore = usePlayerStore(props.store)
 const { ROOT, COMPILED, CURRENT, FPS, ORBIT } = playerStore.raw()

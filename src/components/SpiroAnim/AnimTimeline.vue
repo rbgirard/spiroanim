@@ -27,13 +27,13 @@
           @keydown.enter="thumbClick(index)"
           @keydown.space.prevent="thumbClick(index)"
         />
-        <BaseTooltip class="thumbStart" :text="`Index: Beat`" :disabled="!showTooltips">
+        <AppTooltip class="thumbStart" text="Index: Beat">
           <template #activator="{ props: tooltipProps }">
             <span v-bind="tooltipProps"
               ><span class="thumbIndex">{{ index + 1 }}: </span>{{ msToBeat(time, ROOT.bpm) }}</span
             >
           </template>
-        </BaseTooltip>
+        </AppTooltip>
       </div>
     </div>
     <div :style="activeStyle"></div>
@@ -44,14 +44,13 @@
 <script setup lang="ts">
 // src\components\SpiroAnim\AnimTimeline.vue
 
-import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import AppTooltip from '@/components/AppTooltip.vue'
 import { usePingPongValue, easeInOut } from '@/composables/usePingPongValue'
 import { throttleTrailing, nextFrame, toColor } from '@/utils/UtilFunc'
 import { COLSET } from '@/domain/animation/AnimStruct'
 import { msToBeat } from '@/math/animation/PlayerFunc'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
-import { useViewportStore } from '@/stores/useViewportStore'
 import { useAnimWorkerCamera } from '@/composables/useAnimWorkerCamera'
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
@@ -71,7 +70,6 @@ const props = withDefaults(
 )
 
 const { parents: mainViews } = storeToRefs(useMainPaneStore())
-const { showTooltips } = storeToRefs(useViewportStore())
 
 // Dimensions provided by parent component
 const dim: Readonly<typeof props.dim> = readonly(props.dim)

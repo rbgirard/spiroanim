@@ -1,20 +1,29 @@
 <template>
-  <button
+  <AppTooltip
     v-if="display()"
-    aria-label="Full Screen Toggle"
-    class="fullscreen"
-    title="Full Screen Toggle"
-    type="button"
-    @click="toggle"
+    class="fullscreen-control"
+    text="Full Screen Toggle"
+    placement="bottom"
   >
-    <BaseIcon :path="icon" />
-  </button>
+    <template #activator="{ props: tooltipProps }">
+      <button
+        v-bind="tooltipProps"
+        aria-label="Full Screen Toggle"
+        class="fullscreen"
+        type="button"
+        @click="toggle"
+      >
+        <BaseIcon :path="icon" />
+      </button>
+    </template>
+  </AppTooltip>
 </template>
 
 <script setup lang="ts">
 import { useFullscreen } from '@vueuse/core'
 import { mdiFullscreen, mdiFullscreenExit } from '@mdi/js'
 
+import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 
 const { isFullscreen, toggle } = useFullscreen(),
@@ -39,11 +48,14 @@ const { isFullscreen, toggle } = useFullscreen(),
 </script>
 
 <style scoped>
-.fullscreen {
+.fullscreen-control {
   position: absolute;
   top: 4px;
   left: 4px;
   z-index: 1000;
+}
+
+.fullscreen {
   display: grid;
   width: 2rem;
   height: 2rem;
