@@ -77,7 +77,7 @@ export const COMMON_ASPECT_RATIOS: Record<string, number> = {
   ...VERTICAL_ASPECT_RATIOS,
 }
 
-console.log(COMMON_ASPECT_RATIOS)
+//console.log(COMMON_ASPECT_RATIOS)
 
 // Horizontal aspect ratio descriptions
 export const HORIZONTAL_ASPECT_DESCRIPTIONS: Record<string, string> = {
