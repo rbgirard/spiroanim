@@ -4,28 +4,61 @@
       <div class="sticky">
         <div class="container-cntrl">
           <div class="cntrl">
-            <button
-              class="icon-button"
-              type="button"
-              aria-label="Previous frame"
-              @click="clickRewind"
-            >
-              <BaseIcon :path="mdiRewindOutline" />
-            </button>
-            <button class="icon-button" type="button" aria-label="Next frame" @click="clickForward">
-              <BaseIcon :path="mdiFastForwardOutline" />
-            </button>
-            <button class="icon-button" type="button" aria-label="Undo" @click="clickUndo">
-              <BaseIcon :path="mdiUndoVariant" />
-            </button>
+            <AppTooltip text="Back">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="icon-button"
+                  type="button"
+                  aria-label="Previous frame"
+                  @click="clickRewind"
+                >
+                  <BaseIcon :path="mdiRewindOutline" />
+                </button>
+              </template>
+            </AppTooltip>
+            <AppTooltip text="Forward">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="icon-button"
+                  type="button"
+                  aria-label="Next frame"
+                  @click="clickForward"
+                >
+                  <BaseIcon :path="mdiFastForwardOutline" />
+                </button>
+              </template>
+            </AppTooltip>
+            <AppTooltip text="Undo">
+              <template #activator="{ props: tooltipProps }">
+                <button
+                  v-bind="tooltipProps"
+                  class="icon-button"
+                  type="button"
+                  aria-label="Undo"
+                  @click="clickUndo"
+                >
+                  <BaseIcon :path="mdiUndoVariant" />
+                </button>
+              </template>
+            </AppTooltip>
           </div>
           <div class="props-header">
-            <span
-              >Pos:&nbsp;<span class="modifying-count">{{ position }}</span></span
-            >
-            <span
-              >Mod:&nbsp;<span class="modifying-count">{{ ANIMS.length }}</span></span
-            >
+            <AppTooltip text="Position">
+              <template #activator="{ props: tooltipProps }">
+                <span v-bind="tooltipProps"
+                  >Pos:&nbsp;<span class="modifying-count">{{ position }}</span></span
+                >
+              </template>
+            </AppTooltip>
+            <AppTooltip text="Modifying">
+              <template #activator="{ props: tooltipProps }">
+                <span v-bind="tooltipProps"
+                  >Mod:&nbsp;<span class="modifying-count">{{ ANIMS.length }}</span></span
+                >
+              </template>
+            </AppTooltip>
           </div>
         </div>
       </div>
@@ -61,7 +94,11 @@
       <div v-show="props.cols == 2" />
       <div :class="clsCell3">
         <div class="selection-options">
-          <label><input v-model="pMULTI" type="checkbox" /> Multi</label>
+          <AppTooltip text="Select multiple props">
+            <template #activator="{ props: tooltipProps }">
+              <label v-bind="tooltipProps"><input v-model="pMULTI" type="checkbox" /> Multi</label>
+            </template>
+          </AppTooltip>
           <label v-if="SELECTION"><input v-model="pBOUND" type="checkbox" /> Bound</label>
         </div>
       </div>
