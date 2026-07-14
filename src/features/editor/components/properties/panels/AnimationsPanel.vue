@@ -112,8 +112,8 @@ const axis = reactive({
 })
 
 const vals = [
-  turns,
   arc,
+  turns,
   plane,
   axis,
   {

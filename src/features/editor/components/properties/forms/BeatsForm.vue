@@ -102,7 +102,8 @@ watch(
   text-align: center;
 }
 .slider {
-  padding-top: 12px;
+  align-self: end;
+  padding-bottom: var(--space-form-slider-bottom);
 }
 .val {
   color: var(--color-action-primary);

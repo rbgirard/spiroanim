@@ -90,6 +90,8 @@ const handleInput = (event: InputEvent) => {
 }
 
 input {
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   min-height: 2rem;
   padding-inline: var(--space-2);

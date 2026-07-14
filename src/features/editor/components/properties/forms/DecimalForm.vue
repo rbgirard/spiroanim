@@ -1,6 +1,6 @@
 <template>
-  <div class="container">
-    <div>
+  <div class="decimal-form">
+    <div class="decimal-field">
       <DecimalText :data="props.data" :vals="props.vals" :setter="props.setter" />
     </div>
     <div class="slider">
@@ -110,12 +110,16 @@ const end = (/*final: number*/) => {
 </script>
 
 <style scoped>
-.container {
+.decimal-form {
   display: grid;
-  grid-template-columns: minmax(90px, auto) 1fr;
+  grid-template-columns: 60px minmax(0, 1fr);
+}
+.decimal-field {
+  min-width: 0;
 }
 .slider {
-  padding-top: 12px;
+  align-self: end;
+  padding-bottom: var(--space-form-slider-bottom);
 }
 
 .range {
