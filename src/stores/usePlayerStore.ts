@@ -109,9 +109,13 @@ export const usePlayerStore = (id: string) => {
           v.ASPECT.value[0] = r.ROOT.value.aspectx
           v.ASPECT.value[1] = r.ROOT.value.aspecty
         }
-
-        v.cameraCenter.value = Symbol()
       })
+
+      // Changing the configured viewing distance recenters the camera using the new distance.
+      watch(
+        () => r.ROOT.value.distance,
+        () => (v.cameraCenter.value = Symbol()),
+      )
 
       // Update INDEX when position in player changes
       watchImmediate(r.CURRENT, (current) => {

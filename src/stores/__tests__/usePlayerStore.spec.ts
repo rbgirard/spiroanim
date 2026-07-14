@@ -40,6 +40,20 @@ describe('usePlayerStore', () => {
     expect(store.INDEX).toBe(1)
   })
 
+  it('requests camera centering only when the viewing distance changes', async () => {
+    const store = usePlayerStore('test-camera-centering')
+    const runtime = store.raw()
+    const initialRequest = store.cameraCenter
+
+    runtime.ROOT.value = { ...runtime.ROOT.value, thick: 8 }
+    await nextTick()
+    expect(store.cameraCenter).toBe(initialRequest)
+
+    runtime.ROOT.value = { ...runtime.ROOT.value, distance: 30 }
+    await nextTick()
+    expect(store.cameraCenter).not.toBe(initialRequest)
+  })
+
   it('loads the original settings key including legacy ORBIT data', () => {
     localStorage.setItem(
       'sa-player-test-load',
