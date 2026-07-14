@@ -140,12 +140,19 @@ export function useSplitHandle({
   })
 
   const updateStyle = () => {
+    const halfWidth = element.value?.offsetWidth ? element.value.offsetWidth / 2 : offset
+    const halfHeight = element.value?.offsetHeight ? element.value.offsetHeight / 2 : offset
+    const horizontalInset = Math.min(halfWidth, parent.value.width / 2)
+    const verticalInset = Math.min(halfHeight, parent.value.height / 2)
+
     if (landscape.value) {
       iconStyle.top = '50%'
-      iconStyle.left = Math.min(Math.max(pos.left, offset), parent.value.width - offset) + 'px'
+      iconStyle.left =
+        Math.min(Math.max(pos.left, horizontalInset), parent.value.width - horizontalInset) + 'px'
     } else {
       iconStyle.left = '50%'
-      iconStyle.top = Math.min(Math.max(pos.top, offset), parent.value.height - offset) + 'px'
+      iconStyle.top =
+        Math.min(Math.max(pos.top, verticalInset), parent.value.height - verticalInset) + 'px'
     }
   }
 
@@ -162,6 +169,7 @@ export function useSplitHandle({
   // Keeping .passive doesn't allow .prevent to work, and elements under the button were otherwise being clicked
   onMounted(() => {
     useEventListener(element, 'touchstart', handleTouchStart, { passive: false })
+    updateStyle()
   })
 
   onBeforeUnmount(() => {
