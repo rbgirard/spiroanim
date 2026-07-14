@@ -1,6 +1,16 @@
 <template>
   <div class="inspnt-container">
-    <a href="#" @click.prevent="activate">Insert Points</a>
+    <AppTooltip>
+      <template #activator="{ props: tooltipProps }">
+        <a v-bind="tooltipProps" href="#" @click.prevent="activate">Insert Points</a>
+      </template>
+      <template #html>
+        <strong>Insert Points</strong><br />
+        Inserts animation points into the selected props before or after the current timeline
+        position or selected range.<br />
+        Add a blank point directly, or choose reference nodes in the player to build a path.
+      </template>
+    </AppTooltip>
     <div v-show="pINPUT == inputStr">
       <button v-show="!firstProp" class="action-button" type="button" @click="oneClick">ADD</button>
       <button class="action-button" type="button" @click="click">{{ text }}</button>
@@ -17,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import { useProperties } from '@/features/editor/composables/useProperties'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useManageProperties } from '@/features/editor/composables/useManageProperties'

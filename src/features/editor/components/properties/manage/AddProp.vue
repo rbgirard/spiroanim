@@ -1,10 +1,20 @@
 <template>
   <div class="addprp-container">
-    <a href="#" @click.prevent="clickAddProp">Add Prop</a>
+    <AppTooltip>
+      <template #activator="{ props: tooltipProps }">
+        <a v-bind="tooltipProps" href="#" @click.prevent="clickAddProp">Add Prop</a>
+      </template>
+      <template #html>
+        <strong>Add Prop</strong><br />
+        Adds a new prop with an empty starting animation and selects it for editing.<br />
+        Any previously selected props are deselected.
+      </template>
+    </AppTooltip>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useProperties } from '@/features/editor/composables/useProperties'
 

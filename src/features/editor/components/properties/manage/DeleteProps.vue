@@ -1,10 +1,20 @@
 <template>
   <div class="delprp-container">
-    <a href="#" @click.prevent="clickDeleteProps">Delete Props</a>
+    <AppTooltip>
+      <template #activator="{ props: tooltipProps }">
+        <a v-bind="tooltipProps" href="#" @click.prevent="clickDeleteProps">Delete Props</a>
+      </template>
+      <template #html>
+        <strong>Delete Props</strong><br />
+        Removes every currently selected prop and all animation data owned by those props.<br />
+        If any props remain, the first one is selected automatically.
+      </template>
+    </AppTooltip>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useProperties } from '@/features/editor/composables/useProperties'
 

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import PropertyPanel from '@/features/editor/components/properties/PropertyPanel.vue'
 import AdvancedPanel from '@/features/editor/components/properties/panels/AdvancedPanel.vue'
 import AnimationsPanel from '@/features/editor/components/properties/panels/AnimationsPanel.vue'
+import RootPanel from '@/features/editor/components/properties/panels/RootPanel.vue'
 import type { DynamicVal } from '@/types/AnimTypes'
 
 describe('editor property panel organization', () => {
@@ -44,5 +45,17 @@ describe('editor property panel organization', () => {
       'type',
       'move',
     ])
+  })
+
+  it('provides help content for every root display control', () => {
+    const wrapper = shallowMount(RootPanel, {
+      global: { provide: { store: ref('root-panel-tooltips') } },
+    })
+    const slots = wrapper.getComponent(PropertyPanel).vm.$slots
+
+    expect(Object.keys(slots)).toEqual(
+      expect.arrayContaining(['aspectx', 'aspecty', 'distance', 'thick']),
+    )
+    wrapper.unmount()
   })
 })

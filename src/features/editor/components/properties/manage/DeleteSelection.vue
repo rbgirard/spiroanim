@@ -1,10 +1,20 @@
 <template>
   <div class="delsel-container">
-    <a href="#" @click.prevent="clickDeleteSel">Delete Selection</a>
+    <AppTooltip>
+      <template #activator="{ props: tooltipProps }">
+        <a v-bind="tooltipProps" href="#" @click.prevent="clickDeleteSel">Delete Selection</a>
+      </template>
+      <template #html>
+        <strong>Delete Selection</strong><br />
+        Removes animation points from the selected props at the current timeline position.<br />
+        When a timeline range is selected, every point within that range is removed.
+      </template>
+    </AppTooltip>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppTooltip from '@/components/AppTooltip.vue'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useManageProperties } from '@/features/editor/composables/useManageProperties'
 
