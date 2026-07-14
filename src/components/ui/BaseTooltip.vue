@@ -1,34 +1,37 @@
 <template>
   <span class="tooltip-root">
     <slot name="activator" :props="activatorProps" />
-    <span
-      v-if="visible && !disabled"
-      :id="tooltipId"
-      class="tooltip-content"
-      :class="`tooltip-content--${placement}`"
-      role="tooltip"
-    >
-      <slot name="html">
-        <span>{{ text }}</span>
-      </slot>
-    </span>
+    <Transition name="tooltip">
+      <span
+        v-if="visible && !disabled"
+        :id="tooltipId"
+        class="tooltip-content"
+        :class="`tooltip-content--${placement}`"
+        role="tooltip"
+      >
+        <slot name="html">
+          <span>{{ text }}</span>
+        </slot>
+      </span>
+    </Transition>
   </span>
 </template>
 
 <script setup lang="ts">
 import { useId } from 'vue'
+import { DEFAULT_TOOLTIP_DELAY, type TooltipPlacement } from '@/components/ui/tooltip'
 
 const props = withDefaults(
   defineProps<{
     text?: string
     disabled?: boolean
     delay?: number
-    placement?: 'top' | 'bottom'
+    placement?: TooltipPlacement
   }>(),
   {
     text: '',
     disabled: false,
-    delay: 1000,
+    delay: DEFAULT_TOOLTIP_DELAY,
     placement: 'top',
   },
 )
@@ -88,9 +91,40 @@ defineExpose({ hide })
 
 .tooltip-content--top {
   bottom: calc(100% + var(--space-2));
+  transform-origin: bottom center;
 }
 
 .tooltip-content--bottom {
   top: calc(100% + var(--space-2));
+  transform-origin: top center;
+}
+
+.tooltip-enter-active,
+.tooltip-leave-active {
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.tooltip-enter-from,
+.tooltip-leave-to {
+  opacity: 0;
+}
+
+.tooltip-enter-from.tooltip-content--top,
+.tooltip-leave-to.tooltip-content--top {
+  transform: translate(-50%, var(--space-1)) scale(0.97);
+}
+
+.tooltip-enter-from.tooltip-content--bottom,
+.tooltip-leave-to.tooltip-content--bottom {
+  transform: translate(-50%, calc(0rem - var(--space-1))) scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip-enter-active,
+  .tooltip-leave-active {
+    transition: none;
+  }
 }
 </style>

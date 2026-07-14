@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
+import { DEFAULT_TOOLTIP_DELAY, type TooltipPlacement } from '@/components/ui/tooltip'
 import { useViewportStore } from '@/stores/useViewportStore'
 
 withDefaults(
@@ -25,12 +26,12 @@ withDefaults(
     text?: string
     disabled?: boolean
     delay?: number
-    placement?: 'top' | 'bottom'
+    placement?: TooltipPlacement
   }>(),
   {
     text: '',
     disabled: false,
-    delay: 1000,
+    delay: DEFAULT_TOOLTIP_DELAY,
     placement: 'top',
   },
 )

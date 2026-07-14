@@ -27,7 +27,11 @@ describe('PaneSwapButton', () => {
 
     const button = wrapper.get('button[aria-label="Swap Views"]')
     await button.trigger('mouseenter')
-    vi.advanceTimersByTime(1000)
+    vi.advanceTimersByTime(249)
+    await nextTick()
+    expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
+
+    vi.advanceTimersByTime(1)
     await nextTick()
 
     expect(wrapper.get('[role="tooltip"]').text()).toBe('Swap Views')
