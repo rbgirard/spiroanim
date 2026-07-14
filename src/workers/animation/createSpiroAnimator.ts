@@ -490,6 +490,7 @@ export const createSpiroAnimator = (vars: {
         }
 
         // Collect paths into one collection if enabled
+        //if (paths && !(active && !timeline)) rotTmp.push(...rotPoints) // Only the one when selected
         if (paths) rotTmp.push(...rotPoints)
         else if (active) {
           // Otherwise create individual lines for each frame
@@ -499,6 +500,7 @@ export const createSpiroAnimator = (vars: {
         }
 
         // Collect hands into one collection if enabled
+        //if (hands && !(active && !timeline)) posTmp.push(...posPoints) // Only the one when selected
         if (hands) posTmp.push(...posPoints)
         else if (active) {
           // Otherwise create individual lines for each frame
