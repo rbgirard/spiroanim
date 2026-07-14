@@ -100,6 +100,24 @@ describe('PlayerProgress', () => {
     expect(fill.element.style.insetInlineEnd).toBe('0%')
   })
 
+  it('keeps the stationary handle in place when the end handle crosses it', async () => {
+    const store = usePlayerStore('progress-end-crossing')
+    store.UTIMES = [0, 1000, 2000, 3000, 4000]
+    store.COUNT = 4
+    store.SELECTED = [1, 3]
+    store.SELECTION = true
+    const wrapper = mountProgress('progress-end-crossing')
+    const start = wrapper.get<HTMLInputElement>('input[aria-label="Selection start"]')
+    const end = wrapper.get<HTMLInputElement>('input[aria-label="Selection end"]')
+
+    // Thumb identity must not depend on separate pointer event bookkeeping.
+    await end.setValue(0)
+
+    expect(store.SELECTED).toEqual([0, 1])
+    expect(start.element.value).toBe('1')
+    expect(end.element.value).toBe('0')
+  })
+
   it('synchronizes its handles when selection mode mutates the range in place', async () => {
     const store = usePlayerStore('progress-mode-switch')
     store.UTIMES = [0, 1000, 2000, 3000, 4000]

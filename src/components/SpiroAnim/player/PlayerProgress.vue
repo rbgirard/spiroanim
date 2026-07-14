@@ -80,6 +80,7 @@ const dim = inject<Readonly<{ width: number; height: number }>>('dim')
 
 let autoPlay = false
 let interacting = false
+let updatingSelection = false
 const selectionHandles = ref<[number, number]>([SELECTED.value[0] ?? 0, SELECTED.value[1] ?? 0])
 let previousSelection: [number, number] = [...selectionHandles.value]
 
@@ -118,12 +119,14 @@ const setCurrent = (event: Event) => {
 
 const setSelectionStart = (event: Event) => {
   selectionHandles.value[0] = inputValue(event)
+  updatingSelection = true
   SELECTED.value = [...selectionHandles.value].sort((a, b) => a - b) as [number, number]
   update()
 }
 
 const setSelectionEnd = (event: Event) => {
   selectionHandles.value[1] = inputValue(event)
+  updatingSelection = true
   SELECTED.value = [...selectionHandles.value].sort((a, b) => a - b) as [number, number]
   update()
 }
@@ -134,7 +137,9 @@ watch(
     const [start = 0, end = 0] = val
     const [oldStart, oldEnd] = previousSelection
 
-    if (!interacting) selectionHandles.value = [start, end]
+    // Keep each physical thumb attached to the pointer while it crosses the other thumb.
+    // Only external selection changes should replace the local, unsorted handle positions.
+    if (!updatingSelection && !interacting) selectionHandles.value = [start, end]
 
     if (end !== oldEnd) {
       // If end index changed:
@@ -148,6 +153,7 @@ watch(
     }
 
     previousSelection = [start, end]
+    updatingSelection = false
   },
   { deep: true },
 )
