@@ -27,3 +27,47 @@ select,
 textarea {
   font: inherit;
 }
+
+:is(
+  button,
+  select,
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='range'],
+  input[type='color'],
+  input[type='file']
+):not(:disabled) {
+  cursor: pointer;
+}
+
+label:has(
+  :is(
+    select,
+    input[type='checkbox'],
+    input[type='radio'],
+    input[type='range'],
+    input[type='color'],
+    input[type='file']
+  ):not(:disabled)
+) {
+  cursor: pointer;
+}
+
+:is(
+  button,
+  select,
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='range'],
+  input[type='color'],
+  input[type='file']
+):disabled,
+label:has(:disabled) {
+  cursor: not-allowed;
+}
