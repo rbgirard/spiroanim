@@ -34,6 +34,8 @@ describe('PlayerProgress', () => {
     expect(store.raw().CURRENT.value).toBe(750)
     expect(store.UPDATE).not.toBe(update)
     expect(slider.attributes('max')).toBe('2000')
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineStart).toBe('0%')
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineEnd).toBe('62.5%')
   })
 
   it('pauses during interaction and resumes only when it was already playing', async () => {
@@ -72,5 +74,66 @@ describe('PlayerProgress', () => {
     await start.setValue(1)
     expect(store.SELECTED).toEqual([1, 2])
     expect(store.raw().CURRENT.value).toBe(1000)
+  })
+
+  it('fills only the selected range and allows the handles to cross', async () => {
+    const store = usePlayerStore('progress-selection-crossing')
+    store.UTIMES = [0, 1000, 2000, 3000, 4000]
+    store.COUNT = 4
+    store.SELECTED = [1, 3]
+    store.SELECTION = true
+    const wrapper = mountProgress('progress-selection-crossing')
+    const fill = wrapper.get<HTMLElement>('.selection-fill')
+    const start = wrapper.get<HTMLInputElement>('input[aria-label="Selection start"]')
+
+    expect(fill.element.style.insetInlineStart).toBe('25%')
+    expect(fill.element.style.insetInlineEnd).toBe('25%')
+
+    await start.trigger('pointerdown')
+    await start.setValue(4)
+    expect(store.SELECTED).toEqual([3, 4])
+    expect(start.element.value).toBe('4')
+
+    await start.trigger('pointerup')
+    expect(start.element.value).toBe('3')
+    expect(fill.element.style.insetInlineStart).toBe('75%')
+    expect(fill.element.style.insetInlineEnd).toBe('0%')
+  })
+
+  it('synchronizes its handles when selection mode mutates the range in place', async () => {
+    const store = usePlayerStore('progress-mode-switch')
+    store.UTIMES = [0, 1000, 2000, 3000, 4000]
+    store.COUNT = 4
+    const wrapper = mountProgress('progress-mode-switch')
+
+    store.SELECTION = true
+    store.SELECTED[0] = 2
+    store.SELECTED[1] = 4
+    await nextTick()
+
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Selection start"]').element.value).toBe(
+      '2',
+    )
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Selection end"]').element.value).toBe(
+      '4',
+    )
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineStart).toBe('50%')
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineEnd).toBe('0%')
+
+    store.SELECTION = false
+    await nextTick()
+    store.SELECTION = true
+    store.SELECTED[0] = 1
+    store.SELECTED[1] = 2
+    await nextTick()
+
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Selection start"]').element.value).toBe(
+      '1',
+    )
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Selection end"]').element.value).toBe(
+      '2',
+    )
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineStart).toBe('25%')
+    expect(wrapper.get<HTMLElement>('.selection-fill').element.style.insetInlineEnd).toBe('50%')
   })
 })
