@@ -16,6 +16,7 @@ describe('AppTooltip', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    document.body.innerHTML = ''
   })
 
   it('centrally respects the application tooltip preference', async () => {
@@ -35,12 +36,13 @@ describe('AppTooltip', () => {
     await button.trigger('mouseenter')
     vi.advanceTimersByTime(0)
     await nextTick()
-    expect(wrapper.find('[role="tooltip"]').exists()).toBe(false)
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
 
     viewport.showTooltips = true
     await button.trigger('mouseenter')
     vi.advanceTimersByTime(0)
     await nextTick()
-    expect(wrapper.get('[role="tooltip"]').text()).toBe('Shared tooltip')
+    expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe('Shared tooltip')
+    wrapper.unmount()
   })
 })

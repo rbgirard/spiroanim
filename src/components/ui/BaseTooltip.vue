@@ -1,19 +1,23 @@
 <template>
-  <span class="tooltip-root">
+  <span ref="rootEl" class="tooltip-root">
     <slot name="activator" :props="activatorProps" />
-    <Transition name="tooltip">
-      <span
-        v-if="visible && !disabled"
-        :id="tooltipId"
-        class="tooltip-content"
-        :class="`tooltip-content--${placement}`"
-        role="tooltip"
-      >
-        <slot name="html">
-          <span>{{ text }}</span>
-        </slot>
-      </span>
-    </Transition>
+    <Teleport to="body">
+      <Transition name="tooltip">
+        <span
+          v-if="visible && !disabled"
+          :id="tooltipId"
+          ref="contentEl"
+          class="tooltip-content"
+          :class="`tooltip-content--${effectivePlacement}`"
+          :style="contentStyle"
+          role="tooltip"
+        >
+          <slot name="html">
+            <span>{{ text }}</span>
+          </slot>
+        </span>
+      </Transition>
+    </Teleport>
   </span>
 </template>
 
@@ -38,7 +42,48 @@ const props = withDefaults(
 
 const visible = ref(false)
 const tooltipId = useId()
+const rootEl = ref<HTMLElement>()
+const contentEl = ref<HTMLElement>()
+const effectivePlacement = ref<TooltipPlacement>(props.placement)
+const position = reactive({ left: 0, top: 0 })
 let timeout: ReturnType<typeof setTimeout> | undefined
+
+const contentStyle = computed<CSSProperties>(() => ({
+  left: `${position.left}px`,
+  top: `${position.top}px`,
+}))
+
+const updatePosition = () => {
+  if (!visible.value || rootEl.value === undefined || contentEl.value === undefined) return
+
+  const gap = 8
+  const viewportPadding = 8
+  const anchorRect = rootEl.value.getBoundingClientRect()
+  const contentWidth = contentEl.value.offsetWidth
+  const contentHeight = contentEl.value.offsetHeight
+  const topSpace = anchorRect.top
+  const bottomSpace = window.innerHeight - anchorRect.bottom
+  let nextPlacement = props.placement
+
+  if (nextPlacement === 'top' && topSpace < contentHeight + gap && bottomSpace > topSpace)
+    nextPlacement = 'bottom'
+  else if (
+    nextPlacement === 'bottom' &&
+    bottomSpace < contentHeight + gap &&
+    topSpace > bottomSpace
+  )
+    nextPlacement = 'top'
+
+  effectivePlacement.value = nextPlacement
+
+  const center = anchorRect.left + anchorRect.width / 2
+  const halfWidth = Math.min(contentWidth / 2, (window.innerWidth - viewportPadding * 2) / 2)
+  const minLeft = viewportPadding + halfWidth
+  const maxLeft = window.innerWidth - viewportPadding - halfWidth
+
+  position.left = Math.min(Math.max(center, minLeft), maxLeft)
+  position.top = nextPlacement === 'top' ? anchorRect.top - gap : anchorRect.bottom + gap
+}
 
 const show = () => {
   if (props.disabled) return
@@ -46,6 +91,7 @@ const show = () => {
   timeout = setTimeout(() => {
     visible.value = true
     timeout = undefined
+    nextTick(updatePosition)
   }, props.delay)
 }
 
@@ -63,6 +109,13 @@ const activatorProps = {
   onBlur: hide,
 }
 
+useEventListener(window, 'resize', updatePosition)
+useEventListener(window, 'scroll', updatePosition, { capture: true })
+watch(
+  () => props.placement,
+  () => nextTick(updatePosition),
+)
+
 onBeforeUnmount(hide)
 
 defineExpose({ hide })
@@ -75,9 +128,8 @@ defineExpose({ hide })
 }
 
 .tooltip-content {
-  position: absolute;
-  left: 50%;
-  z-index: 1100;
+  position: fixed;
+  z-index: var(--z-tooltip);
   width: max-content;
   max-width: min(20rem, 80vw);
   padding: var(--space-2);
@@ -90,12 +142,12 @@ defineExpose({ hide })
 }
 
 .tooltip-content--top {
-  bottom: calc(100% + var(--space-2));
+  transform: translate(-50%, -100%);
   transform-origin: bottom center;
 }
 
 .tooltip-content--bottom {
-  top: calc(100% + var(--space-2));
+  transform: translate(-50%, 0);
   transform-origin: top center;
 }
 
@@ -113,7 +165,7 @@ defineExpose({ hide })
 
 .tooltip-enter-from.tooltip-content--top,
 .tooltip-leave-to.tooltip-content--top {
-  transform: translate(-50%, var(--space-1)) scale(0.97);
+  transform: translate(-50%, calc(-100% + var(--space-1))) scale(0.97);
 }
 
 .tooltip-enter-from.tooltip-content--bottom,
