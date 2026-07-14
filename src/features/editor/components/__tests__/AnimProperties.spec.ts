@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import AnimProperties from '@/features/editor/components/AnimProperties.vue'
+import { usePlayerStore } from '@/stores/usePlayerStore'
 
 describe('AnimProperties', () => {
   beforeEach(() => {
@@ -12,6 +13,7 @@ describe('AnimProperties', () => {
   })
 
   it('describes the editor toolbar controls with shared tooltips', () => {
+    usePlayerStore('toolbar-tooltips').SELECTION = true
     const wrapper = mount(AnimProperties, {
       props: {
         dim: { width: 700, height: 400, perc: 60 },
@@ -41,6 +43,7 @@ describe('AnimProperties', () => {
         'Position',
         'Modifying',
         'Select multiple props',
+        'Only include props with points at both selection bounds',
       ]),
     )
 

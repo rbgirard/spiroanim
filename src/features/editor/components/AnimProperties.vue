@@ -99,7 +99,14 @@
               <label v-bind="tooltipProps"><input v-model="pMULTI" type="checkbox" /> Multi</label>
             </template>
           </AppTooltip>
-          <label v-if="SELECTION"><input v-model="pBOUND" type="checkbox" /> Bound</label>
+          <AppTooltip
+            v-if="SELECTION"
+            text="Only include props with points at both selection bounds"
+          >
+            <template #activator="{ props: tooltipProps }">
+              <label v-bind="tooltipProps"><input v-model="pBOUND" type="checkbox" /> Bound</label>
+            </template>
+          </AppTooltip>
         </div>
       </div>
       <div v-for="n in extraCols" :key="'ec' + n" class="sticky" />
