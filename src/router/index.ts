@@ -8,12 +8,18 @@ const router = createRouter({
   //history: createWebHistory('/spiroanim/'), // Replace with your subdirectory path
   routes: [
     {
+      path: '/',
+      name: 'landing',
+      component: () => import('@/views/LandingPage.vue'),
+      alias: '/index',
+    },
+    {
       path: '/app',
       name: 'main',
       component: isBrowserSupported()
         ? () => import('@/views/SpiroAnim.vue')
         : () => import('@/views/BrowserSupport.vue'),
-      alias: ['/', '/player', '/timeline', '/editor', ...paneSplits],
+      alias: ['/player', '/timeline', '/editor', ...paneSplits],
     },
     {
       path: '/:pathMatch(.*)*',

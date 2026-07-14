@@ -23,22 +23,22 @@ export const aspectRatioLevelMap: Record<
 > = {
   0: {
     label: 'Exact Match',
-    color: '#6fbf73', // soft green
+    color: 'var(--color-aspect-exact)', // Theme-aware green
     confidence: 'Perfect',
   },
   1: {
     label: 'Near Standard',
-    color: '#d8b041', // muted goldenrod
+    color: 'var(--color-aspect-near)', // Theme-aware goldenrod
     confidence: 'High',
   },
   2: {
     label: 'Approximate',
-    color: '#d68b36', // soft orange-brown
+    color: 'var(--color-aspect-approximate)', // Theme-aware orange-brown
     confidence: 'Medium',
   },
   3: {
     label: 'Unmatched',
-    color: '#ff3b30', // bright red (like iOS error color)
+    color: 'var(--color-aspect-unmatched)', // Theme-aware error red
     confidence: 'Low',
   },
 }

@@ -19,6 +19,7 @@ describe('useAspectRatio', () => {
 
     expect(aspect.data.value.match).toBe('16:9')
     expect(aspect.description.value).toContain('Widescreen HD')
+    expect(aspect.color.value).toBe('var(--color-aspect-exact)')
 
     width.value = 1000
     height.value = 1000

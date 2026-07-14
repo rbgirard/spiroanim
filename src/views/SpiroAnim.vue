@@ -1,5 +1,5 @@
 <template>
-  <div data-role="main-container" :style="containerStyle">
+  <div class="spiro-workspace" data-role="main-container" :style="containerStyle">
     <div v-show="paneVisible.left" ref="eLeft" data-role="left-pane" :style="leftStyle">
       <PaneRotate pane="left" />
     </div>
@@ -186,3 +186,32 @@ const rightStyle = computed<CSSProperties>(() => ({
   'overflow-x': 'auto',
 }))
 </script>
+
+<style scoped>
+.spiro-workspace {
+  background:
+    radial-gradient(
+      ellipse at 8% 12%,
+      color-mix(in srgb, var(--color-action-primary) 24%, transparent),
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse at 92% 88%,
+      color-mix(in srgb, var(--color-workspace-separator) 26%, transparent),
+      transparent 46%
+    ),
+    linear-gradient(
+      132deg,
+      transparent 24%,
+      color-mix(in srgb, var(--color-workspace-boundary) 12%, transparent) 48%,
+      transparent 72%
+    ),
+    repeating-linear-gradient(
+      118deg,
+      transparent 0 5rem,
+      color-mix(in srgb, var(--color-border) 8%, transparent) 5rem 5.08rem,
+      transparent 5.08rem 10rem
+    ),
+    var(--color-canvas);
+}
+</style>
