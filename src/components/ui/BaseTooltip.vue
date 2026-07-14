@@ -128,17 +128,37 @@ defineExpose({ hide })
 }
 
 .tooltip-content {
+  --tooltip-max-width: 40rem;
+
   position: fixed;
   z-index: var(--z-tooltip);
+  box-sizing: border-box;
   width: max-content;
-  max-width: min(20rem, 80vw);
+  max-width: min(var(--tooltip-max-width), calc(100vw - var(--space-4)));
   padding: var(--space-2);
   color: var(--color-text);
+  font-family: var(--font-family-sans);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
   pointer-events: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   transform: translateX(-50%);
+}
+
+.tooltip-content :deep(strong),
+.tooltip-content :deep(b) {
+  color: var(--color-action-primary);
+  font-weight: 700;
+}
+
+.tooltip-content :deep(em),
+.tooltip-content :deep(i) {
+  color: color-mix(in srgb, var(--color-text) 70%, var(--color-action-primary));
+  font-style: italic;
+  font-weight: 500;
 }
 
 .tooltip-content--top {
