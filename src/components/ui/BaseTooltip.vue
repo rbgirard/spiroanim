@@ -23,7 +23,12 @@
 
 <script setup lang="ts">
 import { useId } from 'vue'
-import { DEFAULT_TOOLTIP_DELAY, type TooltipPlacement } from '@/components/ui/tooltip'
+import {
+  activateTooltip,
+  deactivateTooltip,
+  DEFAULT_TOOLTIP_DELAY,
+  type TooltipPlacement,
+} from '@/components/ui/tooltip'
 
 const props = withDefaults(
   defineProps<{
@@ -87,6 +92,7 @@ const updatePosition = () => {
 
 const show = () => {
   if (props.disabled) return
+  activateTooltip(hide)
   if (timeout !== undefined) clearTimeout(timeout)
   timeout = setTimeout(() => {
     visible.value = true
@@ -99,6 +105,7 @@ const hide = () => {
   if (timeout !== undefined) clearTimeout(timeout)
   timeout = undefined
   visible.value = false
+  deactivateTooltip(hide)
 }
 
 const activatorProps = {
@@ -111,6 +118,10 @@ const activatorProps = {
 
 useEventListener(window, 'resize', updatePosition)
 useEventListener(window, 'scroll', updatePosition, { capture: true })
+useEventListener(window, 'blur', hide)
+useEventListener(document, 'visibilitychange', () => {
+  if (document.hidden) hide()
+})
 watch(
   () => props.placement,
   () => nextTick(updatePosition),

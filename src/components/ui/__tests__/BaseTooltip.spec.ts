@@ -77,6 +77,51 @@ describe('BaseTooltip', () => {
     wrapper.unmount()
   })
 
+  it('closes an open tooltip when the window loses focus', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(BaseTooltip, {
+      props: { text: 'Window focus', delay: 0 },
+      slots: { activator: '<button v-bind="props">Help</button>' },
+    })
+
+    await wrapper.get('button').trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).not.toBeNull()
+
+    window.dispatchEvent(new Event('blur'))
+    await nextTick()
+    expect(document.body.querySelector('[role="tooltip"]')).toBeNull()
+
+    wrapper.unmount()
+  })
+
+  it('closes the previous tooltip when another tooltip opens', async () => {
+    vi.useFakeTimers()
+    const first = mount(BaseTooltip, {
+      props: { text: 'First', delay: 0 },
+      slots: { activator: '<button v-bind="props">First button</button>' },
+    })
+    const second = mount(BaseTooltip, {
+      props: { text: 'Second', delay: 0 },
+      slots: { activator: '<button v-bind="props">Second button</button>' },
+    })
+
+    await first.get('button').trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+    await second.get('button').trigger('mouseenter')
+    vi.runAllTimers()
+    await nextTick()
+
+    const tooltips = document.body.querySelectorAll('[role="tooltip"]')
+    expect(tooltips).toHaveLength(1)
+    expect(tooltips[0]?.textContent).toBe('Second')
+
+    first.unmount()
+    second.unmount()
+  })
+
   it('keeps wide tooltip content inside the viewport', async () => {
     vi.useFakeTimers()
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(500)
