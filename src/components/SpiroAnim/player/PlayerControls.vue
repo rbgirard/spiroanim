@@ -191,7 +191,7 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
   bottom: 44px;
   left: 10px;
   display: grid;
-  width: 70px;
+  width: 48px;
   color: var(--color-text);
   font-size: 0.75rem;
   text-align: left;

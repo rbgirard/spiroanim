@@ -214,4 +214,20 @@ const rightStyle = computed<CSSProperties>(() => ({
     ),
     var(--color-canvas);
 }
+
+/* Keep keyboard focus visible without the heavy outlines used outside the workspace. */
+.spiro-workspace :deep(:focus-visible) {
+  outline: 1px solid color-mix(in srgb, var(--color-action-primary) 55%, var(--color-text-muted));
+  outline-offset: 1px;
+}
+
+.spiro-workspace :deep(.range--custom:focus-visible::-webkit-slider-thumb),
+.spiro-workspace :deep(.range--selection:focus-visible::-webkit-slider-thumb) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-action-primary) 40%, transparent);
+}
+
+.spiro-workspace :deep(.range--custom:focus-visible::-moz-range-thumb),
+.spiro-workspace :deep(.range--selection:focus-visible::-moz-range-thumb) {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-action-primary) 40%, transparent);
+}
 </style>
