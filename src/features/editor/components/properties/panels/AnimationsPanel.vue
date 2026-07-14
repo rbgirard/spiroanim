@@ -1,60 +1,59 @@
 <template>
   <PropertyPanel panel="anim" title="Animation" :data="data" :vals="vals" :setter="animSet">
-    <template #point>
-      <strong>Point</strong><br />
-      Indicates the nearest of 26 reference nodes that the start of this frame aligns with.<br />
-      Selecting a node here will directly update <strong>Arc</strong> and
-      <strong>Plane</strong> values.<br /><br />
-      <u>Node abbreviations:</u><br />
-      First letter: <strong>F</strong>ront, <strong>M</strong>iddle, <strong>B</strong>ack.<br />
-      Second letter (for 3‑letter codes): <strong>T</strong>op, <strong>B</strong>ottom.<br />
-      Final letter: <strong>L</strong>eft, <strong>C</strong>enter, <strong>R</strong>ight.
-    </template>
-
-    <template #path>
-      <strong>Path</strong><br />
-      Indicates the nearest of 26 reference nodes aligned with the
-      <strong>Plane</strong> orientation.<br />
-      Selecting a node here directly modifies the <strong>Plane</strong> setting.<br /><br />
-      <u>See “Point” above for node abbreviations.</u>
-    </template>
-
-    <template #direct>
-      <strong>Direct</strong><br />
-      Indicates the nearest of 26 reference nodes in the direction of the current rotation.<br />
-      Selecting a node here will adjust <strong>Turns</strong> and
-      <strong>Axis</strong> values.<br />
-      <strong>Warning:</strong> This feature is experimental and may not behave exactly as
-      expected.<br /><br />
-      <u>See “Point” above for node abbreviations.</u>
-    </template>
-
     <template #turns>
       <strong>Turns</strong><br />
       Defines how many rotational steps are taken along the current path.<br />
-      Positive or negative values control the rotation’s direction.<br />
+      Positive or negative values control the rotation's direction.<br />
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
 
-    <template #beats>
-      <strong>Beats</strong><br />
-      Specifies timing or rhythm divisions along the path.<br />
+    <template #arc>
+      <strong>Arc</strong><br />
+      Defines the primary rotational division of your pattern.<br />
+      Each step represents a slice of the full circle.<br />
+      Changing Arc sets the base step size that other sliders (such as <strong>Plane</strong> and
+      <strong>Axis</strong>) build upon.<br />
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
 
-    <template #type>
-      <strong>Type</strong><br />
-      Determines the transition style between frames or segments.<br />
-      Changing this affects how the prop interpolates or blends between positions.<br />
-      <strong>Spherical:</strong> Moves around the center in a radial pattern.<br />
-      <strong>Linear:</strong> Moves in a straight line (typically) between two points.<br />
+    <template #plane>
+      <strong>Plane</strong><br />
+      Controls the orientation of the orthogonal reference point relative to
+      <strong>Arc</strong>.<br />
+      Adjusting Plane effectively shifts the rotation plane on which your pattern is drawn.
+    </template>
+
+    <template #axis>
+      <strong>Axis</strong><br />
+      Rotates the object’s own axis, independent of <strong>Plane</strong>.<br />
+      <br /><i>When undefined, this property mirrors Plane, keeping them aligned.</i>
+    </template>
+
+    <template #adjust>
+      <strong>Adjust</strong><br />
+      Applies an offset on top of the current <strong>Axis</strong> intended for fine-tuning 3D
+      transitions.<br />
+      This does not redefine <strong>Plane</strong> or <strong>Arc</strong>; instead, it adds or
+      subtracts degrees from the established axis and smoothly interpolates toward that new
+      orientation.<br />
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
 
-    <template #move>
-      <strong>Move</strong><br />
-      Offsets the prop’s position along the path relative to its previous position.<br />
-      This allows fine adjustments without altering the underlying path or rotation.
+    <template #scale>
+      <strong>Scale</strong><br />
+      Controls the size or center of the movement or shape.<br />
+      A higher Scale increases the radius or distance of the pattern, while a lower Scale shrinks
+      it.<br />
+      <br /><i>When undefined, this property inherits from the previous frame.</i>
+    </template>
+
+    <template #depth>
+      <strong>Depth</strong><br />
+      Moves the pattern forward or backward along its perpendicular axis.<br />
+      Increasing Depth pushes the motion outward or inward in 3D space, modifying the center of
+      rotation.<br />
+      <strong>Note:</strong> A value of <em>-0.5</em> can create an “isolation” effect with poi.<br />
+      <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
   </PropertyPanel>
 </template>
@@ -62,7 +61,6 @@
 <script setup lang="ts">
 import PropertyPanel from '../PropertyPanel.vue'
 import { useProperties } from '@/features/editor/composables/useProperties'
-import { INDPNT, TTEXT } from '@/domain/animation/AnimStruct'
 
 const store = inject('store', ref('main'))
 const { animGet, animSet, ANIMS, panelWatcher, ARCDENOM } = useProperties(store.value)
@@ -80,30 +78,73 @@ const turns = reactive({
   neg: true,
 })
 
+const arc = reactive({
+  name: 'arc',
+  text: 'Arc',
+  component: 'Arc',
+  undef: true,
+  mult: 15,
+  min: -24,
+  max: 24,
+  neg: true,
+})
+
+const plane = reactive({
+  name: 'plane',
+  text: 'Plane',
+  component: 'Yaw',
+  undef: true,
+  mult: 45,
+  min: -8,
+  max: 8,
+  neg: true,
+})
+
+const axis = reactive({
+  name: 'axis',
+  text: 'Axis',
+  component: 'Yaw',
+  undef: true,
+  mult: 45,
+  min: -8,
+  max: 8,
+  neg: true,
+})
+
 const vals = [
-  { name: 'point', text: 'Point', component: 'Point', items: INDPNT },
-  { name: 'path', text: 'Path', component: 'Point', items: INDPNT },
-  { name: 'direct', text: 'Direct', component: 'Point', items: INDPNT },
   turns,
-  { name: 'beats', text: 'Beats', component: 'Beats', undef: true },
+  arc,
+  plane,
+  axis,
   {
-    name: 'type',
-    text: 'Type',
-    component: 'SelectInt',
+    name: 'adjust',
+    text: 'Adjust',
+    component: 'Decimal', // Yaw - Don't think this is necessary
     undef: true,
-    items: TTEXT,
-    label: 'Transition Type',
+    mult: 5,
+    min: -18,
+    max: 18,
+    neg: true,
   },
-  { name: 'move', text: 'Move', component: 'Offset', undef: true },
+  { name: 'scale', text: 'Scale', component: 'Decimal', undef: true, mult: 1 },
+  { name: 'depth', text: 'Depth', component: 'Decimal', undef: true, mult: 1 },
 ]
 
 watchEffect(() => {
   const arcd = ARCDENOM.value // step size (degrees per snap)
   const max = 360 / arcd // how many steps fit in ±360
+  const maxhalf = Math.ceil(max / 2) // how many steps fit in ±180 (rounded UP)
 
   turns.mult = arcd // each step = arcd degrees
   turns.max = max // steps forward
   turns.min = -max // steps backward
+
+  arc.mult = plane.mult = axis.mult = arcd // each step = arcd degrees
+  arc.max = max // steps allowed in + direction for ARC
+  arc.min = -max // steps allowed in - direction for ARC
+
+  plane.max = axis.max = maxhalf // steps allowed in + direction for PLANE and AXIS
+  plane.min = axis.min = -maxhalf // steps allowed in - direction for PLANE and AXIS
 })
 
 panelWatcher(ANIMS, data, vals, animGet)

@@ -41,7 +41,7 @@
     <template #guides>
       <strong>Guides</strong><br />
       Toggles the display of guide paths that connect all nodes.<br />
-      These guides originated in the system’s earliest design for navigation and alignment and are
+      These guides originated in the system's earliest design for navigation and alignment and are
       retained as a visual aid and for historical reference.<br />
       <br /><i>When undefined, this property inherits from <strong>ROOT</strong>.</i>
     </template>

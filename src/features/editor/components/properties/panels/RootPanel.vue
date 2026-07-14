@@ -24,7 +24,7 @@
 
     <template #nodes>
       <strong>Nodes</strong><br />
-      Toggles the display of the system’s reference nodes.<br />
+      Toggles the display of the system's reference nodes.<br />
       <em>Note:</em> Node positions dynamically adjust based on the current <strong>Scale</strong>,
       giving an accurate sense of spacing at different sizes.<br />
       <br /><i>This is a global setting that applies as the default for all props.</i>
