@@ -145,16 +145,16 @@ const inputStr = (name: string) => {
   border: 0;
 }
 .val-fall {
-  color: var(--color-text-muted);
+  color: var(--color-property-value-inherited);
 }
 .val-mism {
-  color: var(--color-action-primary);
+  color: var(--color-property-value-mismatch);
 }
 .val-undef {
-  color: var(--color-text-muted);
+  color: var(--color-property-value-undefined);
 }
 .val-def {
-  color: var(--color-action-primary);
+  color: var(--color-property-value-defined);
 }
 .val-err::before {
   content: '>> ';
