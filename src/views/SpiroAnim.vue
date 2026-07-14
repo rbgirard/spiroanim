@@ -62,7 +62,7 @@ import Timeline from '@/components/SpiroAnim/AnimTimeline.vue'
 import { useViewDimensions } from '@/composables/useViewDimensions'
 import { useScrollSelectScale } from '@/composables/useScrollSelectScale'
 import { useMainRoute } from '@/composables/useMainRoute'
-import { useSpiroAnimKeyboardControls } from '@/composables/useSpiroAnimKeyboardControls'
+import { useSpiroAnimKeyboard } from '@/composables/useSpiroAnimKeyboard'
 
 import { useViewportStore } from '@/stores/useViewportStore'
 import { useSplitterStore } from '@/stores/useSplitterStore'
@@ -70,7 +70,7 @@ import { useMainPaneStore } from '@/stores/useMainPaneStore'
 
 useScrollSelectScale()
 useMainRoute() // Handles updates to route path and query
-useSpiroAnimKeyboardControls()
+useSpiroAnimKeyboard()
 
 const { viewWidth, viewHeight, isLandscape } = storeToRefs(useViewportStore())
 

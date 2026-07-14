@@ -9,7 +9,7 @@ function isInteractiveTarget(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest(interactiveSelector) !== null
 }
 
-export function useSpiroAnimKeyboardControls(): () => void {
+export function useSpiroAnimKeyboard(): () => void {
   const viewportStore = useViewportStore()
   const playerStore = usePlayerStore('main')
   const { rewind, forward } = usePlayerFrameNavigation('main')

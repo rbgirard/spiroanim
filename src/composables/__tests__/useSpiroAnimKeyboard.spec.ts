@@ -1,11 +1,11 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useSpiroAnimKeyboardControls } from '@/composables/useSpiroAnimKeyboardControls'
+import { useSpiroAnimKeyboard } from '@/composables/useSpiroAnimKeyboard'
 import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useViewportStore } from '@/stores/useViewportStore'
 
-describe('useSpiroAnimKeyboardControls', () => {
+describe('useSpiroAnimKeyboard', () => {
   let stop: (() => void) | undefined
 
   beforeEach(() => {
@@ -23,7 +23,7 @@ describe('useSpiroAnimKeyboardControls', () => {
     const playerStore = usePlayerStore('main')
     playerStore.PLAYING = false
     vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(false)
-    stop = useSpiroAnimKeyboardControls()
+    stop = useSpiroAnimKeyboard()
 
     const event = new KeyboardEvent('keydown', { code: 'Space', cancelable: true })
     window.dispatchEvent(event)
@@ -36,7 +36,7 @@ describe('useSpiroAnimKeyboardControls', () => {
     const playerStore = usePlayerStore('main')
     playerStore.PLAYING = false
     vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(true)
-    stop = useSpiroAnimKeyboardControls()
+    stop = useSpiroAnimKeyboard()
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
 
@@ -50,7 +50,7 @@ describe('useSpiroAnimKeyboardControls', () => {
     playerStore.INDEX = 1
     CURRENT.value = 15
     vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(false)
-    stop = useSpiroAnimKeyboardControls()
+    stop = useSpiroAnimKeyboard()
 
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ArrowLeft' }))
     expect(CURRENT.value).toBe(10)
@@ -63,7 +63,7 @@ describe('useSpiroAnimKeyboardControls', () => {
     const playerStore = usePlayerStore('main')
     playerStore.PLAYING = false
     vi.spyOn(useViewportStore(), 'isTouchDevice').mockReturnValue(false)
-    stop = useSpiroAnimKeyboardControls()
+    stop = useSpiroAnimKeyboard()
 
     const input = document.createElement('input')
     document.body.append(input)
