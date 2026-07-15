@@ -9,6 +9,8 @@ export const useViewportStore = defineStore(
 
     const viewWidth = ref(window.visualViewport?.width || window.innerWidth)
     const viewHeight = ref(window.visualViewport?.height || window.innerHeight)
+    const viewLeft = ref(window.visualViewport?.offsetLeft ?? 0)
+    const viewTop = ref(window.visualViewport?.offsetTop ?? 0)
     const pixelRatio = ref(window.devicePixelRatio)
 
     const isLandscape = computed(() => viewWidth.value > viewHeight.value)
@@ -53,14 +55,16 @@ export const useViewportStore = defineStore(
     function updateViewSize() {
       viewWidth.value = window.visualViewport?.width || window.innerWidth
       viewHeight.value = window.visualViewport?.height || window.innerHeight
+      viewLeft.value = window.visualViewport?.offsetLeft ?? 0
+      viewTop.value = window.visualViewport?.offsetTop ?? 0
       pixelRatio.value = window.devicePixelRatio
     }
 
-    useEventListener(
-      window.visualViewport,
-      'resize',
-      debounceImmediate(updateViewSize, debounceDelay),
-    )
+    const updateViewSizeDebounced = debounceImmediate(updateViewSize, debounceDelay)
+
+    useEventListener(window, 'resize', updateViewSizeDebounced)
+    useEventListener(window.visualViewport, 'resize', updateViewSizeDebounced)
+    useEventListener(window.visualViewport, 'scroll', updateViewSizeDebounced)
 
     // Watch for pixelRatio changes independent of resize
     let lastPixelRatio = window.devicePixelRatio
@@ -75,6 +79,8 @@ export const useViewportStore = defineStore(
     return {
       viewWidth: readonly(viewWidth),
       viewHeight: readonly(viewHeight),
+      viewLeft: readonly(viewLeft),
+      viewTop: readonly(viewTop),
       pixelRatio: readonly(pixelRatio),
       isLandscape: readonly(isLandscape),
       isVisible: readonly(isVisible),

@@ -48,6 +48,8 @@ class FakeResizeObserver {
 }
 
 describe('AnimTimeline', () => {
+  const scrollIntoView = vi.fn<() => void>()
+
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
@@ -62,7 +64,7 @@ describe('AnimTimeline', () => {
     vi.stubGlobal('cancelAnimationFrame', vi.fn<(id: number) => void>())
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
-      value: vi.fn<() => void>(),
+      value: scrollIntoView,
     })
   })
 
@@ -114,5 +116,43 @@ describe('AnimTimeline', () => {
     wrapper.unmount()
     await flushPromises()
     expect(FakeWorker.instances[0]!.terminate).toHaveBeenCalledOnce()
+  })
+
+  it('scrolls only its own container when the active thumbnail is outside the view', async () => {
+    const store = usePlayerStore('timeline-scroll')
+    const runtime = store.raw()
+    runtime.ROOT.value = {
+      ...runtime.ROOT.value,
+      bpm: 60,
+      props: [{ anim: [{ beats: 1 }, { beats: 1 }, { beats: 1 }] }],
+    }
+    await nextTick()
+
+    const wrapper = mount(AnimTimeline, {
+      props: {
+        store: 'timeline-scroll',
+        dim: { width: 600, height: 400, perc: 50 },
+      },
+    })
+    await flushPromises()
+
+    const scroll = wrapper.get('.scrollbar').element as HTMLElement
+    const thumbs = wrapper.findAll<HTMLImageElement>('img.thumb')
+    scroll.scrollTop = 20
+    vi.spyOn(scroll, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 50, 600, 100))
+    vi.spyOn(thumbs[1]!.element, 'getBoundingClientRect').mockReturnValue(
+      new DOMRect(0, 250, 300, 100),
+    )
+    scrollIntoView.mockClear()
+
+    runtime.CURRENT.value = 1000
+    await nextTick()
+    await flushPromises()
+
+    expect(scroll.scrollTop).toBe(220)
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    wrapper.unmount()
+    await flushPromises()
   })
 })

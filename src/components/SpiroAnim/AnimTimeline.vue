@@ -404,11 +404,11 @@ async function scrollActive() {
   const active = eThumbs.value[INDEX.value]
   const scroll = eScroll.value
   if (scroll == undefined || active == undefined) return
-  if (!imgsVisible[INDEX.value] || getScrollVisibleHeightPercent(active, scroll) < 1)
-    active.scrollIntoView({
-      behavior: 'auto',
-      block: 'start',
-    })
+  if (!imgsVisible[INDEX.value] || getScrollVisibleHeightPercent(active, scroll) < 1) {
+    const activeRect = active.getBoundingClientRect()
+    const scrollRect = scroll.getBoundingClientRect()
+    scroll.scrollTop += activeRect.top - scrollRect.top - scroll.clientTop
+  }
 }
 
 // Shorthand function to shorten an array when data changes

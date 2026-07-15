@@ -3,7 +3,7 @@
 @import './base.css';
 
 #app {
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 /* Shared thin scrollbars used by the editor and timeline. */

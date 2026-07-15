@@ -72,7 +72,7 @@ useScrollSelectScale()
 useMainRoute() // Handles updates to route path and query
 useSpiroAnimKeyboard()
 
-const { viewWidth, viewHeight, isLandscape } = storeToRefs(useViewportStore())
+const { viewWidth, viewHeight, viewLeft, viewTop, isLandscape } = storeToRefs(useViewportStore())
 
 const splitterStore = useSplitterStore('main')
 const { leftWidth, leftHeight, rightWidth, rightHeight, leftPerc } = storeToRefs(splitterStore)
@@ -171,7 +171,10 @@ const onEmitPerc = (val: number) => {
 const containerStyle = computed<CSSProperties>(() => ({
   width: `${viewWidth.value}px`,
   height: `${viewHeight.value}px`,
-  position: 'relative',
+  // Mobile browser chrome can move the visual viewport relative to the layout viewport.
+  left: `${viewLeft.value}px`,
+  top: `${viewTop.value}px`,
+  position: 'fixed',
   display: 'flex',
   'flex-direction': flexDirection.value,
 }))

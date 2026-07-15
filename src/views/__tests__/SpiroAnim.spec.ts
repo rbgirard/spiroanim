@@ -23,10 +23,23 @@ describe('SpiroAnim view', () => {
       removeEventListener: vi.fn<() => void>(),
       dispatchEvent: vi.fn<() => boolean>(() => true),
     }))
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: Object.assign(new EventTarget(), {
+        width: 412,
+        height: 760,
+        offsetLeft: 3,
+        offsetTop: 48,
+      }),
+    })
   })
 
   afterEach(() => {
     document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: undefined,
+    })
     vi.unstubAllGlobals()
   })
 
@@ -53,9 +66,14 @@ describe('SpiroAnim view', () => {
     })
     await flushPromises()
 
-    expect(wrapper.get('[data-role="main-container"]').attributes('data-role')).toBe(
-      'main-container',
-    )
+    const container = wrapper.get('[data-role="main-container"]')
+    const containerStyle = (container.element as HTMLElement).style
+    expect(container.attributes('data-role')).toBe('main-container')
+    expect(containerStyle.position).toBe('fixed')
+    expect(containerStyle.left).toBe('3px')
+    expect(containerStyle.top).toBe('48px')
+    expect(containerStyle.width).toBe('412px')
+    expect(containerStyle.height).toBe('760px')
     expect(wrapper.get('[data-role="left-pane"]').text()).toContain('Player')
     expect(wrapper.get('[data-role="right-pane"]').text()).toContain('Timeline')
     expect(wrapper.text()).not.toContain('Editor')
