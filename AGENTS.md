@@ -263,6 +263,12 @@ Validation should be proportional to the scope of the change. Run broader checks
 
 Report which commands ran and whether they passed. Use only scripts that exist in `package.json`; mention a missing command instead of inventing one. Note that the current formatting script targets only `src/`.
 
+# Environment Workarounds
+
+- On Windows, if PowerShell blocks `npm.ps1` or `npx.ps1`, use `npm.cmd` and `npx.cmd`. Do not change the system execution policy merely to run project commands.
+- Inside the Codex sandbox, Playwright Firefox may fail to spawn its tab subprocess. For Firefox commands run inside Codex only, set `MOZ_DISABLE_CONTENT_SANDBOX=1` for that command. Do not persist this variable, add it to normal project configuration, or use it for ordinary local or CI testing. Codex's outer sandbox remains active.
+- Verify Playwright browsers with `npx.cmd playwright install --list` before assuming an executable is missing.
+
 # Git and Safety
 
 - Do not commit, push, reset, rebase, delete branches, or rewrite history unless explicitly instructed.
