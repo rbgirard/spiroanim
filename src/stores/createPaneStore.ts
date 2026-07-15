@@ -201,18 +201,15 @@ export function createPaneStore<
         Object.fromEntries(paneKeys.map((key) => [key, true])) as Record<VisiblePaneKey, boolean>,
       )
 
-      const viewVisible = ref<Record<ElementType, boolean>>(
-        Object.fromEntries(viewKeys.map((key) => [key, false])) as Record<ElementType, boolean>,
-      )
-
-      onMounted(() => {
-        // Track visibility of views
-        watchEffect(() => {
-          viewKeys.forEach((key) => {
-            const pane = parents.value[key]
-            viewVisible.value[key] = pane != 'hidden' && paneVisible.value[pane]
-          })
-        })
+      // Track visibility in the store scope so it survives component unmounts and remounts.
+      const viewVisible = computed<Record<ElementType, boolean>>(() => {
+        const visibility = {} as Record<ElementType, boolean>
+        for (const view of viewKeys) {
+          const key = view as ElementType
+          const pane = parents.value[key]
+          visibility[key] = pane !== hiddenPane && paneVisible.value[pane as VisiblePaneKey]
+        }
+        return visibility
       })
 
       return {

@@ -13,6 +13,12 @@ class FakeResizeObserver {
 describe('AnimEditor', () => {
   const originalWidth = Object.getOwnPropertyDescriptor(Screen.prototype, 'width')
 
+  const globalStubs = {
+    Properties: { template: '<div data-type="properties" />' },
+    Timeline: { template: '<div data-type="timeline" />' },
+    PaneSplitter: { template: '<div data-role="editor-splitter" />' },
+  }
+
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
@@ -35,11 +41,7 @@ describe('AnimEditor', () => {
         vtl: false,
       },
       global: {
-        stubs: {
-          Properties: { template: '<div data-type="properties" />' },
-          Timeline: { template: '<div data-type="timeline" />' },
-          PaneSplitter: { template: '<div data-role="editor-splitter" />' },
-        },
+        stubs: globalStubs,
       },
     })
     await nextTick()
@@ -52,5 +54,45 @@ describe('AnimEditor', () => {
 
     await wrapper.setProps({ vtl: true })
     expect(wrapper.find('button[aria-label="Swap Editor Views"]').exists()).toBe(false)
+  })
+
+  it('restores the timeline after the editor remounts and gains enough height', async () => {
+    const { default: AnimEditor } = await import('@/components/SpiroAnim/AnimEditor.vue')
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const firstMount = mount(AnimEditor, {
+      props: {
+        dim: { width: 700, height: 280, perc: 60 },
+        landscape: true,
+        vtl: false,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(firstMount.find('[data-type="timeline"]').exists()).toBe(false)
+    firstMount.unmount()
+
+    const secondMount = mount(AnimEditor, {
+      props: {
+        dim: { width: 700, height: 400, perc: 60 },
+        landscape: true,
+        vtl: false,
+      },
+      global: {
+        plugins: [pinia],
+        stubs: globalStubs,
+      },
+    })
+    await nextTick()
+
+    expect(secondMount.find('[data-type="properties"]').exists()).toBe(true)
+    expect(secondMount.find('[data-type="timeline"]').exists()).toBe(true)
+    expect(secondMount.find('button[aria-label="Swap Editor Views"]').exists()).toBe(true)
+    secondMount.unmount()
   })
 })
