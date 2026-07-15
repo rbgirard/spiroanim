@@ -1,10 +1,10 @@
 <template>
   <span ref="rootEl" class="tooltip-root">
     <slot name="activator" :props="activatorProps" />
-    <Teleport to="body">
-      <Transition name="tooltip">
+    <!-- Hidden tooltip portals inside repeated timelines corrupt RouterView anchors on teardown. -->
+    <Teleport v-if="visible && !disabled" to="body">
+      <Transition appear name="tooltip">
         <span
-          v-if="visible && !disabled"
           :id="tooltipId"
           ref="contentEl"
           class="tooltip-content"
