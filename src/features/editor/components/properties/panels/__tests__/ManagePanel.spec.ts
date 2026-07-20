@@ -29,6 +29,9 @@ describe('ManagePanel', () => {
     const expected = ['Insert Points', 'Delete Selection', 'Add Prop', 'Delete Props']
     const links = wrapper.findAll('a')
     expect(links.map((link) => link.text())).toEqual(expected)
+    expect(wrapper.get('.manage-note').text()).toBe(
+      'Manage tools are limited and still in development.',
+    )
 
     for (const [index, text] of expected.entries()) {
       await links[index]!.trigger('mouseenter')
