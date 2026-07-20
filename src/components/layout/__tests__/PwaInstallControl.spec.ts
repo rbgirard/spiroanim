@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
+import { initializePwaInstallPromptCapture } from '@/composables/usePwaInstall'
 
 class TestInstallPromptEvent extends Event {
   readonly platforms = ['web']
@@ -10,6 +11,8 @@ class TestInstallPromptEvent extends Event {
 }
 
 describe('PwaInstallControl', () => {
+  let stopPromptCapture: () => void
+
   beforeEach(() => {
     vi.stubGlobal(
       'matchMedia',
@@ -24,17 +27,19 @@ describe('PwaInstallControl', () => {
         dispatchEvent: vi.fn<() => boolean>(() => true),
       })),
     )
+    stopPromptCapture = initializePwaInstallPromptCapture()
   })
 
   afterEach(() => {
+    stopPromptCapture()
     vi.unstubAllGlobals()
   })
 
-  it('shows and invokes the deferred browser installation prompt', async () => {
-    const wrapper = mount(PwaInstallControl)
+  it('shows and invokes a browser installation prompt captured before mounting', async () => {
     const event = new TestInstallPromptEvent('beforeinstallprompt', { cancelable: true })
 
     window.dispatchEvent(event)
+    const wrapper = mount(PwaInstallControl)
     await wrapper.vm.$nextTick()
 
     const button = wrapper.get('button')
