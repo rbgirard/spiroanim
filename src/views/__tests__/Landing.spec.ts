@@ -25,6 +25,7 @@ describe('Landing view', () => {
       routes: [
         { path: '/', component: Landing },
         { path: '/app', component: { template: '<div>Application</div>' } },
+        { path: '/about', component: { template: '<div>About</div>' } },
       ],
     })
     await router.push('/')
@@ -45,9 +46,12 @@ describe('Landing view', () => {
     expect(wrapper.get('h1').text()).toBe('SpiroAnim.com')
     expect(wrapper.get('img.brand-mark').attributes('src')).toBe('/pwa-source.svg')
     expect(wrapper.get('img.brand-mark').attributes('alt')).toBe('')
+    expect(wrapper.get('.project-note').text()).toContain('proof-of-concept rendering tool')
+    expect(wrapper.get('.project-note').text()).toContain('More features are on the way')
     expect(wrapper.text()).not.toContain('high-end mobile device')
     expect(wrapper.text()).not.toContain('Continuing on mobile')
     expect(wrapper.get('a.enter-button').attributes('href')).toBe('/app')
+    expect(wrapper.get('a.about-button').attributes('href')).toBe('/about')
   })
 
   it('shows mobile usage guidance on a touch-first device', async () => {

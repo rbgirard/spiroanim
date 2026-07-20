@@ -7,6 +7,15 @@
         <h1 id="landing-title">SpiroAnim.com</h1>
         <p class="lead">Render the Flow.</p>
 
+        <section class="project-note" aria-labelledby="preview-title">
+          <p class="eyebrow">Early preview</p>
+          <h2 id="preview-title">A 3D playground for flow arts</h2>
+          <p>
+            SpiroAnim is a proof-of-concept rendering tool with a basic editor. More features are on
+            the way, and you may encounter a few rough edges.
+          </p>
+        </section>
+
         <template v-if="!isDesktop">
           <div class="experience-note">
             <h2>The complete workspace lives on desktop</h2>
@@ -25,6 +34,7 @@
 
         <RouterLink class="enter-button" to="/app">Enter</RouterLink>
         <PwaInstallControl />
+        <RouterLink class="about-button" to="/about">About SpiroAnim</RouterLink>
       </section>
     </div>
   </main>
@@ -117,6 +127,35 @@ h1 {
   line-height: 1.55;
 }
 
+.project-note {
+  position: relative;
+  padding: var(--space-6);
+  margin-block-end: var(--space-6);
+  overflow: hidden;
+  text-align: start;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-action-primary) 10%, transparent),
+      transparent 65%
+    ),
+    color-mix(in srgb, var(--color-surface) 94%, var(--color-canvas));
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 28%, var(--color-border));
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+.project-note h2 {
+  margin: 0 0 var(--space-2);
+  font-size: clamp(1.15rem, 3vw, 1.35rem);
+}
+
+.project-note > p:last-child {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
 .experience-note {
   padding: var(--space-6);
   text-align: start;
@@ -173,12 +212,38 @@ h1 {
   outline-offset: 4px;
 }
 
+.about-button {
+  display: block;
+  width: max-content;
+  margin: var(--space-4) auto 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration-color: color-mix(in srgb, var(--color-action-primary) 55%, transparent);
+  text-underline-offset: 0.3em;
+  border-radius: var(--radius-sm);
+}
+
+.about-button:hover {
+  color: var(--color-action-primary);
+}
+
+.about-button:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
 @media (max-width: 32rem) {
   .landing-card {
     padding-inline: var(--space-4);
   }
 
   .experience-note {
+    padding: var(--space-4);
+  }
+
+  .project-note {
     padding: var(--space-4);
   }
 }

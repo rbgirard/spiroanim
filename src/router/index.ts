@@ -22,6 +22,11 @@ const router = createRouter({
       alias: ['/player', '/timeline', '/editor', ...paneSplits],
     },
     {
+      path: '/about',
+      name: 'about',
+      component: () => import('@/views/AboutPage.vue'),
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: 'not-found',
       component: () => import('@/views/NotFound.vue'),
