@@ -299,6 +299,7 @@ const gridStyle = computed<CSSProperties>(() => ({
   position: sticky;
   top: 0;
   z-index: 1000;
+  min-height: var(--size-editor-toolbar-height);
   background-color: var(--color-editor-toolbar-background);
   padding-bottom: 1px;
   border-bottom: solid 1px;

@@ -78,6 +78,9 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-role="right-pane"]').text()).toContain('Timeline')
     expect(wrapper.text()).not.toContain('Editor')
     expect(wrapper.findAll('button[aria-label="Swap Views"]')).toHaveLength(2)
+    const menuButton = wrapper.get('button[aria-label="Open SpiroAnim menu"]')
+    expect(menuButton.attributes('aria-haspopup')).toBe('menu')
+    expect(menuButton.attributes('aria-expanded')).toBe('false')
     expect(wrapper.get('button[aria-label="Resize"]').attributes('title')).toBeUndefined()
     expect(document.documentElement.classList.contains('disable-scroll')).toBe(true)
 
