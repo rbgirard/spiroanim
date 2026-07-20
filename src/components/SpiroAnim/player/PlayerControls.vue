@@ -76,9 +76,13 @@
 
   <label class="speed">
     <span>Speed</span>
-    <select v-model.number="speed" aria-label="Playback speed">
-      <option v-for="option in speedOptions" :key="option" :value="option">{{ option }}</option>
-    </select>
+    <AppTooltip class="speed-tooltip" text="Playback Speed">
+      <template #activator="{ props: tooltipProps }">
+        <select v-bind="tooltipProps" v-model.number="speed" aria-label="Playback speed">
+          <option v-for="option in speedOptions" :key="option" :value="option">{{ option }}</option>
+        </select>
+      </template>
+    </AppTooltip>
   </label>
 </template>
 
@@ -204,6 +208,10 @@ const modeIcon = computed(() => (SELECTION.value ? mdiVectorSelection : mdiSelec
   background: var(--color-surface);
   border: 0;
   border-block-end: 1px solid var(--color-border);
+}
+
+.speed-tooltip {
+  width: 100%;
 }
 
 .speed select:focus-visible {
