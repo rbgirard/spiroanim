@@ -306,6 +306,11 @@ const gridStyle = computed<CSSProperties>(() => ({
 }))
 </script>
 <style scoped>
+.properties-grid {
+  width: max-content;
+  min-width: 100%;
+}
+
 .scrollbar--main-left .properties-grid > .sticky:first-child {
   /* Reserve the navigation button's width without shortening the toolbar borders or grid track. */
   padding-inline-start: var(--size-editor-toolbar-height);
