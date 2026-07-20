@@ -56,8 +56,20 @@ describe('FullScreen', () => {
     expect(fullscreenState.toggle).toHaveBeenCalledOnce()
   })
 
-  it('hides the control in an installed display mode', () => {
+  it('keeps the control available in an installed display mode', () => {
     displayState.isInstalledDisplay.value = true
+
+    expect(mountFullScreen().find('button').exists()).toBe(true)
+  })
+
+  it('hides the control on iOS while its fullscreen behavior remains unsupported', () => {
+    displayState.isIos.value = true
+
+    expect(mountFullScreen().find('button').exists()).toBe(false)
+  })
+
+  it('hides the control when the Fullscreen API is unavailable', () => {
+    fullscreenState.isSupported.value = false
 
     expect(mountFullScreen().find('button').exists()).toBe(false)
   })

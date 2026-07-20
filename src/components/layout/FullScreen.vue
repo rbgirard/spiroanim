@@ -23,8 +23,8 @@ import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const { isFullscreen, isSupported, toggle } = useFullscreen()
-const { isInstalledDisplay, isIos } = useAppDisplayMode()
-const showControl = computed(() => isSupported.value && !isIos.value && !isInstalledDisplay.value)
+const { isIos } = useAppDisplayMode()
+const showControl = computed(() => isSupported.value && !isIos.value)
 const icon = computed(() => (isFullscreen.value ? mdiFullscreenExit : mdiFullscreen))
 const label = computed(() => (isFullscreen.value ? 'Exit full screen' : 'Enter full screen'))
 </script>

@@ -17,6 +17,8 @@ the editor can reopen without a network connection after its first successful lo
   relaunch offline. The “SpiroAnim is ready offline” notice confirms that precaching completed.
 - A browser shortcut created from a development or otherwise uncontrolled page is only a shortcut;
   it is not an offline-capable installed app.
+- Installed desktop and Android apps retain the fullscreen control. It remains hidden on iOS and
+  iPadOS until their fullscreen behavior is tested and intentionally supported.
 - The service worker uses `index.html` as its navigation fallback, including route aliases and URLs
   containing animation query data.
 
