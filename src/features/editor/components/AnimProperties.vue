@@ -1,6 +1,15 @@
 <template>
-  <div ref="eScroll" class="scrollbar" :style="scrollStyle">
-    <div :style="gridStyle">
+  <div
+    ref="eScroll"
+    class="scrollbar"
+    :class="{ 'scrollbar--main-left': isInsideMainLeftPane }"
+    :style="scrollStyle"
+  >
+    <div
+      class="properties-grid"
+      :class="{ 'properties-grid--single-column': cols === 1 }"
+      :style="gridStyle"
+    >
       <div class="sticky">
         <div class="container-cntrl">
           <div class="cntrl">
@@ -134,6 +143,7 @@ import { usePlayerStore } from '@/stores/usePlayerStore'
 import { useProperties } from '@/features/editor/composables/useProperties'
 import { usePlayerFrameNavigation } from '@/composables/usePlayerFrameNavigation'
 import { useQSMainStore } from '@/stores/useQSMainStore'
+import { useMainPaneStore } from '@/stores/useMainPaneStore'
 
 import { COLSET } from '@/domain/animation/AnimStruct'
 import { toColor } from '@/utils/UtilFunc'
@@ -181,6 +191,9 @@ const {
 const qsStore = useQSMainStore()
 const { decodeQS } = qsStore
 const { qsSkip, qsHistory } = storeToRefs(qsStore)
+
+const { parents: mainPaneParents } = storeToRefs(useMainPaneStore())
+const isInsideMainLeftPane = computed(() => mainPaneParents.value.editor === 'left')
 
 const cols = computed(() => props.cols)
 
@@ -293,6 +306,16 @@ const gridStyle = computed<CSSProperties>(() => ({
 }))
 </script>
 <style scoped>
+.scrollbar--main-left .properties-grid > .sticky:first-child {
+  /* Reserve the navigation button's width without shortening the toolbar borders or grid track. */
+  padding-inline-start: var(--size-editor-toolbar-height);
+}
+
+.scrollbar--main-left .properties-grid--single-column :is(.prop-options, .selection-options) {
+  /* In one column, the selection controls wrap below the toolbar beside the fullscreen control. */
+  padding-inline-start: calc(var(--size-editor-toolbar-height) + var(--space-2));
+}
+
 .expansion-panel {
   padding: 2px;
 }
