@@ -7,19 +7,21 @@
         <h1 id="landing-title">SpiroAnim.com</h1>
         <p class="lead">Render the Flow.</p>
 
-        <div class="experience-note">
-          <h2>The complete workspace lives on desktop</h2>
-          <p>
-            A high-end mobile device can run SpiroAnim, but desktop provides the best experience:
-            hover tooltips, more room for the player, editor, and timeline, plus additional features
-            that may not be available in the touch layout.
-          </p>
-        </div>
+        <template v-if="!isDesktop">
+          <div class="experience-note">
+            <h2>The complete workspace lives on desktop</h2>
+            <p>
+              A high-end mobile device can run SpiroAnim, but desktop provides the best experience:
+              hover tooltips, more room for the player, editor, and timeline, plus additional
+              features that may not be available in the touch layout.
+            </p>
+          </div>
 
-        <p class="mobile-note">
-          Continuing on mobile is fine—just expect a more compact experience designed around the
-          available screen and input method.
-        </p>
+          <p class="mobile-note">
+            Continuing on mobile is fine—just expect a more compact experience designed around the
+            available screen and input method.
+          </p>
+        </template>
 
         <RouterLink class="enter-button" to="/app">Enter</RouterLink>
         <PwaInstallControl />
@@ -32,8 +34,10 @@
 import { RouterLink } from 'vue-router'
 
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
+import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const brandIconUrl = '/pwa-source.svg'
+const { isDesktop } = useAppDisplayMode()
 </script>
 
 <style scoped>

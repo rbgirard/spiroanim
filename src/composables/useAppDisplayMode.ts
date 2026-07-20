@@ -21,6 +21,7 @@ export function useAppDisplayMode() {
   const fullscreen = useMediaQuery('(display-mode: fullscreen)')
   const minimalUi = useMediaQuery('(display-mode: minimal-ui)')
   const windowControlsOverlay = useMediaQuery('(display-mode: window-controls-overlay)')
+  const isDesktop = useMediaQuery('(hover: hover) and (pointer: fine)')
   const isIos = ref(false)
   const iosStandalone = ref(false)
 
@@ -39,6 +40,7 @@ export function useAppDisplayMode() {
   )
 
   return {
+    isDesktop: readonly(isDesktop),
     isInstalledDisplay: readonly(isInstalledDisplay),
     isIos: readonly(isIos),
   }

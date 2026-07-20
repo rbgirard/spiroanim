@@ -5,11 +5,13 @@ import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const originalStandalone = Object.getOwnPropertyDescriptor(navigator, 'standalone')
 
-function stubDisplayMode(activeMode?: string) {
+function stubDisplayMode(activeMode?: string, isDesktop = false) {
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query: string) => ({
-      matches: query === `(display-mode: ${activeMode})`,
+      matches:
+        query === `(display-mode: ${activeMode})` ||
+        (query === '(hover: hover) and (pointer: fine)' && isDesktop),
       media: query,
       onchange: null,
       addEventListener: vi.fn<() => void>(),
@@ -26,7 +28,8 @@ function mountHarness() {
     setup() {
       return useAppDisplayMode()
     },
-    template: '<div :data-installed="isInstalledDisplay" :data-ios="isIos" />',
+    template:
+      '<div :data-desktop="isDesktop" :data-installed="isInstalledDisplay" :data-ios="isIos" />',
   })
 }
 
@@ -41,6 +44,12 @@ describe('useAppDisplayMode', () => {
     stubDisplayMode('standalone')
 
     expect(mountHarness().attributes('data-installed')).toBe('true')
+  })
+
+  it('detects a desktop-class pointer and hover capability', () => {
+    stubDisplayMode(undefined, true)
+
+    expect(mountHarness().attributes('data-desktop')).toBe('true')
   })
 
   it('uses the iOS navigator standalone fallback', async () => {
