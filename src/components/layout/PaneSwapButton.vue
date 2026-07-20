@@ -31,8 +31,8 @@ const emit = defineEmits<{
 <style scoped>
 .pane-swap-button {
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: var(--size-pane-switch-button);
+  height: var(--size-pane-switch-button);
   padding: 0;
   place-items: center;
   color: var(--color-action-primary);

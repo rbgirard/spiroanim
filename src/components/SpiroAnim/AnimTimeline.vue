@@ -515,6 +515,7 @@ const gridStyle = computed<CSSProperties>(() => ({
   width: `${gridPos.cols * cellDim.width}px`, // eliminates occasional gaps in cells
   'grid-template-columns': gridTemplateColumns.value,
   'grid-auto-rows': gridAutoRows.value,
+  'padding-bottom': 'var(--size-pane-switch-bottom-clearance)',
   display: 'grid',
 }))
 

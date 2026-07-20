@@ -351,18 +351,22 @@ const containerStyle = computed<CSSProperties>(() => ({
 </script>
 
 <style scoped>
+.fps,
+.aspect-tooltip {
+  /* Clear the 34px-wide side controls and their 2px right inset. */
+  right: calc(34px + 2px);
+}
+
 .fps {
   color: var(--color-text-muted);
   font-size: 14px;
   font-weight: bold;
   position: absolute;
-  right: 10px;
   top: 26px;
 }
 .aspect-tooltip {
   position: absolute;
   top: 6px;
-  right: 10px;
   z-index: 2;
 }
 

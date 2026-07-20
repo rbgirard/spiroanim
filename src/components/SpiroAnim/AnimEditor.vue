@@ -204,7 +204,7 @@ const containerStyle = computed<CSSProperties>(() => ({
 <style scoped>
 .pane-rotate-icon {
   position: absolute;
-  bottom: 10px;
+  bottom: var(--space-pane-switch-bottom);
   right: 11px;
   z-index: 1010;
 }

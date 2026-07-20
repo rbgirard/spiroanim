@@ -12,6 +12,11 @@
 
   --size-editor-toolbar-height: 42px;
   --size-editor-scrollbar: 8px;
+  --size-pane-switch-button: 2rem;
+  --space-pane-switch-bottom: 10px;
+  --size-pane-switch-bottom-clearance: calc(
+    var(--size-pane-switch-button) + var(--space-pane-switch-bottom)
+  );
 
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;

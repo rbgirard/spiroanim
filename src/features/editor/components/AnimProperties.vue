@@ -286,6 +286,7 @@ const scrollStyle = computed<CSSProperties>(() => ({
 
 const gridStyle = computed<CSSProperties>(() => ({
   'grid-template-columns': gridTemplateColumns.value,
+  'padding-bottom': 'var(--size-pane-switch-bottom-clearance)',
   'font-size': '16px',
   color: 'var(--color-text)',
   display: 'grid',
