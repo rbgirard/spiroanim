@@ -32,7 +32,7 @@ test('ships an installable manifest and every declared icon', async ({ request }
   expect(manifest).toMatchObject({
     id: '/',
     scope: '/',
-    start_url: '/app',
+    start_url: '/',
     display: 'standalone',
   })
 

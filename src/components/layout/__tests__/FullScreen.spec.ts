@@ -62,10 +62,10 @@ describe('FullScreen', () => {
     expect(mountFullScreen().find('button').exists()).toBe(true)
   })
 
-  it('hides the control on iOS while its fullscreen behavior remains unsupported', () => {
+  it('keeps the control available on iOS while fullscreen support is being tested', () => {
     displayState.isIos.value = true
 
-    expect(mountFullScreen().find('button').exists()).toBe(false)
+    expect(mountFullScreen().find('button').exists()).toBe(true)
   })
 
   it('hides the control when the Fullscreen API is unavailable', () => {

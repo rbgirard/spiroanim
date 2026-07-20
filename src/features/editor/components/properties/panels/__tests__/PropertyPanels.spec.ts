@@ -24,10 +24,10 @@ describe('editor property panel organization', () => {
     return names
   }
 
-  it('keeps Turns first in Animation followed by the rotational controls', () => {
+  it('keeps Arc first in Animation followed by the rotational controls', () => {
     expect(propertyNames(AnimationsPanel, 'animation-panel-order')).toEqual([
-      'turns',
       'arc',
+      'turns',
       'plane',
       'axis',
       'adjust',
