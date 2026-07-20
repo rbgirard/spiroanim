@@ -32,8 +32,8 @@ const label = computed(() => (isFullscreen.value ? 'Exit full screen' : 'Enter f
 <style scoped>
 .fullscreen-control {
   position: absolute;
-  top: calc(var(--space-1) + var(--safe-area-inset-top));
-  left: calc(var(--space-1) + var(--safe-area-inset-left));
+  top: var(--space-1);
+  left: var(--space-1);
   z-index: 1000;
 }
 
