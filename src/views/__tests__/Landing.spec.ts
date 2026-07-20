@@ -20,7 +20,9 @@ describe('Landing view', () => {
       global: { plugins: [router] },
     })
 
-    expect(wrapper.get('h1').text()).toBe('SpiroAnim')
+    expect(wrapper.get('h1').text()).toBe('SpiroAnim.com')
+    expect(wrapper.get('img.brand-mark').attributes('src')).toBe('/pwa-source.svg')
+    expect(wrapper.get('img.brand-mark').attributes('alt')).toBe('')
     expect(wrapper.text()).toContain('high-end mobile device')
     expect(wrapper.text()).toContain('hover tooltips')
     expect(wrapper.get('a.enter-button').attributes('href')).toBe('/app')

@@ -1,14 +1,9 @@
 <template>
-  <AppTooltip
-    v-if="display()"
-    class="fullscreen-control"
-    text="Full Screen Toggle"
-    placement="bottom"
-  >
+  <AppTooltip v-if="showControl" class="fullscreen-control" :text="label" placement="bottom">
     <template #activator="{ props: tooltipProps }">
       <button
         v-bind="tooltipProps"
-        aria-label="Full Screen Toggle"
+        :aria-label="label"
         class="fullscreen"
         type="button"
         @click="toggle"
@@ -25,33 +20,20 @@ import { mdiFullscreen, mdiFullscreenExit } from '@mdi/js'
 
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
-const { isFullscreen, toggle } = useFullscreen(),
-  icon = computed(() => {
-    return isFullscreen.value ? mdiFullscreen : mdiFullscreenExit
-  }),
-  // 1.) iPhones don't support full screen
-  // 2.) Added standalone app support for Apple devices (TODO: needs more work)
-  // 3.) Fullscreen mode on ipad is still funky, removed
-  display = () => {
-    const ua = navigator.userAgent
-    const isIOS = /iPhone|iPad|iPod/.test(ua)
-
-    // platform is deprecated but still used for iPad detection
-    const platform = (navigator as Navigator & { platform?: string }).platform
-    const isTouchMac = platform === 'MacIntel' && navigator.maxTouchPoints > 1
-
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-
-    return !(isIOS || isTouchMac || isStandalone)
-  }
+const { isFullscreen, isSupported, toggle } = useFullscreen()
+const { isInstalledDisplay, isIos } = useAppDisplayMode()
+const showControl = computed(() => isSupported.value && !isIos.value && !isInstalledDisplay.value)
+const icon = computed(() => (isFullscreen.value ? mdiFullscreenExit : mdiFullscreen))
+const label = computed(() => (isFullscreen.value ? 'Exit full screen' : 'Enter full screen'))
 </script>
 
 <style scoped>
 .fullscreen-control {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: calc(var(--space-1) + var(--safe-area-inset-top));
+  left: calc(var(--space-1) + var(--safe-area-inset-left));
   z-index: 1000;
 }
 

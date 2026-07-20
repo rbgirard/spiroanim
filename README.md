@@ -66,6 +66,16 @@ npm run test:e2e -- tests/example.spec.ts
 npm run test:e2e -- --debug
 ```
 
+### Build and Test the Progressive Web App
+
+```sh
+npm run generate:pwa-assets
+npm run test:pwa
+```
+
+See [docs/PWA.md](docs/PWA.md) for installation behavior, offline caching, icon generation, and
+production hosting requirements.
+
 ### Lint with [ESLint](https://eslint.org/)
 
 ```sh

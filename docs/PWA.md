@@ -1,0 +1,84 @@
+# Progressive Web App
+
+SpiroAnim uses `vite-plugin-pwa` to generate its web manifest and Workbox service worker. The
+service worker precaches the static application shell, routed Vue chunks, and animation worker so
+the editor can reopen without a network connection after its first successful load.
+
+## Product behavior
+
+- Installed launches open `/app` rather than the landing page.
+- Browser installation is offered on the landing page only when the browser exposes an install
+  prompt. Safari on iOS receives Add to Home Screen instructions instead.
+- Service-worker updates require user confirmation. Do not switch to automatic reload without
+  accounting for active editor work.
+- Offline support is available in production builds served over HTTPS (and in `npm run preview`),
+  not from `npm run dev`; the development service worker is intentionally disabled.
+- A device must finish one online production launch and register the service worker before it can
+  relaunch offline. The “SpiroAnim is ready offline” notice confirms that precaching completed.
+- A browser shortcut created from a development or otherwise uncontrolled page is only a shortcut;
+  it is not an offline-capable installed app.
+- The service worker uses `index.html` as its navigation fallback, including route aliases and URLs
+  containing animation query data.
+
+## Icons
+
+`public/pwa-source.svg` is the authoritative, editable icon source. It intentionally has a
+transparent background; the generator adds a dark background only to platform-specific icons that
+require one. Regenerate the favicon, Apple touch icon,
+standard PWA icons, and maskable icon after changing it:
+
+```sh
+npm run generate:pwa-assets
+```
+
+The generation settings are in `pwa-assets.config.ts`. Keep important maskable artwork inside the
+central safe zone.
+
+### Icon design brief
+
+Treat these constraints as part of the icon's design contract when modifying it manually or with an
+LLM:
+
+- Edit `public/pwa-source.svg`, not the generated PNG or ICO files. Keep it as an understandable,
+  editable vector with named gradients, grouped elements, and no embedded raster image.
+- Keep the SVG canvas transparent. Do not add a full-canvas dark rectangle, vignette, or baked-in
+  border. `pwa-assets.config.ts` supplies the dark background for maskable and Apple icons.
+- Preserve the basic concept: three rounded orbital loops at different apparent 3D orientations.
+  The tiny spherical center accent is optional and must remain subordinate to the paths. The mark
+  should suggest a spirographic animation path and remain legible at 48–64 pixels.
+- Preserve a violet-to-blue-to-cyan/teal palette and luminous technical character. The high-level
+  inspiration is Vulkan Tech Gospel's dark, neon, flow-art mood; do not copy its skull, lettering,
+  diagram, or any other specific artwork.
+- Avoid four-way rotational symmetry, hooked or right-angled arms, bent arrows, pinwheels, crosses,
+  and any silhouette that could resemble a swastika or another religious or political symbol.
+- Keep the emblem visually large on the transparent standard icon while retaining enough central
+  safe-zone clearance for circular and maskable crops.
+- After every source change, run `npm run generate:pwa-assets` and inspect at least the 64-pixel,
+  512-pixel, maskable, and Apple outputs. Do not hand-edit those generated derivatives.
+
+## Validation
+
+The PWA test builds the production application, starts Vite preview, validates the generated
+manifest and icons, installs the service worker, and performs an offline routed navigation:
+
+```sh
+npm run test:pwa
+```
+
+Use Chrome DevTools Application panels to inspect the manifest, service worker, and cache contents
+when diagnosing an installed build.
+
+## Hosting requirements
+
+Production hosting must:
+
+- serve the site over HTTPS and redirect HTTP to HTTPS;
+- rewrite application navigation requests to `/index.html`;
+- serve `manifest.webmanifest` as `application/manifest+json`;
+- revalidate `/`, `/index.html`, `/manifest.webmanifest`, and `/sw.js` rather than caching them as
+  immutable;
+- cache hashed `/assets/*` files with a long immutable lifetime.
+
+Vite emits production files to `build/`. The directory is ignored because deployment should build
+from source. If a hosting workflow intentionally commits generated output, document that exception
+and ensure every deployment regenerates the service worker and precache manifest.

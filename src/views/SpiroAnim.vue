@@ -49,8 +49,6 @@
 <script setup lang="ts">
 // src\views\SpiroAnim.vue
 
-// TODO: Research - Progressive Web Apps
-
 import PaneSplitter from '@/components/layout/PaneSplitter.vue'
 import PaneRotate from '@/components/layout/PaneRotate.vue'
 import FullScreen from '@/components/layout/FullScreen.vue'

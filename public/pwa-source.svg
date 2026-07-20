@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">SpiroAnim</title>
+  <desc id="desc">Three luminous orbital loops surrounding a tiny metallic accent</desc>
+
+  <defs>
+    <linearGradient id="violet-blue" x1="70" y1="160" x2="310" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#b150ff" />
+      <stop offset="0.48" stop-color="#643cff" />
+      <stop offset="1" stop-color="#087fff" />
+    </linearGradient>
+    <linearGradient id="blue-cyan" x1="200" y1="80" x2="390" y2="325" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#145eff" />
+      <stop offset="0.55" stop-color="#00b7ff" />
+      <stop offset="1" stop-color="#14f1ed" />
+    </linearGradient>
+    <linearGradient id="cyan-teal" x1="230" y1="215" x2="430" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#03cfff" />
+      <stop offset="0.55" stop-color="#00e9ce" />
+      <stop offset="1" stop-color="#18d98c" />
+    </linearGradient>
+    <radialGradient id="core" cx="34%" cy="26%" r="72%">
+      <stop offset="0" stop-color="#d9f8ff" />
+      <stop offset="0.12" stop-color="#5875d7" />
+      <stop offset="0.42" stop-color="#172c62" />
+      <stop offset="0.78" stop-color="#071226" />
+      <stop offset="1" stop-color="#020611" />
+    </radialGradient>
+    <linearGradient id="core-rim" x1="214" y1="222" x2="290" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9e63ff" />
+      <stop offset="0.5" stop-color="#147eff" />
+      <stop offset="1" stop-color="#19d99e" />
+    </linearGradient>
+    <filter id="glow" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="7" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <g transform="translate(264 252) scale(1.2) translate(-256 -256)">
+    <!-- Each lobe is independent so its position, depth, and color remain easy to tune. -->
+    <g fill="none" stroke-linecap="round">
+    <g stroke="#020611" stroke-width="30" opacity="0.92">
+      <ellipse cx="185" cy="259" rx="120" ry="75" transform="rotate(11 185 259)" />
+      <ellipse cx="274" cy="196" rx="75" ry="125" transform="rotate(23 274 196)" />
+      <ellipse cx="310" cy="319" rx="80" ry="126" transform="rotate(-33 310 319)" />
+    </g>
+
+    <g stroke-width="19" filter="url(#glow)">
+      <ellipse cx="185" cy="259" rx="120" ry="75" transform="rotate(11 185 259)" stroke="url(#violet-blue)" />
+      <ellipse cx="274" cy="196" rx="75" ry="125" transform="rotate(23 274 196)" stroke="url(#blue-cyan)" />
+      <ellipse cx="310" cy="319" rx="80" ry="126" transform="rotate(-33 310 319)" stroke="url(#cyan-teal)" />
+    </g>
+
+    <g stroke="#d7fbff" stroke-width="3.5" opacity="0.72">
+      <ellipse cx="185" cy="259" rx="120" ry="75" transform="rotate(11 185 259)" />
+      <ellipse cx="274" cy="196" rx="75" ry="125" transform="rotate(23 274 196)" />
+      <ellipse cx="310" cy="319" rx="80" ry="126" transform="rotate(-33 310 319)" />
+    </g>
+    </g>
+
+    <!-- A restrained core accent separates the central crossings without dominating the paths. -->
+    <circle cx="252" cy="267" r="19" fill="#020611" opacity="0.92" />
+    <circle cx="252" cy="267" r="15" fill="url(#core)" stroke="url(#core-rim)" stroke-width="2.5" />
+    <ellipse cx="247" cy="261" rx="3.8" ry="2.3" fill="#ffffff" opacity="0.72" transform="rotate(-28 247 261)" />
+  </g>
+</svg>

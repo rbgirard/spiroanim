@@ -2,9 +2,7 @@
   <main class="landing-page">
     <div class="landing-shell">
       <section class="landing-card" aria-labelledby="landing-title">
-        <div class="brand-mark" aria-hidden="true">
-          <span />
-        </div>
+        <img class="brand-mark" :src="brandIconUrl" alt="" aria-hidden="true" />
 
         <h1 id="landing-title">SpiroAnim.com</h1>
         <p class="lead">Render the Flow.</p>
@@ -24,6 +22,7 @@
         </p>
 
         <RouterLink class="enter-button" to="/app">Enter</RouterLink>
+        <PwaInstallControl />
       </section>
     </div>
   </main>
@@ -31,6 +30,10 @@
 
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
+
+import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
+
+const brandIconUrl = '/pwa-source.svg'
 </script>
 
 <style scoped>
@@ -56,9 +59,14 @@ import { RouterLink } from 'vue-router'
 }
 
 .landing-shell {
+  --landing-safe-padding: clamp(var(--space-4), 6vw, var(--space-8));
+
   display: grid;
   min-height: 100%;
-  padding: clamp(var(--space-4), 6vw, var(--space-8));
+  padding-block-start: max(var(--landing-safe-padding), var(--safe-area-inset-top));
+  padding-inline-end: max(var(--landing-safe-padding), var(--safe-area-inset-right));
+  padding-block-end: max(var(--landing-safe-padding), var(--safe-area-inset-bottom));
+  padding-inline-start: max(var(--landing-safe-padding), var(--safe-area-inset-left));
   place-items: center;
 }
 
@@ -73,28 +81,12 @@ import { RouterLink } from 'vue-router'
 }
 
 .brand-mark {
-  display: grid;
-  width: 4.5rem;
-  height: 4.5rem;
+  display: block;
+  width: clamp(6rem, 18vw, 8.5rem);
+  height: auto;
   margin-inline: auto;
   margin-block-end: var(--space-4);
-  place-items: center;
-  background: conic-gradient(
-    from 35deg,
-    var(--color-action-primary),
-    var(--color-workspace-separator),
-    var(--color-action-primary)
-  );
-  border-radius: 50%;
-  box-shadow: 0 0 2rem color-mix(in srgb, var(--color-action-primary) 30%, transparent);
-}
-
-.brand-mark span {
-  width: 2.4rem;
-  height: 2.4rem;
-  background: var(--color-surface);
-  border: 0.4rem solid color-mix(in srgb, var(--color-surface) 72%, transparent);
-  border-radius: 50%;
+  filter: drop-shadow(0 0 1.25rem color-mix(in srgb, var(--color-action-primary) 24%, transparent));
 }
 
 .eyebrow {
