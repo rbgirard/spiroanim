@@ -12,6 +12,7 @@ class TestInstallPromptEvent extends Event {
 
 describe('PwaInstallControl', () => {
   let stopPromptCapture: () => void
+  const originalUserAgent = Object.getOwnPropertyDescriptor(navigator, 'userAgent')
 
   beforeEach(() => {
     vi.stubGlobal(
@@ -33,6 +34,8 @@ describe('PwaInstallControl', () => {
   afterEach(() => {
     stopPromptCapture()
     vi.unstubAllGlobals()
+    if (originalUserAgent) Object.defineProperty(navigator, 'userAgent', originalUserAgent)
+    else Reflect.deleteProperty(navigator, 'userAgent')
   })
 
   it('shows and invokes a browser installation prompt captured before mounting', async () => {
@@ -51,5 +54,28 @@ describe('PwaInstallControl', () => {
     expect(event.defaultPrevented).toBe(true)
     expect(event.prompt).toHaveBeenCalledOnce()
     expect(wrapper.find('button').exists()).toBe(false)
+  })
+
+  it('explains Safari installation steps on iPad', async () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (iPad; CPU OS 26_0 like Mac OS X)',
+    })
+    const wrapper = mount(PwaInstallControl)
+    await wrapper.vm.$nextTick()
+
+    const button = wrapper.get('button')
+    expect(button.text()).toBe('Install from Safari')
+    expect(button.attributes('aria-expanded')).toBe('false')
+
+    await button.trigger('click')
+
+    expect(button.attributes('aria-expanded')).toBe('true')
+    expect(wrapper.get('.instructions-title').text()).toContain('Home Screen')
+    expect(wrapper.findAll('.install-instructions li').map((item) => item.text())).toEqual([
+      expect.stringContaining('square with an arrow pointing up'),
+      expect.stringContaining('Add to Home Screen'),
+      expect.stringContaining('Open as Web App'),
+    ])
   })
 })

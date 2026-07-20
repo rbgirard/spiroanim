@@ -1,19 +1,39 @@
 <template>
   <div v-if="canPromptInstall || canShowIosInstructions" class="pwa-install">
-    <button class="install-button" type="button" @click="install">
-      {{ canPromptInstall ? 'Install App' : 'How to Install' }}
+    <button
+      class="install-button"
+      type="button"
+      :aria-controls="canShowIosInstructions ? instructionsId : undefined"
+      :aria-expanded="canShowIosInstructions ? showIosInstructions : undefined"
+      @click="install"
+    >
+      {{ canPromptInstall ? 'Install App' : 'Install from Safari' }}
     </button>
-    <p v-if="showIosInstructions" class="install-instructions" role="status">
-      In Safari, open Share and choose Add to Home Screen.
-    </p>
+    <div v-if="showIosInstructions" :id="instructionsId" class="install-instructions" role="status">
+      <p class="instructions-title">Add SpiroAnim to your Home Screen:</p>
+      <ol>
+        <li>
+          In Safari’s toolbar, tap the
+          <span class="share-control"><BaseIcon :path="mdiExport" :size="20" /> Share</span>
+          button—the square with an arrow pointing up.
+        </li>
+        <li>Tap <strong>More</strong> if shown, then tap <strong>Add to Home Screen</strong>.</li>
+        <li>Turn on <strong>Open as Web App</strong> if shown, then tap <strong>Add</strong>.</li>
+      </ol>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { mdiExport } from '@mdi/js'
+import { useId } from 'vue'
+
+import BaseIcon from '@/components/icons/BaseIcon.vue'
 import { usePwaInstall } from '@/composables/usePwaInstall'
 
 const { canPromptInstall, canShowIosInstructions, promptInstall } = usePwaInstall()
 const showIosInstructions = ref(false)
+const instructionsId = useId()
 
 async function install() {
   if (canPromptInstall.value) {
@@ -55,9 +75,36 @@ async function install() {
 
 .install-instructions {
   max-width: 24rem;
-  margin: 0;
   color: var(--color-text-muted);
   font-size: 0.9rem;
+  text-align: start;
   line-height: 1.5;
+}
+
+.instructions-title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.install-instructions ol {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-inline-start: var(--space-6);
+}
+
+.share-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--color-text);
+  font-weight: 700;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.share-control .base-icon {
+  display: inline-block;
 }
 </style>

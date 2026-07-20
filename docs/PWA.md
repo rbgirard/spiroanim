@@ -8,7 +8,8 @@ the editor can reopen without a network connection after its first successful lo
 
 - Installed launches open `/app` rather than the landing page.
 - Browser installation is offered on the landing page only when the browser exposes an install
-  prompt. Safari on iOS receives Add to Home Screen instructions instead.
+  prompt. Safari on iOS receives numbered Add to Home Screen instructions that identify the Share
+  control and account for the More and Open as Web App steps shown by current iPadOS versions.
 - Service-worker updates require user confirmation. Do not switch to automatic reload without
   accounting for active editor work.
 - Offline support is available in production builds served over HTTPS (and in `npm run preview`),
