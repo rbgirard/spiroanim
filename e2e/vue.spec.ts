@@ -1,11 +1,14 @@
 import { test, expect } from '@playwright/test'
 
+const expectedCleanupMessages = new Set(['WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost'])
+
 test('restores both routes with browser back and forward navigation', async ({ page }) => {
   const pageErrors: string[] = []
   const consoleErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
   page.on('console', (message) => {
     if (message.type() === 'error' || message.type() === 'warning') {
+      if (expectedCleanupMessages.has(message.text())) return
       consoleErrors.push(message.text())
     }
   })

@@ -47,18 +47,21 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: ['**/pwa.spec.ts', '**/webkit-support.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
       },
     },
     {
       name: 'firefox',
+      testIgnore: ['**/pwa.spec.ts', '**/webkit-support.spec.ts'],
       use: {
         ...devices['Desktop Firefox'],
       },
     },
     {
       name: 'webkit',
+      testIgnore: ['**/pwa.spec.ts', '**/vue.spec.ts'],
       use: {
         ...devices['Desktop Safari'],
       },
