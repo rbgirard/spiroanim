@@ -30,7 +30,7 @@ export default defineConfig({
       manifest: {
         id: '/',
         scope: '/',
-        start_url: '/app',
+        start_url: '/',
         name: 'Spiro Animator',
         short_name: 'SpiroAnim',
         description: 'Create, edit, and play procedural spiro animations.',
