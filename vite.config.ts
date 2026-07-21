@@ -40,14 +40,6 @@ export function createViteConfig(isSsrBuild: boolean) {
     build: {
       outDir: 'build',
       target: 'es2022',
-      rollupOptions: isSsrBuild
-        ? undefined
-        : {
-            input: {
-              main: fileURLToPath(new URL('index.html', import.meta.url)),
-              'app-shell': fileURLToPath(new URL('app-shell.html', import.meta.url)),
-            },
-          },
     },
     server: {
       host: true,
@@ -120,11 +112,12 @@ export function createViteConfig(isSsrBuild: boolean) {
             clientsClaim: true,
             cleanupOutdatedCaches: true,
             additionalManifestEntries: [
+              { url: 'app-shell.html', revision: publicPageRevision },
               { url: 'index.html', revision: publicPageRevision },
               { url: 'about.html', revision: publicPageRevision },
               { url: 'about/index.html', revision: publicPageRevision },
             ],
-            globPatterns: ['**/*.{css,ico,js,png,svg}', 'app-shell.html'],
+            globPatterns: ['**/*.{css,ico,js,png,svg}'],
             navigateFallback: 'app-shell.html',
             navigateFallbackDenylist: [/^\/(?:index\/?|about\/?)?$/],
           },

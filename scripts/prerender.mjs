@@ -9,7 +9,6 @@ const serverEntryUrl = pathToFileURL(
 ).href
 const { clientOnlyPaths, render } = await import(serverEntryUrl)
 const template = await readFile(path.join(clientDirectory, 'index.html'), 'utf8')
-const appShell = await readFile(path.join(clientDirectory, 'app-shell.html'), 'utf8')
 
 function escapeHtml(value) {
   return value
@@ -40,6 +39,16 @@ function pageHtml(appHtml, seo) {
     .replace('<!--ssr-outlet-->', appHtml)
 }
 
+function clientShellHtml() {
+  return template
+    .replace(
+      /<meta name="robots" content=".*?"\s*\/?>/,
+      '<meta name="robots" content="noindex, nofollow">',
+    )
+    .replace('<!--seo-head-->', '')
+    .replace('<!--ssr-outlet-->', '')
+}
+
 async function writeRoute(route, html, includeCleanUrlFile = false) {
   const relativeRoute = route.replace(/^\/+/, '')
   const routeDirectory = route === '/' ? clientDirectory : path.join(clientDirectory, relativeRoute)
@@ -53,7 +62,9 @@ async function writeRoute(route, html, includeCleanUrlFile = false) {
 
 const landing = await render('/')
 const about = await render('/about')
+const appShell = clientShellHtml()
 
+await writeFile(path.join(clientDirectory, 'app-shell.html'), appShell)
 await writeRoute('/', pageHtml(landing.appHtml, landing.seo))
 await writeRoute('/index', pageHtml(landing.appHtml, landing.seo))
 await writeRoute('/about', pageHtml(about.appHtml, about.seo), true)
