@@ -76,6 +76,10 @@ npm run test:pwa
 See [docs/PWA.md](docs/PWA.md) for installation behavior, offline caching, icon generation, and
 production hosting requirements.
 
+The production build also prerenders the landing and About pages for search engines while keeping
+the editor and PWA browser-only. See [docs/SEO.md](docs/SEO.md) for the route boundary and hosting
+requirements, and [docs/PRERENDERING.md](docs/PRERENDERING.md) when adding another public page.
+
 ### Lint with [ESLint](https://eslint.org/)
 
 ```sh

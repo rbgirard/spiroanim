@@ -1,4 +1,6 @@
 import { mount } from '@vue/test-utils'
+import { renderToString } from '@vue/server-renderer'
+import { createSSRApp } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -60,5 +62,20 @@ describe('Landing view', () => {
     expect(wrapper.text()).toContain('high-end mobile device')
     expect(wrapper.text()).toContain('hover tooltips')
     expect(wrapper.text()).toContain('Continuing on mobile')
+  })
+
+  it('defers device-specific content until the page mounts', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: Landing }],
+    })
+    await router.push('/')
+    await router.isReady()
+
+    const html = await renderToString(createSSRApp(Landing).use(router))
+
+    expect(html).not.toContain('high-end mobile device')
+    expect(html).not.toContain('Continuing on mobile')
+    expect(html).not.toContain('pwa-install')
   })
 })

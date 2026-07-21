@@ -16,7 +16,7 @@
           </p>
         </section>
 
-        <template v-if="!isDesktop">
+        <template v-if="hasMounted && !isDesktop">
           <div class="experience-note">
             <h2>The complete workspace lives on desktop</h2>
             <p>
@@ -33,7 +33,7 @@
         </template>
 
         <RouterLink class="enter-button" to="/app">Enter</RouterLink>
-        <PwaInstallControl />
+        <PwaInstallControl v-if="hasMounted" />
         <RouterLink class="about-button" to="/about">About SpiroAnim</RouterLink>
       </section>
     </div>
@@ -48,6 +48,11 @@ import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const brandIconUrl = '/pwa-source.svg'
 const { isDesktop } = useAppDisplayMode()
+const hasMounted = ref(false)
+
+onMounted(() => {
+  hasMounted.value = true
+})
 </script>
 
 <style scoped>

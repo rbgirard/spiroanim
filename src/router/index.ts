@@ -1,37 +1,38 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, type RouteRecordRaw, type RouterHistory } from 'vue-router'
 
 import { paneSplits } from '@/composables/useMainRoute'
 import { isBrowserSupported } from '@/services/browserSupport'
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  //history: createWebHistory('/spiroanim/'), // Replace with your subdirectory path
-  routes: [
-    {
-      path: '/',
-      name: 'landing',
-      component: () => import('@/views/LandingPage.vue'),
-      alias: '/index',
-    },
-    {
-      path: '/app',
-      name: 'main',
-      component: isBrowserSupported()
-        ? () => import('@/views/SpiroAnim.vue')
-        : () => import('@/views/BrowserSupport.vue'),
-      alias: ['/player', '/timeline', '/editor', ...paneSplits],
-    },
-    {
-      path: '/about',
-      name: 'about',
-      component: () => import('@/views/AboutPage.vue'),
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'not-found',
-      component: () => import('@/views/NotFound.vue'),
-    },
-  ],
-})
+const appRouteAliases = ['/player', '/timeline', '/editor', ...paneSplits]
 
-export default router
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'landing',
+    component: () => import('@/views/LandingPage.vue'),
+    alias: '/index',
+  },
+  {
+    path: '/app',
+    name: 'main',
+    component: () =>
+      isBrowserSupported() ? import('@/views/SpiroAnim.vue') : import('@/views/BrowserSupport.vue'),
+    alias: appRouteAliases,
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: () => import('@/views/AboutPage.vue'),
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFound.vue'),
+  },
+]
+
+export const clientOnlyPaths = ['/app', ...appRouteAliases]
+
+export function createAppRouter(history: RouterHistory) {
+  return createRouter({ history, routes })
+}

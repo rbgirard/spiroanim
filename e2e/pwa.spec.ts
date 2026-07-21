@@ -1,4 +1,9 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Response } from '@playwright/test'
+
+function requireResponse(response: Response | null): Response {
+  if (!response) throw new Error('The browser did not return a navigation response.')
+  return response
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -46,6 +51,19 @@ test('ships an installable manifest and every declared icon', async ({ request }
   expect(declaredSizes).toContain('512x512')
 })
 
+test('serves rendered HTML only for public pages', async ({ request }) => {
+  const landing = await (await request.get('/')).text()
+  const about = await (await request.get('/about')).text()
+  const app = await (await request.get('/app')).text()
+
+  expect(landing).toContain('data-prerendered="true"')
+  expect(landing).toContain('id="landing-title"')
+  expect(about).toContain('data-prerendered="true"')
+  expect(about).toContain('id="about-title"')
+  expect(app).toContain('<div id="app"></div>')
+  expect(app).not.toContain('data-prerendered="true"')
+})
+
 test('relaunches a routed application screen after the network goes offline', async ({
   context,
   page,
@@ -61,6 +79,12 @@ test('relaunches a routed application screen after the network goes offline', as
   await expect
     .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
     .toBe(true)
+
+  const landingResponse = requireResponse(await page.goto('/'))
+
+  expect(landingResponse.fromServiceWorker()).toBe(true)
+  expect(await landingResponse.text()).toContain('data-prerendered="true"')
+  await expect(page.getByRole('heading', { name: 'SpiroAnim.com' })).toBeVisible()
 
   await page.close()
 

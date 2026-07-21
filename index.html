@@ -12,9 +12,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="SpiroAnim" />
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <meta name="robots" content="index, follow" />
+    <!--seo-head-->
     <title>Spiro Animator</title>
   </head>
-  <body id="app">
-    <script type="module" src="/src/main.ts"></script>
+  <body>
+    <div id="app"><!--ssr-outlet--></div>
+    <script type="module" src="/src/entry-client.ts"></script>
   </body>
 </html>

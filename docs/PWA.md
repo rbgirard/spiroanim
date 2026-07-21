@@ -6,7 +6,8 @@ the editor can reopen without a network connection after its first successful lo
 
 ## Product behavior
 
-- Installed launches open `/app` rather than the landing page.
+- Installed launches open the landing page. Manifest shortcuts can open the player, editor, or
+  timeline directly.
 - Browser installation is offered on the landing page only when the browser exposes an install
   prompt. Safari on iOS receives numbered Add to Home Screen instructions that identify the Share
   control and account for the More and Open as Web App steps shown by current iPadOS versions.
@@ -20,8 +21,8 @@ the editor can reopen without a network connection after its first successful lo
   it is not an offline-capable installed app.
 - Installed desktop and Android apps retain the fullscreen control. It remains hidden on iOS and
   iPadOS until their fullscreen behavior is tested and intentionally supported.
-- The service worker uses `index.html` as its navigation fallback, including route aliases and URLs
-  containing animation query data.
+- The service worker uses the client-only `app-shell.html` as its offline navigation fallback,
+  including route aliases and URLs containing animation query data.
 
 ## Icons
 
@@ -76,10 +77,13 @@ when diagnosing an installed build.
 Production hosting must:
 
 - serve the site over HTTPS and redirect HTTP to HTTPS;
-- rewrite application navigation requests to `/index.html`;
+- serve the generated directory index files so `/`, `/index`, and `/about` return their prerendered
+  HTML;
+- serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
+  `/timeline`, and the pane-layout aliases. A blanket rewrite to `/index.html` would replace this
+  separation and should not be used;
 - serve `manifest.webmanifest` as `application/manifest+json`;
-- revalidate `/`, `/index.html`, `/manifest.webmanifest`, and `/sw.js` rather than caching them as
-  immutable;
+- revalidate HTML files, `/manifest.webmanifest`, and `/sw.js` rather than caching them as immutable;
 - cache hashed `/assets/*` files with a long immutable lifetime.
 
 Vite emits production files to `build/`. The directory is ignored because deployment should build

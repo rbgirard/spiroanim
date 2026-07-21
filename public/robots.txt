@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://spiroanim.com/sitemap.xml
