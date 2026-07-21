@@ -88,6 +88,34 @@ Production hosting must:
 - revalidate HTML files, `/manifest.webmanifest`, and `/sw.js` rather than caching them as immutable;
 - cache hashed `/assets/*` files with a long immutable lifetime.
 
+### Cloudflare Pages cache configuration
+
+The production site is hosted by Cloudflare Pages. Cloudflare reads `public/_headers` during
+deployment and applies those response-header rules to the generated files. Keep that file in the
+repository even though it is not used by Vite's local development or preview servers.
+
+The current rules require:
+
+- `/sw.js` to use `no-cache, no-store, must-revalidate` so browsers can discover a new service
+  worker immediately;
+- `/manifest.webmanifest` to use `no-cache, must-revalidate` so installation metadata stays
+  current;
+- fingerprinted `/assets/*` files to use a one-year immutable cache because a content change
+  produces a new filename.
+
+Cloudflare Pages' default immediate-revalidation behavior is retained for HTML. Do not apply a long
+immutable cache to HTML, the manifest, or the service worker. A stale HTML document can reference
+fingerprinted assets from an older deployment and leave the application unable to start.
+
+If hosting moves away from Cloudflare Pages, `public/_headers` may not be recognized. Configure the
+new platform to provide the same effective cache behavior using its headers, redirects, or server
+configuration. The deployment must also publish each build consistently so its HTML, service
+worker, and fingerprinted assets come from the same build.
+
+After changing hosts or cache rules, inspect the deployed response headers for `/`, `/sw.js`,
+`/manifest.webmanifest`, and one `/assets/*` file. Local preview confirms application behavior but
+cannot validate CDN response headers.
+
 Vite emits production files to `build/`. The directory is ignored because deployment should build
 from source. If a hosting workflow intentionally commits generated output, document that exception
 and ensure every deployment regenerates the service worker and precache manifest.
