@@ -33,10 +33,34 @@
         <div class="detail-block">
           <span class="detail-marker" aria-hidden="true"></span>
           <div>
-            <h2>Open source, by design</h2>
+            <h2>Open source</h2>
             <p>
-              You’re free to use portions of SpiroAnim or modify it for your own use, as long as
-              your project is—and remains—open source.
+              You're free to use portions of SpiroAnim or modify it for your own use, as long as
+              your project is, and remains, open source.
+            </p>
+          </div>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-marker" aria-hidden="true"></span>
+          <div>
+            <h2>Offline-capable</h2>
+            <p>
+              The first successful online visit prepares and saves the application files on that
+              device. After that, SpiroAnim can reopen without a network connection and will check
+              for newer versions when it returns online.
+            </p>
+          </div>
+        </div>
+
+        <div class="detail-block">
+          <span class="detail-marker" aria-hidden="true"></span>
+          <div>
+            <h2>A progressive web app</h2>
+            <p>
+              SpiroAnim can be installed from a supported browser and launched from your desktop or
+              home screen in its own app window. It keeps the convenience of a website while
+              receiving new versions through the normal update prompt.
             </p>
           </div>
         </div>

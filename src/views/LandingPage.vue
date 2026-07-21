@@ -12,11 +12,20 @@
           <h2 id="preview-title">A 3D playground for flow arts</h2>
           <p>
             SpiroAnim is a proof-of-concept rendering tool with a basic editor. More features are on
-            the way, and you may encounter a few rough edges.
+            the way, including a VTG generator, a library, and more. You may encounter a few rough
+            edges in the meantime.
           </p>
         </section>
 
-        <template v-if="hasMounted && !isDesktop">
+        <div class="offline-note">
+          <span class="offline-indicator" aria-hidden="true"></span>
+          <p>
+            <strong>Built to work offline.</strong>
+            After one online visit, SpiroAnim can reopen without a connection.
+          </p>
+        </div>
+
+        <div class="mobile-guidance">
           <div class="experience-note">
             <h2>The complete workspace lives on desktop</h2>
             <p>
@@ -27,10 +36,10 @@
           </div>
 
           <p class="mobile-note">
-            Continuing on mobile is fine—just expect a more compact experience designed around the
+            Continuing on mobile is fine, but expect a more compact experience designed around the
             available screen and input method.
           </p>
-        </template>
+        </div>
 
         <RouterLink class="enter-button" to="/app">Enter</RouterLink>
         <PwaInstallControl v-if="hasMounted" />
@@ -44,10 +53,8 @@
 import { RouterLink } from 'vue-router'
 
 import PwaInstallControl from '@/components/layout/PwaInstallControl.vue'
-import { useAppDisplayMode } from '@/composables/useAppDisplayMode'
 
 const brandIconUrl = '/pwa-source.svg'
-const { isDesktop } = useAppDisplayMode()
 const hasMounted = ref(false)
 
 onMounted(() => {
@@ -161,6 +168,42 @@ h1 {
   line-height: 1.6;
 }
 
+.offline-note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  margin-block-end: var(--space-6);
+  text-align: start;
+  background: color-mix(in srgb, var(--color-action-primary) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-action-primary) 22%, var(--color-border));
+  border-radius: var(--radius-md);
+}
+
+.offline-indicator {
+  width: 0.7rem;
+  height: 0.7rem;
+  background: var(--color-action-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--color-action-primary) 12%, transparent);
+}
+
+.offline-note p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.offline-note strong {
+  color: var(--color-text);
+}
+
+.mobile-guidance {
+  display: block;
+}
+
 .experience-note {
   padding: var(--space-6);
   text-align: start;
@@ -250,6 +293,12 @@ h1 {
 
   .project-note {
     padding: var(--space-4);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-guidance {
+    display: none;
   }
 }
 

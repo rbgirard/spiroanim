@@ -8,8 +8,9 @@ SpiroAnim selectively prerenders its public information pages during `npm run bu
 
 This is static-site generation rather than a continuously running server. It gives crawlers useful
 HTML for the small set of indexable pages without evaluating Three.js, editor state, PWA behavior,
-or browser APIs on a server. Vue hydrates the prerendered public pages after mounting; device and
-PWA controls intentionally appear only after that client mount.
+or browser APIs on a server. Vue hydrates the prerendered public pages after mounting. Responsive
+guidance remains in the stable HTML and is controlled by CSS, while PWA controls intentionally
+appear only after the client mount.
 
 ## Build flow
 

@@ -21,14 +21,14 @@ const pageSeo: Record<string, PageSeo> = {
     description:
       'Explore SpiroAnim, an open-source 3D rendering and animation editor for flow arts props.',
     robots: 'index, follow',
-    title: 'SpiroAnim — 3D Flow Arts Animation Editor',
+    title: 'SpiroAnim - 3D Flow Arts Animation Editor',
   },
   '/about': {
     canonicalPath: '/about',
     description:
       'Learn about SpiroAnim, its years of development, open-source license, and upcoming improvements.',
     robots: 'index, follow',
-    title: 'About SpiroAnim — Open-Source Flow Arts Rendering',
+    title: 'About SpiroAnim - Open-Source Flow Arts Rendering',
   },
 }
 

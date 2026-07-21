@@ -48,7 +48,7 @@ Add an entry to `src/domain/seo/pageSeo.ts`:
   canonicalPath: '/help',
   description: 'Learn how to use SpiroAnim.',
   robots: 'index, follow',
-  title: 'Help — SpiroAnim',
+  title: 'Help - SpiroAnim',
 },
 ```
 
@@ -131,7 +131,7 @@ Disable JavaScript and reload as an additional check. The primary page content s
 visible, while controls intentionally deferred until mounting may be absent.
 
 If an old service worker is still active, accept the SpiroAnim update prompt or unregister it under
-DevTools → Application → Service Workers before checking again.
+DevTools > Application > Service Workers before checking again.
 
 ## Completion checklist
 

@@ -13,9 +13,9 @@
       <p class="instructions-title">Add SpiroAnim to your Home Screen:</p>
       <ol>
         <li>
-          In Safari’s toolbar, tap the
+          In Safari's toolbar, tap the
           <span class="share-control"><BaseIcon :path="mdiExport" :size="20" /> Share</span>
-          button—the square with an arrow pointing up.
+          button - the square with an arrow pointing up.
         </li>
         <li>Tap <strong>More</strong> if shown, then tap <strong>Add to Home Screen</strong>.</li>
         <li>Turn on <strong>Open as Web App</strong> if shown, then tap <strong>Add</strong>.</li>

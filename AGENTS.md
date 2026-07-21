@@ -197,6 +197,7 @@
 - Prefer extending existing abstractions over introducing parallel implementations that solve the same problem.
 - Do not preserve an existing pattern merely for consistency when it is known to be incorrect, unsafe, deprecated, or incompatible with the requested change. Explain the exception before introducing a replacement pattern.
 - Avoid changing public component props, emitted events, composable return contracts, store APIs, serialized formats, or worker message contracts unless required by the task.
+- Prefer ASCII punctuation in source code, UI copy, tests, and documentation. Use straight quotes and apostrophes, hyphens, and `>` instead of smart quotes, en or em dashes, and typographic arrows. Retain non-ASCII characters only when they convey intentional technical or domain meaning, such as degree, multiplication, or approximation symbols, or when the content specifically requires them.
 
 # Documentation
 

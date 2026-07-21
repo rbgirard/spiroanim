@@ -16,7 +16,7 @@ the editor can reopen without a network connection after its first successful lo
 - Offline support is available in production builds served over HTTPS (and in `npm run preview`),
   not from `npm run dev`; the development service worker is intentionally disabled.
 - A device must finish one online production launch and register the service worker before it can
-  relaunch offline. The “SpiroAnim is ready offline” notice confirms that precaching completed.
+  relaunch offline. The "SpiroAnim is ready offline" notice confirms that precaching completed.
 - A browser shortcut created from a development or otherwise uncontrolled page is only a shortcut;
   it is not an offline-capable installed app.
 - Installed desktop and Android apps retain the fullscreen control. It remains hidden on iOS and
@@ -49,7 +49,7 @@ LLM:
   border. `pwa-assets.config.ts` supplies the dark background for maskable and Apple icons.
 - Preserve the basic concept: three rounded orbital loops at different apparent 3D orientations.
   The tiny spherical center accent is optional and must remain subordinate to the paths. The mark
-  should suggest a spirographic animation path and remain legible at 48–64 pixels.
+  should suggest a spirographic animation path and remain legible at 48-64 pixels.
 - Preserve a violet-to-blue-to-cyan/teal palette and luminous technical character. The high-level
   inspiration is Vulkan Tech Gospel's dark, neon, flow-art mood; do not copy its skull, lettering,
   diagram, or any other specific artwork.
