@@ -16,11 +16,12 @@ appear only after the client mount.
 
 `npm run build` performs these steps:
 
-1. Builds the browser application and service worker.
+1. Builds the browser application and web manifest.
 2. Builds a temporary Vue server-rendering entry.
 3. Renders the landing and About routes into the browser build.
 4. Writes client-only route shells for the application aliases.
-5. Runs the TypeScript check.
+5. Generates the final service worker from the complete browser and prerender output.
+6. Runs the TypeScript check.
 
 The temporary `build-server/` directory and deployable `build/` directory are generated output and
 are ignored by Git. `public/robots.txt` and `public/sitemap.xml` are copied into the final build.

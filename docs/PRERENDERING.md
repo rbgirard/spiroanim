@@ -73,22 +73,16 @@ This supports static hosts that resolve `/help` using either convention.
 
 ## 5. Preserve rendered HTML through the service worker
 
-Add both generated files to `additionalManifestEntries` in `vite.config.ts`:
+Add `help` to `navigateFallbackDenylist` in `scripts/prerender.mjs`. For example:
 
-```ts
-{ url: 'help.html', revision: publicPageRevision },
-{ url: 'help/index.html', revision: publicPageRevision },
-```
-
-Then add `help` to `navigateFallbackDenylist`. For example:
-
-```ts
+```js
 navigateFallbackDenylist: [/^\/(?:index\/?|about\/?|help\/?)?$/],
 ```
 
-This step is required. Without it, an active service worker can replace the rendered document with
-`app-shell.html`, making the page client-rendered again. The revision keeps the cached public HTML
-in sync when application source changes.
+This exclusion is required. Without it, an active service worker can replace the rendered document
+with `app-shell.html`, making the page client-rendered again. The final service worker is generated
+after prerendering and automatically precaches both generated HTML files with revisions based on
+their actual contents; no separate manifest entry is needed.
 
 ## 6. Add the page to the sitemap
 
@@ -130,8 +124,9 @@ Confirm the source contains:
 Disable JavaScript and reload as an additional check. The primary page content should remain
 visible, while controls intentionally deferred until mounting may be absent.
 
-If an old service worker is still active, accept the SpiroAnim update prompt or unregister it under
-DevTools > Application > Service Workers before checking again.
+If an old service worker is still active, accept the SpiroAnim update prompt. When testing a change
+to the service-worker build itself, clear the site's storage and unregister its worker under
+DevTools > Application before checking again.
 
 ## Completion checklist
 
@@ -139,7 +134,7 @@ DevTools > Application > Service Workers before checking again.
 - [ ] Route registered and not listed as client-only.
 - [ ] SEO metadata added.
 - [ ] Route rendered by `scripts/prerender.mjs`.
-- [ ] Clean and directory-index HTML added to the service-worker manifest.
+- [ ] Clean and directory-index HTML emitted before the final service worker is generated.
 - [ ] Route excluded from the client-shell navigation fallback.
 - [ ] Canonical URL added to the sitemap.
 - [ ] Browser-only behavior deferred until mounting.

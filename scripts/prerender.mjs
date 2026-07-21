@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { generateSW } from 'workbox-build'
 
 const projectRoot = process.cwd()
 const clientDirectory = path.resolve(projectRoot, 'build')
@@ -71,6 +72,19 @@ await writeRoute('/about', pageHtml(about.appHtml, about.seo), true)
 
 for (const route of clientOnlyPaths) await writeRoute(route, appShell, true)
 
+const serviceWorkerResult = await generateSW({
+  cleanupOutdatedCaches: true,
+  clientsClaim: true,
+  globDirectory: clientDirectory,
+  globIgnores: ['sw.js', 'workbox-*.js'],
+  globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
+  navigateFallback: 'app-shell.html',
+  navigateFallbackDenylist: [/^\/(?:index\/?|about\/?)?$/],
+  swDest: path.join(clientDirectory, 'sw.js'),
+})
+
+for (const warning of serviceWorkerResult.warnings) console.warn(warning)
+
 console.log(
-  `Prerendered / and /about; generated ${clientOnlyPaths.length} client-only route shells.`,
+  `Prerendered / and /about; generated ${clientOnlyPaths.length} client-only route shells and precached ${serviceWorkerResult.count} final files.`,
 )

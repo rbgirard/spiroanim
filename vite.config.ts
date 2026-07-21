@@ -1,6 +1,3 @@
-import { createHash } from 'node:crypto'
-import { readdirSync, readFileSync } from 'node:fs'
-import path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
@@ -11,28 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import AutoImport from 'unplugin-auto-import/vite'
 import { AutoImports } from './src/sys/auto-imports.ts'
 
-function hashSourceDirectory(directory: string, hash = createHash('sha256')) {
-  for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  )) {
-    const entryPath = path.join(directory, entry.name)
-    if (entry.isDirectory() && entry.name !== '__tests__') hashSourceDirectory(entryPath, hash)
-    else if (entry.name !== 'auto-imports-generated.d.ts' && /\.(?:css|ts|vue)$/.test(entry.name))
-      hash.update(readFileSync(entryPath))
-  }
-
-  return hash
-}
-
-function getPublicPageRevision() {
-  const hash = hashSourceDirectory(fileURLToPath(new URL('./src', import.meta.url)))
-  hash.update(readFileSync(fileURLToPath(new URL('./index.html', import.meta.url))))
-  return hash.digest('hex')
-}
-
 export function createViteConfig(isSsrBuild: boolean) {
-  const publicPageRevision = getPublicPageRevision()
-
   return {
     //root: path.resolve(__dirname, 'src'),
     base: '/',
@@ -111,15 +87,8 @@ export function createViteConfig(isSsrBuild: boolean) {
           workbox: {
             clientsClaim: true,
             cleanupOutdatedCaches: true,
-            additionalManifestEntries: [
-              { url: 'app-shell.html', revision: publicPageRevision },
-              { url: 'index.html', revision: publicPageRevision },
-              { url: 'about.html', revision: publicPageRevision },
-              { url: 'about/index.html', revision: publicPageRevision },
-            ],
-            globPatterns: ['**/*.{css,ico,js,png,svg}'],
-            navigateFallback: 'app-shell.html',
-            navigateFallbackDenylist: [/^\/(?:index\/?|about\/?)?$/],
+            globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
+            navigateFallback: 'index.html',
           },
           devOptions: {
             enabled: false,
