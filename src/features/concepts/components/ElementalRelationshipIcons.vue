@@ -72,6 +72,7 @@ const createRelationshipTokens = (
 ): readonly RelationshipToken[] => {
   if (indeterminate) return [{ symbol: 'Indeterminate', label: 'Indeterminate' }]
   if (!relationship) return []
+  // The Sun/Moon quarter-time extension is attributed in THIRD_PARTY_NOTICES.md.
   const symbol: RelationshipSymbol | undefined =
     relationship.timing === 'Q'
       ? relationship.direction === 'S'

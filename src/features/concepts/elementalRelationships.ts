@@ -6,6 +6,10 @@ export interface ElementalRelationship {
   direction: VtgDirectionCode
 }
 
+/**
+ * These classical-element labels adapt the TKA Platform elemental relationship model. The model
+ * is a community overlay rather than VTG vocabulary; see THIRD_PARTY_NOTICES.md for provenance.
+ */
 export const relationshipElement = (
   relationship: ElementalRelationship | undefined,
 ): ElementName | undefined => {

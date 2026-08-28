@@ -943,6 +943,7 @@ const getElementalAccessibleLabel = (
   indeterminate: boolean | undefined,
 ): string | undefined => {
   if (indeterminate) return 'Indeterminate'
+  // The Sun/Moon quarter-time extension is attributed in THIRD_PARTY_NOTICES.md.
   if (relationship?.timing === 'Q') return relationship.direction === 'S' ? 'Sun' : 'Moon'
   return relationshipElement(relationship)
 }

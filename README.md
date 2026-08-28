@@ -81,6 +81,11 @@ The production build also prerenders the landing, About, and Tips pages for sear
 keeping the editor and PWA browser-only. See [docs/SEO.md](docs/SEO.md) for the route boundary and
 [docs/PRERENDERING.md](docs/PRERENDERING.md) when adding another public page.
 
+## Attribution
+
+Third-party source attribution and license notices are recorded in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ### Lint with [ESLint](https://eslint.org/)
 
 ```sh

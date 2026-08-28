@@ -4,6 +4,9 @@ Use this index to find the document that owns a behavior before changing it. Kee
 focused on its named responsibility, and link to related guides instead of duplicating their
 details.
 
+Third-party source attribution and license notices are maintained in
+[`THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
+
 ## Animation and editor data
 
 - [`QUERY_STRING_AND_PROPERTY_MODEL.md`](./QUERY_STRING_AND_PROPERTY_MODEL.md) - overview of the
