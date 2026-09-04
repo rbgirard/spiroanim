@@ -305,7 +305,7 @@ describe('resampleAnimationFrames', () => {
     expect(halveAnimationFrames(fractionalBpm)).toBeUndefined()
 
     const lowBpm = doubleAnimationFrames(createAnimation())!
-    lowBpm.bpm = 30
+    lowBpm.bpm = 18
     expect(halveAnimationFrames(lowBpm)).toBeUndefined()
 
     const fractionalMotionBeats = doubleAnimationFrames(createAnimation())!

@@ -218,7 +218,6 @@ describe('ConceptsPane', () => {
       'Vulcan Tech Gospel 4',
       'Eight Step',
       'Quarter Space Tech',
-      'Third Order',
       'The Kinetic Alphabet',
     ])
     expect(wrapper.findAll('[data-role^="quick-slot-"]')).toHaveLength(6)
@@ -386,22 +385,6 @@ describe('ConceptsPane', () => {
     expect(wrapper.get('[data-role="tka-development-note"]').text()).toBe(
       'Austin might be working on something for us...',
     )
-    expect(wrapper.emitted('patternSelect')).toBeUndefined()
-  })
-
-  it('shows the Third Order placeholder immediately before The Kinetic Alphabet', async () => {
-    const wrapper = mount(ConceptsPane)
-    const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
-    const options = selector.findAll('option')
-
-    expect(options.map((option) => option.element.value).slice(-2)).toEqual(['to', 'tka'])
-    await selector.setValue('to')
-
-    expect(wrapper.get('[data-role="to-pane"]').text()).toContain('Third Order')
-    expect(wrapper.get('[data-role="to-development-note"]').text()).toBe(
-      'The Rock is in the kitchen and is COOKING something...',
-    )
-    expect(wrapper.find('[data-role="tka-pane"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 

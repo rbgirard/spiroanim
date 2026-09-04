@@ -502,6 +502,27 @@ describe('useSpiroAnimQS', () => {
     ])
   })
 
+  it('uses the 10 BPM v12 range and preserves BPM decoded from older query versions', async () => {
+    expect(VDEF_V12.bpm).toEqual([10, 520, 9])
+
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const legacyQuery = await useSpiroAnimQS(
+      VDEF_V11,
+      useBaseQS(VDEF_V11, { charset: CHARSET_V11 }),
+      11,
+    )
+    const legacyRoot = createRoot()
+    legacyRoot.bpm = 20
+
+    const migrated = await query.decodeVer(legacyQuery.encodeQS(legacyRoot, false))
+    expect(migrated.bpm).toBe(20)
+    expect(query.decodeQS(query.encodeQS(migrated, false)).bpm).toBe(20)
+
+    const minimum = createRoot()
+    minimum.bpm = 10
+    expect(query.decodeQS(query.encodeQS(minimum, false)).bpm).toBe(10)
+  })
+
   it('migrates historical Scale and Turns values into the v12 units', async () => {
     const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
     const legacyQuery = await useSpiroAnimQS(

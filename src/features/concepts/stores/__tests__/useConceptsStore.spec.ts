@@ -533,6 +533,14 @@ describe('useConceptsStore', () => {
     store.rightPropColor = 'Magenta'
     store.prop = 3
     store.sliders = false
+    store.vtgTwistMode = 'advanced'
+    store.vtgTwistValues = [{ 2: 45 }, { 3: -45 }]
+    store.vtgThirdOrderSettings = [{ initial: '1:3-pro', strength: 0.5 }, { timing: '2:3-anti' }]
+    store.vtgThirdOrderMirror = false
+    store.vtgThirdOrderOpposed = true
+    store.vtgFoldValues = [{ 2: { yaw: 45 } }, { 3: { rotate: -45 } }]
+    store.vtgFoldMode = 'advanced'
+    store.vtgActiveProperty = 'third-order'
 
     store.resetPatternControls()
 
@@ -552,6 +560,14 @@ describe('useConceptsStore', () => {
       leftPropColor: store.leftPropColor,
       rightPropColor: store.rightPropColor,
       prop: store.prop,
+      vtgTwistMode: store.vtgTwistMode,
+      vtgTwistValues: store.vtgTwistValues,
+      vtgThirdOrderSettings: store.vtgThirdOrderSettings,
+      vtgThirdOrderMirror: store.vtgThirdOrderMirror,
+      vtgThirdOrderOpposed: store.vtgThirdOrderOpposed,
+      vtgFoldValues: store.vtgFoldValues,
+      vtgFoldMode: store.vtgFoldMode,
+      vtgActiveProperty: store.vtgActiveProperty,
       sliders: store.sliders,
     }).toEqual({
       speedRatio: '1:3',
@@ -569,6 +585,14 @@ describe('useConceptsStore', () => {
       leftPropColor: 'Cyan',
       rightPropColor: 'Green',
       prop: 3,
+      vtgTwistMode: 'simple',
+      vtgTwistValues: [{}, {}],
+      vtgThirdOrderSettings: [{}, {}],
+      vtgThirdOrderMirror: true,
+      vtgThirdOrderOpposed: false,
+      vtgFoldValues: [{}, {}],
+      vtgFoldMode: 'simple',
+      vtgActiveProperty: null,
       sliders: true,
     })
     app.unmount()
@@ -642,12 +666,12 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
-  it('hydrates Third Order as the selected concept', () => {
+  it('resets the removed Third Order concept selection to VTG', () => {
     localStorage.setItem('sa-concepts', JSON.stringify({ selectedConcept: 'to' }))
 
     const { app, store } = mountStore()
 
-    expect(store.selectedConcept).toBe('to')
+    expect(store.selectedConcept).toBe('vtg')
     app.unmount()
   })
 

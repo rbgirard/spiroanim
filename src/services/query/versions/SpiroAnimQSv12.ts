@@ -48,6 +48,8 @@ export const HALF_DEGREE_QUERY_CODEC: QueryValueCodec = {
 
 export const VDEF = {
   ...LEGACY_VDEF,
+  // V12 lowers the core animation minimum while older versions retain their 20 BPM offset.
+  bpm: [10, 520, 9],
   prop: [0, 4, 4],
   scale: [SCALE_MIN, SCALE_MAX, 10],
   strength: [STRENGTH_MIN, STRENGTH_MAX, 10],

@@ -4,7 +4,6 @@ export const fullPathByConcept = {
   vtg: 'vulcan-tech-gospel',
   '8stp': 'eight-step',
   qst: 'quarter-space-tech',
-  to: 'third-order',
   tka: 'the-kinetic-alphabet',
 } as const satisfies Record<ConceptKey, string>
 
@@ -26,7 +25,7 @@ export const findConceptForPath = (path: string): ConceptRouteSelection | undefi
 
   for (const part of page.split('-')) {
     if (part === 'qtr') return { concept: 'vtg', qtrEnabled: true }
-    if (part === 'vtg' || part === '8stp' || part === 'qst' || part === 'to' || part === 'tka') {
+    if (part === 'vtg' || part === '8stp' || part === 'qst' || part === 'tka') {
       return { concept: part, qtrEnabled: false }
     }
   }

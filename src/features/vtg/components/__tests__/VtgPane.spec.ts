@@ -11,6 +11,7 @@ import {
 } from '@/features/builder/describeVtgBuilderMotion'
 import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
+import { resolveVtgBuilderPatternMatchAnimation } from '@/features/builder/resolveVtgBuilderPatternMatchAnimation'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
@@ -18,9 +19,13 @@ import {
   createDefaultQtrAnimation,
   createQtrAnimation,
 } from '@/features/vtg/qtr/createQtrAnimation'
-import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgAnimation, createVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { extractVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 import { findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
-import { createVtgTransitionQuickSlotAnimationCandidates } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import {
+  createVtgTransitionPreviewAnimations,
+  createVtgTransitionQuickSlotAnimationCandidates,
+} from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import {
   exactlyMatchesQtrSelection,
   findQtrPatternMatch,
@@ -1267,25 +1272,31 @@ describe('VtgPane', () => {
   })
 
   it('renders Hands and Third Order timing in VTG thumbnails', async () => {
+    const store = useConceptsStore()
+    store.hands = true
     const wrapper = mount(VtgPane)
     await settlePreviewRendering()
     reportAllBlankDimensions(72, 68)
     await settlePreviewRendering()
 
-    const store = useConceptsStore()
-    store.hands = true
     store.setVtgThirdOrderTiming(0, '2:3-anti')
     await nextTick()
+    await nextTick()
+    reportAllBlankDimensions(72, 68)
     await settlePreviewRendering()
 
-    const preview = FakeWorker.instances[0]?.messages
-      .filter(({ type }) => type === 'data')
-      .map(({ data }) => data as RootDataCompiled)
-      .at(-1)
-    expect(preview).toMatchObject({ hands: true })
-    expect(preview?.props.every((prop) => prop.hands === true)).toBe(true)
-    expect(preview?.props[0]?.anim).toHaveLength(17)
-    expect(preview?.props[0]?.anim.slice(1).every((frame) => frame.warp !== 0)).toBe(true)
+    const previews =
+      FakeWorker.instances[0]?.messages
+        .filter(({ type }) => type === 'data')
+        .map(({ data }) => data as RootDataCompiled) ?? []
+    const handsPreview = previews.find((preview) => preview.hands === true)
+    const thirdOrderPreview = [...previews]
+      .reverse()
+      .find((preview) => preview.props[0]?.anim.length === 17)
+    expect(handsPreview).toMatchObject({ hands: true })
+    expect(handsPreview?.props.every((prop) => prop.hands === true)).toBe(true)
+    expect(thirdOrderPreview?.props[0]?.anim).toHaveLength(17)
+    expect(thirdOrderPreview?.props[0]?.anim.slice(1).every((frame) => frame.warp !== 0)).toBe(true)
 
     wrapper.unmount()
   })
@@ -3121,6 +3132,147 @@ describe('VtgPane', () => {
       )
     },
   )
+
+  it('uses the paired 1:3 layout when Third Order makes shared thumbnail paths diverge', async () => {
+    const store = useConceptsStore()
+    store.vtgThirdOrderSettings = [{ initial: '1:3-pro', strength: 1, timing: '1:3-pro' }, {}]
+    store.vtgThirdOrderMirror = true
+    const wrapper = mount(VtgPane)
+    await nextTick()
+
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    expect(wrapper.findAll('.vtg-tile')[0]?.classes()).toContain('vtg-tile--paired-left')
+    expect(wrapper.findAll('.vtg-tile')[1]?.classes()).toContain('vtg-tile--paired-right')
+  })
+
+  it('returns to shared Full Grid thumbnails when the Builder Drop target is selected', async () => {
+    const store = useConceptsStore()
+    store.vtgThirdOrderSettings = [{ initial: '1:3-pro', strength: 1, timing: '1:3-pro' }, {}]
+    store.vtgThirdOrderMirror = true
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: 0,
+        builderMatchAnimation: animation,
+      },
+    })
+
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+
+    await wrapper.setProps({ builderInsertionIndex: 1, builderMatchAnimation: undefined })
+
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    expect(wrapper.findAll('.vtg-tile')[0]?.classes()).toContain('vtg-tile--shared-preview-top')
+    expect(wrapper.findAll('.vtg-tile')[6]?.classes()).toContain('vtg-tile--shared-preview-bottom')
+  })
+
+  it('pairs the first but shares the second portion of the reported three-portion pattern', async () => {
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      CURRENT_SPIRO_ANIM_QS_VERSION,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Gw48Yk11Y&p0=Q__.blE-ZU.5JE_6k........5JE-ZU_ZE........___-ZU.......&x0=Qo____Yw.____L7L_........____NBf_........____NXL_&m0=_1_mxqv__&p1=N__.blE_98.5L__6k........5JE_6k........___-ZU.......&x1=Qo____Yw.____L7L_........____Luf_........____NXL_&c=_i_bhq&v=12',
+        ),
+      ),
+    )
+    const previews = createVtgTransitionPreviewAnimations(animation)
+    const first = resolveVtgBuilderPatternMatchAnimation(previews, 0)
+    const second = resolveVtgBuilderPatternMatchAnimation(previews, 1)
+    if (!first || !second)
+      throw new Error('Expected the reported pattern to have first and second Builder portions')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        animationReady: true,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: 0,
+        builderMatchAnimation: first,
+      },
+    })
+
+    await settlePreviewRendering()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+
+    await wrapper.setProps({ builderInsertionIndex: 1, builderMatchAnimation: second })
+    await settlePreviewRendering()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+  })
+
+  it('shares equivalent generated thumbnails for the reported standalone pattern', async () => {
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      CURRENT_SPIRO_ANIM_QS_VERSION,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-ZU_U0.......&x0=Qo____Yw.____NBf_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0_6k_WQ.......&x1=Qo____Yw.____Luf_&c=_i_bhq&v=12',
+        ),
+      ),
+    )
+    const wrapper = mount(VtgPane, { props: { animation, animationReady: true } })
+
+    await settlePreviewRendering()
+
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+
+    const store = useConceptsStore()
+    const detectedThirdOrder = store.vtgThirdOrderSettings.map((settings) => ({ ...settings }))
+    expect(detectedThirdOrder).not.toEqual([{}, {}])
+    await wrapper.get('[data-cell-reference="2-2"]').trigger('click')
+    const selection = wrapper.emitted<VtgPatternSelection[]>('patternSelect')?.at(-1)?.[0]
+    if (!selection) throw new Error('Expected the selected cell to emit a VTG pattern')
+    const generated = createVtgAnimation(animation, selection, {
+      minimumCycleCount: store.getVtgPropertyCycleCount(),
+    })
+    if (!generated) throw new Error('Expected the selected VTG pattern to generate')
+    const applied = store.applyVtgPropertyControls(generated)
+    expect(extractVtgThirdOrderSettings(applied)).toEqual(detectedThirdOrder)
+  })
+
+  it('keeps detected properties when selecting another cell in the reported tilted pattern', async () => {
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
+    const codec = await useSpiroAnimQS(
+      version.VDEF,
+      useBaseQS(version.VDEF, { charset: version.CHARSET }),
+      CURRENT_SPIRO_ANIM_QS_VERSION,
+    )
+    const animation = codec.decodeQS(
+      Object.fromEntries(
+        new URLSearchParams(
+          'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-ZU_U0.......&x0=Qo____Yw.____NXL_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0-ZU_WQ.......&x1=Qo____Yw.____NXL_&c=_i_bhq&v=12',
+        ),
+      ),
+    )
+    const wrapper = mount(VtgPane, { props: { animation, animationReady: true } })
+    await settlePreviewRendering()
+
+    const store = useConceptsStore()
+    const detectedThirdOrder = store.vtgThirdOrderSettings.map((settings) => ({ ...settings }))
+    expect(detectedThirdOrder).not.toEqual([{}, {}])
+    await wrapper.get('[data-cell-reference="2-2"]').trigger('click')
+    const selection = wrapper.emitted<VtgPatternSelection[]>('patternSelect')?.at(-1)?.[0]
+    if (!selection) throw new Error('Expected the selected cell to emit a VTG pattern')
+    const generated = createVtgAnimation(animation, selection, {
+      minimumCycleCount: store.getVtgPropertyCycleCount(),
+    })
+    if (!generated) throw new Error('Expected the selected VTG pattern to generate')
+    expect(extractVtgThirdOrderSettings(store.applyVtgPropertyControls(generated))).toEqual(
+      detectedThirdOrder,
+    )
+  })
 
   it.each(['1:2', '1:4'] as const)(
     'uses one bottom thumbnail per horizontal cell pair at %s',

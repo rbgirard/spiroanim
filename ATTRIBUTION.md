@@ -4,11 +4,8 @@
 
 The element artwork (Earth, Water, Air, Fire, Sun, Moon) was created by
 [Austen Cloud](https://tkaflowarts.com) for [The Kinetic Alphabet (TKA)](https://tkaflowarts.com)
-and is licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). SpiroAnim does not vendor
-the files: `ElementalRelationshipIcons.vue` imports them from the
-[`@austencloud/tka-elements`](https://www.npmjs.com/package/@austencloud/tka-elements) npm package,
-which Austen maintains, so the icons here are always the ones TKA renders on its pictographs.
-Bumping that dependency picks up new artwork. Keep this notice if you copy the icons elsewhere.
+and is licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). SpiroAnim vendors the
+WebP files under `src/assets/icons/elements/`. Keep this notice if you copy the icons elsewhere.
 
 ## Elemental relationship terminology
 

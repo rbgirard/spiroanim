@@ -7,8 +7,6 @@ describe('findConceptForPath', () => {
     ['/play-vtg?r=one&v=6', { concept: 'vtg', qtrEnabled: false }],
     ['/8stp-time?r=two&v=6', { concept: '8stp', qtrEnabled: false }],
     ['/quarter-space-tech?r=three&v=6', { concept: 'qst', qtrEnabled: false }],
-    ['/play-to?r=four&v=6', { concept: 'to', qtrEnabled: false }],
-    ['/third-order?r=four&v=6', { concept: 'to', qtrEnabled: false }],
     ['/the-kinetic-alphabet?r=four&v=6', { concept: 'tka', qtrEnabled: false }],
     ['/edit-qtr?r=five&v=6', { concept: 'vtg', qtrEnabled: true }],
     ['/quarterspacing?r=six&v=6', { concept: 'vtg', qtrEnabled: true }],
@@ -19,5 +17,7 @@ describe('findConceptForPath', () => {
   it('does not infer a Concepts child from a generic or unrelated path', () => {
     expect(findConceptForPath('/play-cnc?r=one&v=6')).toBeUndefined()
     expect(findConceptForPath('/editor?r=one&v=6')).toBeUndefined()
+    expect(findConceptForPath('/play-to?r=four&v=6')).toBeUndefined()
+    expect(findConceptForPath('/third-order?r=four&v=6')).toBeUndefined()
   })
 })

@@ -370,6 +370,21 @@ corresponding non-Tilted pattern.
 
 The top-header prop diagrams are not displayed in QTR mode.
 
+VTG normally shares one rendered path thumbnail across each four-cell group. Ratios whose adjacent
+rows diverge use the paired 18-thumbnail layout instead. The pane compares the final compiled path
+changes for the representative `1-6` and `2-6` candidates in the active context, including Builder
+insertion context and any effective Third Order settings. Equivalent results retain the shared
+nine-thumbnail layout.
+
+In Pattern Builder, selecting the empty Drop target clears the effective per-portion Third Order
+preview context. Enabling Full Grid from that target therefore returns to the shared layout and
+renders unmodified candidate paths. Selecting a concrete Builder portion restores its effective
+Third Order layout and thumbnails.
+
+Detected VTG property controls remain active when another matrix cell is selected, including for
+QTR selections and tilted layouts. Reset clears the active Twist, Third Order, Fold, and transition
+offset settings before regenerating the selected pattern.
+
 The 1:2 and 1:4 VTG ratios also hide the top-header labels, prop diagrams, dividers, and tooltips
 while retaining the numbers and selection behavior. At 1:1 and 1:5, the visible top-header rules
 are remapped by physical column as `3, 4, 1, 2, 5, 6`. The 1:3 top headers retain their standard

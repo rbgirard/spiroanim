@@ -79,9 +79,8 @@
                 rel="noopener noreferrer"
                 >The Kinetic Alphabet</a
               >
-              and are the same icons TKA renders on its pictographs, loaded from Austen's
-              <code>@austencloud/tka-elements</code> package. Sun and Moon are Austen's extension of
-              the elemental model to quarter-time relationships. See
+              and are the same icons TKA renders on its pictographs. Sun and Moon are Austen's
+              extension of the elemental model to quarter-time relationships. See
               <a
                 class="inline-link"
                 href="https://github.com/rbgirard/spiroanim/blob/main/ATTRIBUTION.md"

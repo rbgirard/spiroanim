@@ -12,7 +12,6 @@ const appRouteAliases = [
   '/quarterspacing',
   '/eight-step',
   '/quarter-space-tech',
-  '/third-order',
   '/the-kinetic-alphabet',
   ...paneSplits,
 ]

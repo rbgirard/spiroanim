@@ -229,6 +229,21 @@ export const useConceptsStore = defineStore(
       rightPropVisible.value = true
       leftPropColor.value = defaultPatternPropColors[0]
       rightPropColor.value = defaultPatternPropColors[1]
+      vtgTwistMode.value = 'simple'
+      vtgTwistValues.value = [{}, {}]
+      vtgThirdOrderSettings.value = [{}, {}]
+      vtgThirdOrderMirror.value = true
+      vtgThirdOrderOpposed.value = false
+      vtgFoldValues.value = [{}, {}]
+      vtgFoldValuesMaterialized.value = false
+      vtgFoldMode.value = 'simple'
+      vtgFoldBeat.value = [2, 2]
+      vtgFoldRepeat.value = [true, true]
+      vtgFoldEvery.value = [2, 2]
+      vtgFoldAlternate.value = [false, false]
+      vtgFoldSpan.value = 'eighth'
+      vtgFoldMirror.value = true
+      vtgActiveProperty.value = null
       sliders.value = !isTouchDevice()
     }
 

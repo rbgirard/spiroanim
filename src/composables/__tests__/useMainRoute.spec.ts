@@ -92,7 +92,6 @@ describe('useMainRoute', () => {
       '/play-qtr',
       '/play-8stp',
       '/play-qst',
-      '/play-to',
       '/play-tka',
       '/time-play',
       '/time-edit',
@@ -101,7 +100,6 @@ describe('useMainRoute', () => {
       '/time-qtr',
       '/time-8stp',
       '/time-qst',
-      '/time-to',
       '/time-tka',
       '/edit-play',
       '/edit-time',
@@ -110,7 +108,6 @@ describe('useMainRoute', () => {
       '/edit-qtr',
       '/edit-8stp',
       '/edit-qst',
-      '/edit-to',
       '/edit-tka',
       '/cnc-play',
       '/cnc-time',
@@ -127,9 +124,6 @@ describe('useMainRoute', () => {
       '/qst-play',
       '/qst-time',
       '/qst-edit',
-      '/to-play',
-      '/to-time',
-      '/to-edit',
       '/tka-play',
       '/tka-time',
       '/tka-edit',
@@ -486,24 +480,6 @@ describe('useMainRoute', () => {
     expect(conceptsStore.selectedConcept).toBe('tka')
     expect(splitterStore.leftPerc).toBe(0)
     expect(router.currentRoute.value.path).toBe('/the-kinetic-alphabet')
-  })
-
-  it('maps the Third Order route to its full-width Concepts pane', async () => {
-    const { conceptsStore, paneStore, router, splitterStore } = await mountRoute(
-      '/third-order',
-      createLoadedAnimation(),
-    )
-
-    expect(paneStore.parents.concepts).toBe('right')
-    expect(conceptsStore.selectedConcept).toBe('to')
-    expect(splitterStore.leftPerc).toBe(0)
-    expect(router.currentRoute.value.path).toBe('/third-order')
-
-    conceptsStore.selectedConcept = 'tka'
-    await flushPromises()
-    conceptsStore.selectedConcept = 'to'
-    await flushPromises()
-    expect(router.currentRoute.value.path).toBe('/third-order')
   })
 
   it('maps the Quarter Space Tech route and short key to its Concepts pane', async () => {

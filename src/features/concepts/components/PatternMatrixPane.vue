@@ -528,6 +528,7 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { requiresPairedVtgThirdOrderPreviewLayout } from '@/features/vtg/math/requiresPairedVtgThirdOrderPreviewLayout'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { toColor } from '@/utils/UtilFunc'
@@ -734,8 +735,54 @@ const compactBuilder = computed(() => props.builderActive && !props.builderFullC
 const usesClassicLayout = computed(
   () => (vtgAdvanced.value ? classicLayout.value : true) && !compactBuilder.value,
 )
+const appliesThirdOrderToPreviews = computed(
+  () => !props.builderActive || props.builderMatchAnimation !== undefined,
+)
 const usesPairedPreviewLayout = computed(
-  () => compactBuilder.value || requiresPairedVtgPreviewLayout(speedRatio.value),
+  () =>
+    compactBuilder.value ||
+    requiresPairedVtgPreviewLayout(speedRatio.value) ||
+    (!isQtr.value &&
+      requiresPairedVtgThirdOrderPreviewLayout(
+        speedRatio.value,
+        appliesThirdOrderToPreviews.value ? vtgThirdOrderSettings.value : [{}, {}],
+        {
+          mirror: vtgThirdOrderMirror.value,
+          opposed: vtgThirdOrderOpposed.value,
+          createAnimation: (reference, minimumCycleCount) =>
+            props.animation && props.builderInsertionIndex !== undefined
+              ? createVtgBuilderDropPreview(
+                  props.animation,
+                  { reference, speedRatio: speedRatio.value },
+                  props.builderInsertionIndex,
+                  { minimumCycleCount },
+                )
+              : createDefaultVtgAnimation(
+                  { reference, speedRatio: speedRatio.value },
+                  {
+                    minimumCycleCount,
+                  },
+                ),
+          createTransformedAnimation: (reference, minimumCycleCount) =>
+            props.animation && props.builderInsertionIndex !== undefined
+              ? createVtgBuilderDropPreview(
+                  props.animation,
+                  { reference, speedRatio: speedRatio.value },
+                  props.builderInsertionIndex,
+                  {
+                    minimumCycleCount,
+                    thirdOrder: {
+                      settings: appliesThirdOrderToPreviews.value
+                        ? vtgThirdOrderSettings.value
+                        : [{}, {}],
+                      mirror: vtgThirdOrderMirror.value,
+                      opposed: vtgThirdOrderOpposed.value,
+                    },
+                  },
+                )
+              : undefined,
+        },
+      )),
 )
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
 const hideColumnHeaderDetails = computed(
@@ -1319,11 +1366,6 @@ const selectTile = (tile: VtgMatrixTile) => {
     releasePatternEmitSuppression(suppressionOwner)
     emitBuilderPreview(tile)
     return
-  }
-  const changesPattern = tile.reference !== selectedCellReference.value
-  if (changesPattern) {
-    initialTurnsOffset.value = undefined
-    initialTurnsOffsetBeat.value = undefined
   }
   selectedCell.value = {
     column: tile.column,
@@ -2017,20 +2059,38 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
     vtgThirdOrderOpposed.value,
   ]),
   createVtgPreview: (selection) => {
-    const minimumCycleCount = conceptsStore.getVtgPropertyCycleCount()
-    const animation =
-      props.builderActive && props.builderInsertionIndex !== undefined && props.animation
-        ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
-            minimumCycleCount,
-          })
-        : 'quarters' in selection
-          ? createDefaultQtrAnimation(selection)
-          : createDefaultVtgAnimation(selection, { minimumCycleCount })
+    const minimumCycleCount = appliesThirdOrderToPreviews.value
+      ? conceptsStore.getVtgPropertyCycleCount()
+      : 1
+    const isBuilderPreview =
+      props.builderActive &&
+      props.builderInsertionIndex !== undefined &&
+      props.animation !== undefined
+    const animation = isBuilderPreview
+      ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
+          minimumCycleCount,
+          ...(appliesThirdOrderToPreviews.value
+            ? {
+                thirdOrder: {
+                  settings: vtgThirdOrderSettings.value,
+                  mirror: vtgThirdOrderMirror.value,
+                  opposed: vtgThirdOrderOpposed.value,
+                },
+              }
+            : undefined),
+        })
+      : 'quarters' in selection
+        ? createDefaultQtrAnimation(selection)
+        : createDefaultVtgAnimation(selection, { minimumCycleCount })
     if (!animation) return undefined
-    const withThirdOrder = applyVtgThirdOrderSettings(animation, vtgThirdOrderSettings.value, {
-      mirror: vtgThirdOrderMirror.value,
-      opposed: vtgThirdOrderOpposed.value,
-    })
+    const withThirdOrder = isBuilderPreview
+      ? animation
+      : appliesThirdOrderToPreviews.value
+        ? applyVtgThirdOrderSettings(animation, vtgThirdOrderSettings.value, {
+            mirror: vtgThirdOrderMirror.value,
+            opposed: vtgThirdOrderOpposed.value,
+          })
+        : animation
     return toVtgPreviewAnimation(withThirdOrder, { hands: hands.value })
   },
 })

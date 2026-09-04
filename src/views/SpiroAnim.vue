@@ -376,7 +376,9 @@ const applyConceptPattern = (selection: ConceptPatternSelection) => {
   })
   if (createdAnimation) {
     const animation =
-      isVtgPatternSelection(selection) || isEightStepPatternSelection(selection)
+      isVtgPatternSelection(selection) ||
+      isQtrPatternSelection(selection) ||
+      isEightStepPatternSelection(selection)
         ? conceptsStore.applyVtgPropertyControls(createdAnimation)
         : createdAnimation
     commitConceptAnimation(animation)
@@ -397,9 +399,10 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
         })
   if (!animation) return
 
-  const previewAnimation = isVtgPatternSelection(selection)
-    ? conceptsStore.applyVtgPropertyControls(animation)
-    : animation
+  const previewAnimation =
+    isVtgPatternSelection(selection) || isQtrPatternSelection(selection)
+      ? conceptsStore.applyVtgPropertyControls(animation)
+      : animation
 
   playerStore.startPlaybackPreview(
     toVtgBuilderDisplayAnimation(previewAnimation, undefined, {
@@ -420,7 +423,8 @@ const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
         const createdAnimation = createConceptPattern(ROOT.value, selection, {
           minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
         })
-        return createdAnimation && isEightStepPatternSelection(selection)
+        return createdAnimation &&
+          (isQtrPatternSelection(selection) || isEightStepPatternSelection(selection))
           ? conceptsStore.applyVtgPropertyControls(createdAnimation)
           : createdAnimation
       })()
@@ -548,13 +552,11 @@ const quickSlotViewByRoutePart: Readonly<Record<string, QuickSlotTargetView>> = 
   qtr: 'concepts',
   '8stp': 'concepts',
   qst: 'concepts',
-  to: 'concepts',
   tka: 'concepts',
   'vulcan-tech-gospel': 'concepts',
   quarterspacing: 'concepts',
   'eight-step': 'concepts',
   'quarter-space-tech': 'concepts',
-  'third-order': 'concepts',
   'the-kinetic-alphabet': 'concepts',
 }
 

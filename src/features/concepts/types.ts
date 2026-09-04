@@ -2,7 +2,7 @@ import type { EightStepPatternSelection } from '@/features/eight-step/types'
 import type { QstPatternSelection } from '@/features/quarter-space-tech/types'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 
-export const conceptKeys = ['vtg', '8stp', 'qst', 'to', 'tka'] as const
+export const conceptKeys = ['vtg', '8stp', 'qst', 'tka'] as const
 
 export type ConceptKey = (typeof conceptKeys)[number]
 export type ConceptPatternSelection =
