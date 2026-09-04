@@ -219,9 +219,9 @@ Arcs are consolidated when they divide 45 evenly (`15`, for example) and complet
 available.
 
 Subdivision divides Turns by the same factor. Every resulting Turns value must be exactly
-representable to one decimal place. A result requiring hundredths or finer precision, such as
-`.01`, is rejected instead of being rounded. Consolidation likewise preserves complete intervals
-and multiplies Arc and Turns cleanly; it never discards a partial interval group.
+representable in the current half-degree storage precision. A result requiring quarter-degrees or
+finer precision is rejected instead of being rounded. Consolidation likewise preserves complete
+intervals and multiplies Arc and Turns cleanly; it never discards a partial interval group.
 
 ## Detection procedure
 

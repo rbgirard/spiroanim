@@ -19,6 +19,7 @@ first and last states with a small floating-point tolerance:
 
 ```text
 C0.pos == Cn.pos
+C0.warpPos == Cn.warpPos
 C0.orient == Cn.orient
 C0.twistRoll == Cn.twistRoll modulo 360°
 ```
@@ -81,10 +82,17 @@ Durations belong to the segment's starting frame, so the used duration order bec
 old beats 1, old beats 2, ... old beats n - 1, old beats 0
 ```
 
-The UI requests preservation of the original final frame's outgoing values. The shifted final frame
-therefore retains the old final `beats`, `scale`, `warp`, `strength`, `depth`, `twist`, and `adjust` values needed by the next
-unselected interval. For a whole animation, the final `beats` value remains unused until another
-management operation moves that endpoint.
+The UI requests preservation of the original final frame's endpoint and outgoing values. The
+shifted final frame therefore retains the old final `beats`, `scale`, `strength`, `depth`, `twist`,
+and `adjust` values needed by the next unselected interval. For a whole animation, the final
+`beats` value remains unused until another management operation moves that endpoint.
+
+Warp is different because it defines the incoming auxiliary rotation used to reach the shifted
+final frame. The final Warp must come from the rotated source interval; replacing it with the old
+final Warp can open an otherwise closed rendered seam. For a partial range, if the following
+unselected frame inherited the old resolved Warp, Shift materializes that value on the following
+frame. This preserves later inheritance without changing the reconstructed final interval. A
+no-op value is not materialized when the shifted final Warp already matches the following value.
 
 ## Move offsets
 
@@ -111,11 +119,13 @@ the outgoing state used by the following unselected interval:
 
 - `beats`
 - `scale`
-- `warp`
 - `strength`
 - `depth`
 - `adjust`
 - cumulative `move`
+
+The final incoming Warp stays with the rotated interval. When needed, the following frame receives
+the old resolved Warp explicitly so its unselected transition keeps the same inherited value.
 
 Rotating the visible durations preserves the selection's total duration, and retaining the final
 outgoing `beats` value keeps every later frame at its original timeline time. After timing is
@@ -152,4 +162,5 @@ Shift tests cover:
 - Sparse raw output.
 - Atomic multi-prop behavior.
 - Repeated shifts, dynamic Times limits, and one undo step for the complete operation.
+- Reconstructed Warp closure and partial-range following-frame inheritance.
 - A two-prop VTG pattern through query-string encode/decode.

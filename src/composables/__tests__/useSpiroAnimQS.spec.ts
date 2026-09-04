@@ -490,13 +490,14 @@ describe('useSpiroAnimQS', () => {
 
   it('migrates historical Scale and Turns values into the v12 units', async () => {
     const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
-    const decoded = await query.decodeVer({
-      r: 'Ew68kk11Y',
-      p0: 'N__.xT_.bn_..',
-      x0: '_s_',
-      c: '_j_bhq',
-      v: '11',
-    })
+    const legacyQuery = await useSpiroAnimQS(
+      VDEF_V11,
+      useBaseQS(VDEF_V11, { charset: CHARSET_V11 }),
+      11,
+    )
+    const legacyRoot = createRoot()
+    legacyRoot.props[0]!.anim = [{ scale: 8 }, { turns: 180 }]
+    const decoded = await query.decodeVer(legacyQuery.encodeQS(legacyRoot, false))
 
     expect(decoded.props[0]!.anim[0]!.scale).toBe(80)
     expect(decoded.props[0]!.anim[1]!.turns).toBe(180)

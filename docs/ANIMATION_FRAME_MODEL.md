@@ -178,8 +178,9 @@ Assigning Warp the same interval values as Turns reproduces VTG timing geometry 
 the hand path to the prop. For timing `p:q`, anti-spin produces `p + q` petals and in-spin produces
 `abs(q - p)` petals over the complete timing cycle. With 45-degree intervals, `2:3` uses Warp
 `-112.5` for five anti-spin petals or `22.5` for one in-spin petal across its sixteen-interval
-cycle. Linear transitions remain straight and ignore Warp. Paths, Hands, Nodes, Anchors, and Arms
-use the same rendered position as live playback.
+cycle. Linear transitions remain straight: Warp determines their fully rendered endpoints but does
+not curve the interpolation between them. Paths, Hands, Nodes, and Arms use the same rendered
+position as live playback.
 Motion and Depth are applied independently afterward.
 
 ## Independent Motion frames

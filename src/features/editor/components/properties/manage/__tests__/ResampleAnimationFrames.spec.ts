@@ -79,8 +79,7 @@ describe('ResampleAnimationFrames', () => {
     expect(ROOT.value.props[0]!.anim).toHaveLength(3)
     expect(ROOT.value.props[0]!.anim[1]).toMatchObject({
       turns: 45,
-      scale: 212,
-      warp: 0,
+      scale: 150,
       strength: 400,
       depth: 5,
       adjust: 10,

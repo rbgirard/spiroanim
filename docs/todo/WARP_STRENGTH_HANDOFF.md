@@ -2,12 +2,19 @@
 
 ## Purpose
 
-This is the continuation note for the hand-path work discussed and implemented on September 3, 2026. It is intended to make the task recoverable from another computer without relying on the
-chat history.
+This is the continuation note for the hand-path work discussed, implemented, and manually validated
+on September 3, 2026. It is intended to make the task recoverable from another computer without
+relying on the chat history.
 
-The repository was on branch `dev` at commit `d1e8744` (`Third Order (begins)`) when this note was
-written. The worktree contains intentional uncommitted changes. Do not discard or broadly reset
-them when resuming.
+At the final local update, the repository was on branch `dev` at commit `6ab38b2` (`Third Order
+(begins)`) with an intentional closeout diff described below. The user intends to push that diff to
+`dev` before resuming from another computer. Inspect `git status --short` and recent `dev` history
+first; do not discard any remaining changes if the push has not happened.
+
+**First task for September 4, 2026:** evaluate the query-string v12 layout while keeping the version
+number at 12. The current field ranges and behavior are accepted, but the ordering and grouping may
+be revised before v12 is treated as settled. Do not assume that the current `pN`/`xN` ordering is the
+desired final layout merely because it is implemented and tested.
 
 The central result is a pair of Animation properties:
 
@@ -229,8 +236,8 @@ the final endpoints instead.
 
 This was a specific concern from the original discussion and was found to be wrong in the previous
 implementation: the worker used scaled canonical endpoints and ignored Warp/Strength for Linear
-movement. The current uncommitted worker change corrects live rendering and baked hand-path samples
-to use fully rendered endpoints.
+movement. The implemented worker correction makes live rendering and baked hand-path samples use
+fully rendered endpoints.
 
 Relevant implementation names in `createSpiroAnimator.ts` are `LinearStart`, `LinearEnd`, and
 `WarpEnd`. `WarpPerform` remains zero for a Linear segment because Warp is represented by the
@@ -289,8 +296,13 @@ support reconstructs the independent auxiliary vector and its reference orientat
 seam alignment, inherited values, and rebuilt starting state. Strength is preserved/interpolated as
 an ordinary inherited scalar.
 
-This should receive focused manual attention even though the implementation and coverage are in
-place.
+A manual regression found that the UI's final-outgoing preservation overwrote the reconstructed
+final Warp after one additional Shift. In the reported pattern the shifted rendered start was
+`(0.113137, -0.113137, 0)`, but the end became `(0.565685, -0.565685, 0)`. Warp is an incoming
+transition value, so the old final Warp cannot replace the rotated seam value. The fix keeps the
+reconstructed final Warp; a partial-range Shift materializes the old resolved Warp on the following
+unselected frame only when needed to preserve its inheritance. The reported pattern now starts and
+ends at `(0.113137, -0.113137, 0)`, and repeated Shift behavior was manually accepted.
 
 ### Double Frames
 
@@ -300,9 +312,9 @@ auxiliary rotations remain continuously representable.
 
 Linear transitions require an additional guard. Subdividing properties can produce an inserted
 rendered node that does not lie on the original straight line. If accepted, one original line would
-become multiple angled chords. The current uncommitted change computes the original fully rendered
-line and verifies every inserted compiled rendered boundary against the corresponding lerp point.
-Double is disabled if that exact rendered position cannot be represented.
+become multiple angled chords. The implementation computes the original fully rendered line and
+verifies every inserted compiled rendered boundary against the corresponding lerp point. Double is
+disabled if that exact rendered position cannot be represented.
 
 ### Halve Frames
 
@@ -342,6 +354,16 @@ move by 5 degrees while typed/generated values can preserve half degrees.
 ## Query-string version and packing
 
 The query-string version remains **12**. Do not bump it for these current changes.
+
+The first task on September 4 is to review this layout before doing more hand-path work. Keep the
+version at 12, but reconsider the ordering and grouping of fields in `pN` and `xN`, including the
+effect on sparse-frame compactness and readability. Preserve real v1-v11 decoding and the one-time
+Scale/Turns migration. Temporary v12 layouts remain disposable during this development pass. Once
+the ordering is decided, update `SpiroAnimQSv12.ts`, its query tests, `docs/QUERY_STRING_FORMAT.md`,
+and this handoff together.
+
+The remainder of this section describes the currently implemented and tested layout, not a final
+decision that tomorrow's review must retain.
 
 ### Current v12 angle definitions
 
@@ -445,95 +467,85 @@ Earlier diagnostic where Halve and visible path updates were questioned:
 http://localhost:8080/play-edit?r=G068Yk11Y&p0=Q__.bn_.5L_Qpg.......&x0=Qo__QRo&m0=_1_mxqv__&p1=N__.bn_Rhw.5JER3s.......&x1=Qo&c=_i_bhq&v=12
 ```
 
+Shift regression source before the additional Shift:
+
+```text
+http://localhost:8080/play-edit?r=Ew28Yk11Y&p0=Q__..5L_-ZU.......................&x0=Qo____Yw.____Oif_........____MUf_&m0=_1_mxqv__&p1=N__..5E0-ZU...._U0_3w.._U0-ZU...._U0_3w.._U0-ZU...._U0_3w.._U0-ZU...._U0_3w.&x1=Qo____Yw.____Oif_........____MUf_&c=_i_bhq&v=12
+```
+
+The broken output captured before the Shift seam fix was:
+
+```text
+http://localhost:8080/play-edit?r=Ew28Yk11Y&p0=Q__.5L__6k_U0.___-ZU_U0.......................&x0=Qo__Lucw.____Oif_.......____MUf_&m0=_1_mxqv__&p1=N__..5E0-ZU...._U0_3w.._U0-ZU...._U0_3w.._U0-ZU...._U0_3w.._U0-ZU...._U0_3w.&x1=Qo____Yw.____Oif_........____MUf_&c=_i_bhq&v=12
+```
+
+That output incorrectly restored final Warp `0`; the corrected Shift writes final Warp `180` and
+closes the rendered seam. Because tomorrow's v12 packing review may reorder fields, preserve the
+decoded regression data and assertions rather than treating either encoded v12 string as permanent.
+
 ## Current worktree state
 
-At handoff, core Warp/Strength work already existed in `HEAD`. The current uncommitted work mainly
-contains:
+Commit `6ab38b2` on `dev` contains the Warp/Strength implementation, current v12 packing, legacy
+migration, Linear rendered-endpoint behavior, Double/Halve guard, and the original handoff. The
+intentional closeout diff on top of that commit contains:
 
-1. the final v12 Turns/Warp half-degree range and packing changes;
-2. v1-v11 Turns migration;
-3. VTG precision updates for the half-degree contract;
-4. the Linear rendered-endpoint correction;
-5. the Double/Halve Linear exactness guard;
-6. related tests and documentation updates.
+1. the Shift final-Warp seam fix;
+2. partial-range following-Warp inheritance preservation;
+3. focused Shift regression coverage;
+4. corrections to stale Scale midpoint, legacy Turns migration, and Warp-closure test fixtures;
+5. documentation corrections and this updated handoff.
 
-Modified files reported by `git status --short`:
+Files in that local diff before the planned push to `dev`:
 
 ```text
 docs/ANIMATION_FRAME_MODEL.md
-docs/PROPERTY_CONTROLS.md
-docs/QUERY_STRING_FORMAT.md
+docs/SHIFT.md
 docs/VTG_TIMING_RATIOS.md
+docs/todo/WARP_STRENGTH_HANDOFF.md
 src/composables/__tests__/useSpiroAnimQS.spec.ts
-src/composables/useSpiroAnimQS.ts
-src/features/editor/components/properties/manage/ResampleAnimationFrames.vue
-src/features/editor/components/properties/panels/AnimationsPanel.vue
+src/features/editor/components/properties/manage/ShiftFrames.vue
+src/features/editor/components/properties/manage/__tests__/ResampleAnimationFrames.spec.ts
+src/features/editor/components/properties/manage/__tests__/ShiftFrames.spec.ts
 src/features/editor/manage/__tests__/resampleAnimationFrames.spec.ts
-src/features/vtg/math/__tests__/prepareVtg45TransitionPattern.spec.ts
-src/features/vtg/math/inferVtgSpeedRatio.ts
-src/features/vtg/math/prepareVtg45TransitionPattern.ts
-src/math/animation/subdivideAnimationPlayback.ts
-src/services/query/versions/SpiroAnimQSv12.ts
-src/workers/animation/__tests__/createSpiroAnimator.spec.ts
-src/workers/animation/createSpiroAnimator.ts
+src/math/animation/__tests__/shiftAnimationFrames.spec.ts
+src/math/animation/shiftAnimationFrames.ts
 ```
 
-New untracked implementation/test files before this handoff note was added:
-
-```text
-src/domain/animation/timingAngle.ts
-src/services/query/__tests__/migrateLegacyTurns.spec.ts
-src/services/query/migrateLegacyTurns.ts
-```
-
-Inspect `git status --short` and `git diff` first after switching computers. Preserve all of these
-changes unless a later decision explicitly supersedes them.
+The user intends to push this state to `dev` after the handoff update. On the next computer, inspect
+recent `dev` history and `git status --short` before assuming the files are still uncommitted.
 
 ## Validation already performed
 
-Before this handoff note:
+- The user manually accepted spherical Warp/Strength behavior, Scale independence, Linear paths,
+  live and baked displays, Double/Halve behavior, current query round trips, canonical recognition,
+  repeated Shift behavior, and 3D Plane changes.
+- The Shift regression URL was decoded through the application's v12 codec and compiler. After the
+  fix, its rendered first and last positions both equal `(0.113137, -0.113137, 0)`.
+- Focused Warp/Shift/animation/query tests passed: 8 files, 132 tests.
+- The standard full unit suite passed: 162 files, 1,353 tests.
+- `npm run type-check` passed.
+- Changed files passed Prettier checking, ESLint, Oxlint, and `git diff --check`.
+- Exhaustive/audit suites were intentionally not run at the user's request.
+- End-to-end tests and the complete production build were not run during this closeout.
 
-- changed source files were formatted with the configured formatter;
-- `npm run type-check` passed;
-- `git diff --check` passed.
+The first automated run exposed stale expectations rather than additional runtime defects. The
+correct raw Scale midpoint between `100` and `200` is `150`, compact frames do not need an explicit
+inherited `warp: 0`, the legacy migration test now generates data with the v11 codec so it actually
+contains Turns, and the shared Shift fixture now closes its auxiliary Warp vector.
 
-No automated tests were run because the user explicitly said not to run tests while the behavior is
-still being explored manually. Continue to honor that instruction until the user changes it. Test
-files were updated as executable documentation and for a later validation pass.
+## Next-session pickup order
 
-## Manual pickup checklist
-
-Use this order when resuming:
-
-1. Inspect `git status --short` and the full diff. Do not reset the worktree.
-2. Start the local application and create a simple one-prop circle with Paths/Visible adjusted so
-   the hand path is easy to see.
-3. Verify spherical in-spin and anti-spin Warp values for several ratios, not just multiples of 45.
-4. Verify Strength at 0%, intermediate values, and 100%:
-   - 0% must be canonical;
-   - intermediate values must make shallower rounded lobes without requiring center crossing;
-   - 100% may reach the center when the vectors oppose.
-5. Change Scale while holding Warp/Strength constant. The whole shape's outer radius should change,
-   while Strength remains the deformation control.
-6. Verify a Plane-changing 3D spherical animation:
-   - hand position must remain continuous at frame boundaries;
-   - a tangent change at a new Plane is currently allowed and should not be mistaken for a position
-     jump;
-   - prop orientation must remain unchanged relative to the same animation without Warp.
-7. Verify Linear animation:
-   - both endpoints must match their fully rendered Warp/Strength/Scale node positions;
-   - every intermediate hand position must lie on the straight segment between them;
-   - Warp must not introduce a curve between the endpoints.
-8. Check baked hand paths, prop paths, nodes, selection feedback, and final placement against live
-   playback.
-9. Exercise Shift in both directions, including a loop seam and a Plane change.
-10. Exercise Double and Halve:
-    - spherical cases should remain available when values are representable;
-    - a Linear case whose generated midpoint would leave the original line must disable Double;
-    - Halve must only enable when the round trip exactly reconstructs playback.
-11. Round-trip a newly generated v12 URL with negative and half-degree Turns/Warp, Strength, Scale,
-    Beats, and Depth populated.
-12. Open representative v1-v11 URLs and confirm Scale and Turns are converted once.
+1. Pull or inspect the latest `dev` state and confirm whether the closeout diff above was pushed.
+2. Review the v12 query layout first, keeping the version number at 12.
+3. Compare candidate `pN` and `xN` field ordering/grouping against common sparse frames, complete
+   frame length, decode clarity, and the reserved-undefined bit rules.
+4. Preserve the accepted half-degree Turns/Warp range and v1-v11 migration unless the review finds a
+   concrete reason to change them.
+5. Treat temporary v12 URLs as development data; do not add compatibility code for discarded v12
+   layouts.
+6. After choosing the layout, update implementation, query tests, `docs/QUERY_STRING_FORMAT.md`, and
+   this handoff together, then rerun the focused and standard unit suites. Do not run exhaustive
+   audits unless separately requested.
 
 ## Known caveats and next decisions
 
@@ -546,10 +558,8 @@ Use this order when resuming:
 - Warp zero does not reset prior phase; Strength zero disables the visible deformation.
 - Some Linear transitions cannot be exactly Double/Halve represented under the current angular and
   scalar property model. The correct current behavior is to disable the operation.
-- `docs/VTG_TIMING_RATIOS.md` still contains a sentence in the Pattern Builder conversion section
-  saying subdivided Turns must be representable to one decimal place. The implementation and the
-  rest of the updated documentation now use half-degree precision; that sentence should be updated
-  during the next documentation pass.
+- The current v12 field order is deliberately provisional pending the next-session review. Keep the
+  version at 12 while that layout changes.
 
 ## Design invariants to preserve
 

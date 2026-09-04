@@ -18,6 +18,7 @@ const integerSnapTolerance = endpointTolerance
 
 export interface ShiftAnimationRangeOptions {
   allowEndpointMismatch?: boolean
+  /** Retains final endpoint/outgoing values; Warp still follows the reconstructed incoming seam. */
   preserveFinalOutgoing?: boolean
   shiftCount?: number
 }
@@ -876,13 +877,7 @@ export const shiftAnimationFrameRange = (
                 : targetIndex
           ]!.beats,
       scale: preserveOutgoing ? originalEnd.scale : target.scale,
-      warp: snapNumber(
-        preserveOutgoing
-          ? originalEnd.warp
-          : rebuildStart
-            ? MathUtils.radToDeg(warpRadians - arcRadians)
-            : target.warp,
-      ),
+      warp: snapNumber(rebuildStart ? MathUtils.radToDeg(warpRadians - arcRadians) : target.warp),
       strength: preserveOutgoing ? originalEnd.strength : target.strength,
       depth: preserveOutgoing ? originalEnd.depth : target.depth,
       type: target.type,

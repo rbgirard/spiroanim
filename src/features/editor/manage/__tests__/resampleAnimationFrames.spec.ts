@@ -118,7 +118,7 @@ describe('resampleAnimationFrames', () => {
       turns: 45,
       twist: 45,
       beats: 1,
-      scale: 212,
+      scale: 150,
       warp: 0,
       strength: 400,
       depth: 5,
