@@ -147,9 +147,11 @@ export const createSpiroAnimator = (vars: {
     AdjustX = new Vector3(), // Primary Turns axis used by Adjust
     Pos = new Vector3(), // Position of the Prop
     Pos2 = new Vector3(), // Second point used for linear animations
-    scaledPos2 = new Vector3(), // Scaled endpoint used for linear animations
+    LinearStart = new Vector3(), // Fully rendered starting endpoint for linear animations
+    LinearEnd = new Vector3(), // Fully rendered ending endpoint for linear animations
     PosX = new Vector3(), // Direction we're animating for spherical animations
     WarpPos = new Vector3(), // Independent auxiliary hand-path vector
+    WarpEnd = new Vector3(), // Final auxiliary hand-path vector for linear animations
     WarpX = new Vector3(), // Plane-defined direction of the auxiliary vector
     WarpSample = new Vector3(),
     modelStartPrimaryOrientation = new Quaternion(),
@@ -278,6 +280,11 @@ export const createSpiroAnimator = (vars: {
       depth2 = p2.depth / 10
       depthDiff = depth2 - depth1
 
+      // Linear transitions connect the same rendered endpoints that spherical playback would use.
+      // Warp does not curve a Linear segment; it only determines where that straight segment ends.
+      applyWarpPath(Pos, WarpPos, scale1, strength1, LinearStart)
+      applyWarpPath(Pos2, WarpEnd.fromArray(p2.warpPos), scale2, strength2, LinearEnd)
+
       // Adjust: Rotation Blending
       if (smooth) {
         modelStartAdjustment.setFromAxisAngle(
@@ -351,10 +358,7 @@ export const createSpiroAnimator = (vars: {
       } else if (PathType == TTYPE.LINE) {
         // Linear
 
-        modelGroup.position
-          .copy(Pos)
-          .multiplyScalar(scale1)
-          .lerp(scaledPos2.copy(Pos2).multiplyScalar(scale2), perc)
+        modelGroup.position.copy(LinearStart).lerp(LinearEnd, perc)
       }
 
       // Apply Radius (Scale is applied by the path-specific branch above)
@@ -720,8 +724,8 @@ export const createSpiroAnimator = (vars: {
           posPoints = rotationPointsAt(PositionPerform, stepPos, PosX, uniqueSamplePercentages)
         // Linear Path
         else {
-          stepPos.multiplyScalar(scale1)
-          const stepPos2 = Pos2.clone().multiplyScalar(RADIUS * scale2)
+          stepPos.copy(LinearStart).multiplyScalar(RADIUS)
+          const stepPos2 = LinearEnd.clone().multiplyScalar(RADIUS)
           for (const percentage of uniqueSamplePercentages)
             posPoints.push(stepPos.clone().lerp(stepPos2, percentage))
         }

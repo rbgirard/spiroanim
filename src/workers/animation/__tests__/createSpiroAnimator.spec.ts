@@ -554,8 +554,8 @@ describe('createSpiroAnimator linear scaling', () => {
     expect(modelGroup.position.distanceTo(expectedMidpoint)).toBeCloseTo(0)
   })
 
-  it('keeps Linear endpoints canonical and connects them with a straight line', () => {
-    const root = createRoot(false)
+  it('connects fully rendered Warp endpoints with a straight line', () => {
+    const root = createRoot(false, true)
     root.props[0]!.motion = []
     root.props[0]!.anim[0]!.warp = -45
     root.props[0]!.anim[1]!.warp = 90
@@ -581,16 +581,28 @@ describe('createSpiroAnimator linear scaling', () => {
 
     animator.seek(500)
 
-    const expected = new Vector3()
-      .fromArray(prop.anim[0]!.pos)
-      .multiplyScalar(RADIUS * (prop.anim[0]!.scale / 100))
-      .lerp(
-        new Vector3()
-          .fromArray(prop.anim[1]!.pos)
-          .multiplyScalar(RADIUS * (prop.anim[1]!.scale / 100)),
-        0.5,
-      )
+    const renderedStart = applyWarpPath(
+      new Vector3().fromArray(prop.anim[0]!.pos),
+      new Vector3().fromArray(prop.anim[0]!.warpPos),
+      prop.anim[0]!.scale / 100,
+      prop.anim[0]!.strength / 1000,
+      new Vector3(),
+    )
+    const renderedEnd = applyWarpPath(
+      new Vector3().fromArray(prop.anim[1]!.pos),
+      new Vector3().fromArray(prop.anim[1]!.warpPos),
+      prop.anim[1]!.scale / 100,
+      prop.anim[1]!.strength / 1000,
+      new Vector3(),
+    )
+    const expected = renderedStart.clone().lerp(renderedEnd, 0.5).multiplyScalar(RADIUS)
     expect(getAnimatedModelGroup(scene).position.distanceTo(expected)).toBeCloseTo(0)
+
+    const handLine = getLineByColor(scene, COLSET[2]![2])
+    if (!handLine) throw new Error('Expected the Warp-adjusted Linear hand path')
+    const endpoints = getLineEndpoints(handLine)
+    expect(endpoints.first.distanceTo(renderedStart.clone().multiplyScalar(RADIUS))).toBeCloseTo(0)
+    expect(endpoints.last.distanceTo(renderedEnd.clone().multiplyScalar(RADIUS))).toBeCloseTo(0)
   })
 
   it('traces an auxiliary spherical rotation without changing prop orientation', () => {

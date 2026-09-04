@@ -16,7 +16,8 @@
         <strong>Double Frames</strong><br />
         Inserts the exact intermediate frame between every pair of Animation frames and doubles BPM,
         preserving playback timing.<br />
-        Disabled when any generated value exceeds its property range or precision.
+        Disabled when any generated value exceeds its property range or precision, or when the
+        generated endpoint would bend a Linear hand path.
       </template>
     </AppTooltip>
 

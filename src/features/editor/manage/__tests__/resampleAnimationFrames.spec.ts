@@ -8,6 +8,7 @@ import { compressAnimationFrames } from '@/features/editor/manage/compressAnimat
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import { TTYPE } from '@/domain/animation/AnimStruct'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const createAnimation = (): RootDataFinal =>
@@ -143,12 +144,12 @@ describe('resampleAnimationFrames', () => {
     warped.props[0]!.anim[1]!.warp = 5
     expect(doubleAnimationFrames(warped)).toBeDefined()
 
-    const tenthsTurns = createAnimation()
-    tenthsTurns.props[0]!.anim[1]!.turns = 0.2
-    expect(rootCompile(doubleAnimationFrames(tenthsTurns)!).props[0]?.anim[1]?.turns).toBe(0.1)
+    const halfDegreeTurns = createAnimation()
+    halfDegreeTurns.props[0]!.anim[1]!.turns = 1
+    expect(rootCompile(doubleAnimationFrames(halfDegreeTurns)!).props[0]?.anim[1]?.turns).toBe(0.5)
 
     const fractionalTurns = createAnimation()
-    fractionalTurns.props[0]!.anim[1]!.turns = 0.1
+    fractionalTurns.props[0]!.anim[1]!.turns = 0.5
     expect(doubleAnimationFrames(fractionalTurns)).toBeUndefined()
 
     const fractionalScale = createAnimation()
@@ -170,6 +171,21 @@ describe('resampleAnimationFrames', () => {
     const excessiveMotionBeats = createAnimation()
     excessiveMotionBeats.props[0]!.motion = [{ beats: 40 }, {}]
     expect(doubleAnimationFrames(excessiveMotionBeats)).toBeUndefined()
+  })
+
+  it('only doubles Linear transitions when the generated boundary remains on the straight path', () => {
+    const curvedMidpoint = createAnimation()
+    curvedMidpoint.props[0]!.anim.splice(2)
+    curvedMidpoint.props[0]!.anim[1]!.type = TTYPE.LINE
+    expect(doubleAnimationFrames(curvedMidpoint)).toBeUndefined()
+
+    const radialScale = createAnimation()
+    for (const frame of radialScale.props[0]!.anim) {
+      frame.type = TTYPE.LINE
+      frame.arc = 0
+      frame.warp = 0
+    }
+    expect(doubleAnimationFrames(radialScale)).toBeDefined()
   })
 
   it('preserves Prop Motion and Camera timing while BPM changes', () => {
@@ -266,7 +282,7 @@ describe('resampleAnimationFrames', () => {
 
   it('rejects halving when alternating frames are not exact generated intermediates', () => {
     const doubled = doubleAnimationFrames(createAnimation())!
-    doubled.props[0]!.anim[1]!.turns = 45.1
+    doubled.props[0]!.anim[1]!.turns = 45.5
     doubled.props[0]!.anim[2]!.turns = 45
     expect(halveAnimationFrames(doubled)).toBeUndefined()
 

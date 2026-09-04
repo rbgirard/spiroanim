@@ -99,7 +99,7 @@ const turns = reactive({
   min: -8,
   max: 8,
   neg: true,
-  float: 10,
+  float: 2,
 })
 
 const arc = reactive({
@@ -144,7 +144,7 @@ const warp = reactive({
   min: -18,
   max: 18,
   neg: true,
-  float: 10,
+  float: 2,
 })
 
 const vals = [

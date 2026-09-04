@@ -24,37 +24,37 @@ Every definition is:
 Version 1 stores integer values. One all-ones bit pattern is reserved for `undefined`, so a field
 with `N` bits has at most `2^N - 1` defined codes.
 
-| Field       |       V1 range |      Bits | Stored scope and notes                                |
-| ----------- | -------------: | --------: | ----------------------------------------------------- |
-| `bpm`       |        20..520 |         9 | Root                                                  |
-| `beats`     |          1..63 |         6 | Frame                                                 |
-| `prop`      | 0..1 currently |         4 | Root and prop; range follows `PTEXT` length           |
-| `color`     | 0..6 currently |         4 | Root and prop; range follows `COLORS` length          |
-| `guides`    |           0..1 |         2 | Root and prop; decoded with `Boolean`                 |
-| `paths`     |           0..1 |         2 | Root and prop; decoded with `Boolean`                 |
-| `hands`     |           0..1 |         2 | Root and prop; decoded with `Boolean`                 |
-| `precision` |           0..1 |         2 | Motion and Camera in V6; decoded with `Boolean`       |
-| `arms`      |           0..1 |         2 | Root and prop in V2; decoded with `Boolean`           |
-| `visible`   |           0..1 |         2 | Root and prop; decoded with `Boolean`                 |
-| `nodes`     |           0..1 |         2 | Root and prop; decoded with `Boolean`                 |
-| `anchors`   |           0..1 |         2 | Root and prop; decoded with `Boolean`                 |
-| `smooth`    |           0..1 |         2 | Defined, but not currently included in a V1 segment   |
-| `type`      | 0..1 currently |         2 | Frame; range follows `TTEXT` length                   |
-| `scale`     |        -20..40 |         6 | Frame, in internal tenths through V11                 |
-| `warp`      |    -1980..1980 | 16 in V12 | Extended Animation frame degrees; tenths in V12       |
-| `strength`  |        0..1000 | 10 in V12 | Extended Animation frame; tenths of a percent         |
-| `depth`     |        -30..30 |         6 | Frame, in internal tenths                             |
-| `turns`     |    -1980..1980 |        12 | Frame degrees                                         |
-| `twist`     |      -360..360 | 10 in V10 | Extended Animation/Rotation frame degrees             |
-| `adjust`    |      -180..180 |         9 | Frame degrees                                         |
-| `arc`       |         0..360 |         9 | Frame degrees                                         |
-| `plane`     |      -180..180 |         9 | Frame degrees                                         |
-| `axis`      |      -180..180 |         9 | Frame degrees                                         |
-| `move`      |        -30..30 |    6 each | Animation frame in V1-V3; Motion frame in V4          |
-| `aspectx`   |          0..32 |         6 | Root                                                  |
-| `aspecty`   |          0..32 |         6 | Root                                                  |
-| `distance`  |          4..66 |         6 | Root in V1-V4; Motion and Camera path field           |
-| `thick`     |          1..15 |         4 | Root only in V1; prop-level `thick` is not serialized |
+| Field       |       V1 range |      Bits | Stored scope and notes                                 |
+| ----------- | -------------: | --------: | ------------------------------------------------------ |
+| `bpm`       |        20..520 |         9 | Root                                                   |
+| `beats`     |          1..63 |         6 | Frame                                                  |
+| `prop`      | 0..1 currently |         4 | Root and prop; range follows `PTEXT` length            |
+| `color`     | 0..6 currently |         4 | Root and prop; range follows `COLORS` length           |
+| `guides`    |           0..1 |         2 | Root and prop; decoded with `Boolean`                  |
+| `paths`     |           0..1 |         2 | Root and prop; decoded with `Boolean`                  |
+| `hands`     |           0..1 |         2 | Root and prop; decoded with `Boolean`                  |
+| `precision` |           0..1 |         2 | Motion and Camera in V6; decoded with `Boolean`        |
+| `arms`      |           0..1 |         2 | Root and prop in V2; decoded with `Boolean`            |
+| `visible`   |           0..1 |         2 | Root and prop; decoded with `Boolean`                  |
+| `nodes`     |           0..1 |         2 | Root and prop; decoded with `Boolean`                  |
+| `anchors`   |           0..1 |         2 | Root and prop; decoded with `Boolean`                  |
+| `smooth`    |           0..1 |         2 | Defined, but not currently included in a V1 segment    |
+| `type`      | 0..1 currently |         2 | Frame; range follows `TTEXT` length                    |
+| `scale`     |        -20..40 |         6 | Frame, in internal tenths through V11                  |
+| `warp`      |    -2160..1440 | 13 in V12 | Extended Animation frame degrees; half-degrees in V12  |
+| `strength`  |        0..1000 | 10 in V12 | Extended Animation frame; tenths of a percent          |
+| `depth`     |        -30..30 |         6 | Frame, in internal tenths                              |
+| `turns`     |    -2160..1440 | 13 in V12 | Frame degrees; historical layouts are documented below |
+| `twist`     |      -360..360 | 10 in V10 | Extended Animation/Rotation frame degrees              |
+| `adjust`    |      -180..180 |         9 | Frame degrees                                          |
+| `arc`       |         0..360 |         9 | Frame degrees                                          |
+| `plane`     |      -180..180 |         9 | Frame degrees                                          |
+| `axis`      |      -180..180 |         9 | Frame degrees                                          |
+| `move`      |        -30..30 |    6 each | Animation frame in V1-V3; Motion frame in V4           |
+| `aspectx`   |          0..32 |         6 | Root                                                   |
+| `aspecty`   |          0..32 |         6 | Root                                                   |
+| `distance`  |          4..66 |         6 | Root in V1-V4; Motion and Camera path field            |
+| `thick`     |          1..15 |         4 | Root only in V1; prop-level `thick` is not serialized  |
 
 The declared range must fit while retaining the undefined code. Development builds call
 `validateQueryDefinitions()`, which logs an error for an oversized definition but does not throw.
@@ -256,34 +256,36 @@ five-character Rotation frame packs one 29-bit group:
 `xN` returns to one three-character group containing `beats`, `scale`, and `depth`. Sparse-frame
 alignment and trailing empty-frame removal follow the same rules as the other optional tracks.
 
-## Version 12 Warp, Strength, and Scale layout
+## Version 12 Turns, Warp, Strength, and Scale layout
 
-Version 12 adds inherited `warp` and `strength`, and changes Scale's internal unit from tenths to
-hundredths. The current definitions are:
+Version 12 adds inherited `warp` and `strength`, changes Scale's internal unit from tenths to
+hundredths, and gives Turns and Warp the VTG-derived range and half-degree precision. The current
+definitions are:
 
 | Field      | Current range | Bits | Meaning                                      |
 | ---------- | ------------: | ---: | -------------------------------------------- |
 | `scale`    |   `-200..400` |   10 | Raw hundredths; `100` displays as `1.0`      |
 | `strength` |     `0..1000` |   10 | Tenths of a percent; `500` displays as `50%` |
-| `warp`     | `-1980..1980` |   16 | Tenths-degree auxiliary hand-path rotation   |
+| `turns`    | `-2160..1440` |   13 | Half-degree relative prop rotation           |
+| `warp`     | `-2160..1440` |   13 | Half-degree auxiliary hand-path rotation     |
 
-The `xN` values are reordered into four groups per frame:
+The `xN` values are reordered into three groups per frame:
 
 1. Two characters: `scale` (10 bits)
 2. Two characters: `beats` (6 bits), `depth` (6 bits)
-3. Two characters: `strength` (10 bits)
-4. Three characters: `warp` (16 bits)
+3. Four characters: `strength` (10 bits), `warp` (13 bits)
 
-Warp uses the same range, tenths-degree codec, and bit width as the current Turns definition. A
-complete `xN` frame therefore occupies nine characters, while trailing undefined groups are still
-omitted.
+Strength and Warp share a 23-bit final group. A complete `xN` frame therefore occupies eight
+characters, while trailing undefined groups are still omitted. The Version 12 `pN` Turns/Type
+group now uses 15 of its available 18 bits: 13 for Turns and 2 for Type.
 
 Twist remains in the Version 11 `rN` track. Warp does not appear in `pN`, so canonical Arc, Plane,
 Axis, and Adjust packing is unchanged.
 
-When the current decoder opens a Version 1-11 URL, it multiplies every authored Scale value by ten
-after the historical decoder runs. This migration happens only across the version boundary;
-Version 12 data and current undo history are not multiplied again.
+When the current decoder opens a Version 1-11 URL, it multiplies every authored Scale value by ten,
+then clamps and rounds authored Turns to the current half-degree contract after the historical
+decoder runs. This migration happens only across the version boundary; Version 12 data and current
+undo history are not converted again.
 
 ## Low-level packing
 
@@ -319,12 +321,11 @@ Version 7 Turns, is then applied.
 
 ### Integer requirement and fractional values
 
-Versions 1-6 have no fractional encoding. Version 7 and later explicitly support tenths for
-Animation Turns through its bidirectional numeric transform. Version 12 gives Warp the same
-tenths-degree transform. Other packed angle channels remain whole degrees. Scale and Strength
-remain integer query values; Version 12 defines Scale as hundredths and Strength as tenths of a
-percent. The
-property setter's range clamp does not otherwise enforce integer or decimal precision.
+Versions 1-6 have no fractional encoding. Versions 7-11 support tenths for Animation Turns through
+their bidirectional numeric transform. Version 12 stores Turns and Warp as half-degrees. Other
+packed angle channels remain whole degrees. Scale and Strength remain integer query values; Version
+12 defines Scale as hundredths and Strength as tenths of a percent. The property setter's range
+clamp does not otherwise enforce integer or decimal precision.
 
 Packed scalar fields pass through JavaScript bitwise operators, which coerce nonnegative
 normalized fractions to integers by discarding the fractional part. This is an implementation

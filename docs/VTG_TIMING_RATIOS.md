@@ -121,8 +121,8 @@ The equivalent 45-degree segments are:
 | Anti-Spin | 45° | -112.5° |                     -67.5° |
 | In-Spin   | 45° |   22.5° |                      67.5° |
 
-Sixteen such segments accumulate the same values as the 720-degree form. This timing is why Turns
-must retain tenths in the query format.
+Sixteen such segments accumulate the same values as the 720-degree form. Numerator-2 timing is why
+Turns and Warp retain half-degree precision in the current query format.
 
 ## Ratio detection
 
@@ -151,9 +151,10 @@ rate = 0.5     -> 1/2 -> 2:1
 ```
 
 Detection uses a floating-point tolerance when finding the reduced rational number. The tolerance
-includes half of the v7 Turns resolution relative to the segment Arc, allowing the intended ratio
-to survive tenths quantization. It rejects a zero Arc, zero absolute prop displacement, non-finite
-values, and continuations that disagree on either timing or spin.
+includes half of the widest supported serialized Turns step relative to the segment Arc, allowing
+the intended ratio to survive historical whole-degree or current half-degree quantization. It
+rejects a zero Arc, zero absolute prop displacement, non-finite values, and continuations that
+disagree on either timing or spin.
 
 Spin is recovered separately from the ratio. The compiled hand and prop axes, Arc, and absolute
 prop displacement determine whether their signed motions agree:

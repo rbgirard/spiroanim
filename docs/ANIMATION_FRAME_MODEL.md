@@ -134,7 +134,7 @@ A displayed segment combines values from both endpoint frames.
 | Starting hand state            | `p1.pos`, `p1.scale`, `p1.strength`, `p1.depth`                   |
 | Transition type                | `p2.type`                                                         |
 | Spherical hand path            | Strength blend of canonical Arc and Warp vectors, scaled together |
-| Linear hand path               | Interpolate the scaled canonical `pos` endpoints                  |
+| Linear hand path               | Interpolate the fully rendered Warp/Strength/Scale endpoints      |
 | Rotation path                  | Rotate `p1.rot` around `p2.rotx`                                  |
 | Rotation amount                | `p2.turns`, plus `p2.arc` for Spherical                           |
 | Rotation adjustment            | `p2.adjust`, with optional smooth blending from `p1.adjust`       |
@@ -152,9 +152,10 @@ without changing its path, active direction, Plane, Axis, Arc, or Turns. Because
 applied after the transported orientation, its axis follows the prop through three-dimensional
 movement.
 
-For a Linear transition, the worker applies each frame's Scale to its endpoint before
-interpolating. Interpolating position and Scale separately and then multiplying them would produce
-a quadratic curve when both values change.
+For a Linear transition, the worker first applies Warp, Strength, and Scale independently to both
+frame endpoints, then interpolates directly between those two rendered positions. Warp therefore
+determines the target endpoint without curving the segment. Interpolating the individual properties
+during the transition would not guarantee a straight line.
 
 For a Spherical transition, the worker samples the canonical Arc vector `C` and the independently
 compiled Warp vector `W`, then calculates the rendered hand position as:
@@ -204,18 +205,19 @@ Camera Orbit, and Camera Center. Callers can independently include or exclude in
 Animation, Motion, and Camera tracks.
 
 Animation Manage also exposes Double Frames and Halve Frames across every prop. Double Frames
-inserts the intermediate frame in each authored interval and doubles BPM. Turns, Twist, Warp, and Arc are
-split between the two intervals; Scale, Strength, Depth, and Adjust are interpolated; and Plane and Axis are
-transported through the continuation frame. Because Warp is an accumulated angular channel, the
-subdivided auxiliary-vector path remains exactly representable and does not disable Double or Halve.
-Because Prop Motion and Camera are independent
-timelines, effective Beats values on multi-frame tracks are multiplied by two so doubling BPM does
-not change their absolute playback timing. A single-frame Motion or Camera track has no interval, so
-its Beats value remains unchanged. Camera Orbit owns Camera Beats; Camera Center remains beatless.
-The action is disabled when BPM or any generated or adjusted value cannot be represented by the
-current property range and precision. Halve Frames is enabled only when consolidating alternating
-Animation frames, halving Beats on multi-frame Motion and Camera tracks, and doubling the result
-reproduces the complete compiled playback exactly.
+inserts the intermediate frame in each authored interval and doubles BPM. Turns, Twist, Warp, and
+Arc are split between the two intervals; Scale, Strength, Depth, and Adjust are interpolated; and
+Plane and Axis are transported through the continuation frame. This preserves the continuously
+sampled spherical canonical and auxiliary-vector paths. For Linear transitions, the generated
+rendered hand position must also equal the corresponding point on the original straight segment;
+otherwise Double is disabled rather than replacing one line with multiple angled chords. Because
+Prop Motion and Camera are independent timelines, effective Beats values on multi-frame tracks are
+multiplied by two so doubling BPM does not change their absolute playback timing. A single-frame
+Motion or Camera track has no interval, so its Beats value remains unchanged. Camera Orbit owns
+Camera Beats; Camera Center remains beatless. The action is disabled when BPM or any generated or
+adjusted value cannot be represented by the current property range and precision. Halve Frames is
+enabled only when consolidating alternating Animation frames, halving Beats on multi-frame Motion
+and Camera tracks, and doubling the result reproduces the complete compiled playback exactly.
 
 Motion `beats` defaults to `1` on the first frame and inherits afterward. Precision initially
 defaults to `false`; Shape initially defaults to Linear and Amount initially defaults to 50%.
@@ -311,10 +313,12 @@ Camera Orbit and removes Distance from finalized root settings.
 QS version 6 adds Precision to Motion and both Camera paths. Older versions compile its missing
 value as `false`.
 
-QS version 12 adds Warp and Strength and changes Scale's internal storage from tenths to hundredths.
-Strength is stored as integer tenths of a percent from `0` through `1000`. When a Version 1-11 URL
-is opened by the current decoder, authored Scale values are multiplied by ten exactly once. Display
-values remain unchanged: raw `100`, `110`, and `111` render as `1.0`, `1.1`, and `1.11`.
+QS version 12 adds Warp and Strength, changes Scale's internal storage from tenths to hundredths,
+and stores Turns and Warp from `-2160°` through `1440°` in half-degree steps. Strength is stored as
+integer tenths of a percent from `0` through `1000`. When a Version 1-11 URL is opened by the current
+decoder, authored Scale values are multiplied by ten and authored Turns are clamped and rounded to
+the half-degree contract exactly once. Scale display values remain unchanged: raw `100`, `110`, and
+`111` render as `1.0`, `1.1`, and `1.11`.
 
 ## Sparse frame compaction
 

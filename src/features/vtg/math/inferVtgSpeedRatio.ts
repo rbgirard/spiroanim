@@ -78,9 +78,9 @@ const inferContinuation = (frame: AnimDataCompiled): VtgPropTiming | undefined =
   const direction = signedDirection(frame.posx, frame.arc, frame.rotx, absoluteRotation)
   if (Math.abs(direction) <= directionTolerance) return undefined
 
-  // Current query strings serialize Turns to tenths, while legacy versions rounded to whole
-  // degrees. Use the widest supported half-step so old compound ratios still reduce to their
-  // intended timing after decoding.
+  // Current query strings serialize Turns to half-degrees, while legacy versions may have rounded
+  // to whole degrees. Use the widest supported half-step so old compound ratios still reduce to
+  // their intended timing after decoding.
   const ratioTolerance = Math.max(
     floatingPointTolerance,
     legacySerializedTurnsResolution / 2 / Math.abs(frame.arc) + Number.EPSILON,

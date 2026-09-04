@@ -1,6 +1,10 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import { resolveMotionFrames } from '@/math/animation/frameSemantics'
+import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
+import { TTYPE } from '@/domain/animation/AnimStruct'
+import { toScaleMultiplier } from '@/domain/animation/scale'
+import { toStrengthRatio } from '@/domain/animation/strength'
 import { MathUtils, Quaternion, Vector3 } from 'three'
 import type {
   AnimData,
@@ -62,6 +66,43 @@ const compiledBoundaryStateMatches = (
     adjustedOrientation(actual).toArray(),
   )
 
+const renderedHandPosition = (frame: AnimDataCompiled): Vector3 =>
+  applyWarpPath(
+    new Vector3().fromArray(frame.pos),
+    new Vector3().fromArray(frame.warpPos),
+    toScaleMultiplier(frame.scale),
+    toStrengthRatio(frame.strength),
+    new Vector3(),
+  )
+
+const linearSubdivisionsPreservePath = (
+  expected: readonly AnimDataCompiled[],
+  actual: readonly AnimDataCompiled[],
+  subdivisionCount: number,
+): boolean => {
+  for (let targetIndex = 1; targetIndex < expected.length; targetIndex += 1) {
+    const start = expected[targetIndex - 1]
+    const target = expected[targetIndex]
+    if (!start || !target || target.type !== TTYPE.LINE) continue
+
+    const renderedStart = renderedHandPosition(start)
+    const renderedEnd = renderedHandPosition(target)
+    for (let step = 1; step < subdivisionCount; step += 1) {
+      const actualFrame = actual[(targetIndex - 1) * subdivisionCount + step]
+      if (!actualFrame) return false
+
+      const expectedPosition = renderedStart.clone().lerp(renderedEnd, step / subdivisionCount)
+      if (
+        !vectorsNearlyEqual(expectedPosition.toArray(), renderedHandPosition(actualFrame).toArray())
+      ) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
+
 const subdivisionPreservesCompiledBoundaries = (
   expected: ReturnType<typeof rootCompile>,
   actual: ReturnType<typeof rootCompile>,
@@ -73,6 +114,7 @@ const subdivisionPreservesCompiledBoundaries = (
     return (
       actualProp !== undefined &&
       actualProp.anim.length === (prop.anim.length - 1) * subdivisionCount + 1 &&
+      linearSubdivisionsPreservePath(prop.anim, actualProp.anim, subdivisionCount) &&
       prop.anim.every((frame, frameIndex) => {
         const actualFrame = actualProp.anim[frameIndex * subdivisionCount]
         return actualFrame !== undefined && compiledBoundaryStateMatches(frame, actualFrame)

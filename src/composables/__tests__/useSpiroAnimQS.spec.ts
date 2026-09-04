@@ -461,16 +461,16 @@ describe('useSpiroAnimQS', () => {
     const { distance: _legacyDistance, ...root } = createRoot()
     delete root.props[0]!.anim[0]!.move
     root.props[0]!.anim = [
-      { scale: -200, warp: -1980, strength: 0, beats: 1, depth: -30 },
-      { scale: 111, warp: 90.5, strength: 555 },
+      { turns: -2160, scale: -200, warp: -2160, strength: 0, beats: 1, depth: -30 },
+      { turns: 12.5, scale: 111, warp: 90.5, strength: 555 },
       { beats: 63, depth: 30 },
-      { scale: 400, warp: 1980, strength: 1000 },
+      { turns: 1440, scale: 400, warp: 1440, strength: 1000 },
     ]
 
     const encoded = query.encodeQS(root, false)
 
     expect(encoded.v).toBe('12')
-    expect(encoded.x0!.split('.').map((frame) => frame.length)).toEqual([9, 9, 4, 9])
+    expect(encoded.x0!.split('.').map((frame) => frame.length)).toEqual([8, 8, 4, 8])
     expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
   })
 
@@ -478,18 +478,17 @@ describe('useSpiroAnimQS', () => {
     expect(createExtendedAnimationConfigV12()).toEqual([
       [
         'anim',
-        9,
+        8,
         [
           ['bits', 2, ['scale']],
           ['bits', 2, ['beats', 'depth']],
-          ['bits', 2, ['strength']],
-          ['bits', 3, ['warp']],
+          ['bits', 4, ['strength', 'warp']],
         ],
       ],
     ])
   })
 
-  it('migrates historical Scale values into the v12 hundredths unit', async () => {
+  it('migrates historical Scale and Turns values into the v12 units', async () => {
     const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
     const decoded = await query.decodeVer({
       r: 'Ew68kk11Y',
@@ -500,6 +499,7 @@ describe('useSpiroAnimQS', () => {
     })
 
     expect(decoded.props[0]!.anim[0]!.scale).toBe(80)
+    expect(decoded.props[0]!.anim[1]!.turns).toBe(180)
   })
 
   it('omits unused v11 rN tracks without affecting xN tracks', async () => {

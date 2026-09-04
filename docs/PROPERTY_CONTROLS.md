@@ -43,9 +43,10 @@ The commonly used metadata fields are:
 | `float: 1`   | Whole numbers, truncated toward negative infinity                             |
 | `float: 10`  | One decimal place                                                             |
 | `float: 100` | Two decimal places                                                            |
+| `float: 2`   | Half-unit steps                                                               |
 
-Because the implementation uses `Math.floor`, `float` is not nearest-value rounding. For example,
-with `float: 1`, `2.9` becomes `2` and `-2.1` becomes `-3`.
+The implementation uses `Math.round`, so `float` snaps to the nearest permitted increment. For
+example, with `float: 2`, `2.2` becomes `2` and `2.3` becomes `2.5`.
 
 ### Decimal sliders are relative controls
 

@@ -5,6 +5,7 @@ import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { migrateLegacyMotion } from '@/services/query/migrateLegacyMotion'
 import { migrateLegacyScale } from '@/services/query/migrateLegacyScale'
+import { migrateLegacyTurns } from '@/services/query/migrateLegacyTurns'
 
 import type { BaseQS, VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types/SpiroAnimQSTypes'
@@ -49,7 +50,10 @@ export async function useSpiroAnimQS(
       const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2, { charset }), v)
       let decoded = PAQS.decodeQS(route)
       if (VER >= 4 && v < 4) decoded = migrateLegacyMotion(decoded)
-      if (VER >= 12 && v < 12) decoded = migrateLegacyScale(decoded)
+      if (VER >= 12 && v < 12) {
+        decoded = migrateLegacyScale(decoded)
+        decoded = migrateLegacyTurns(decoded)
+      }
       return decoded
     } else {
       return decodeQS(route)
