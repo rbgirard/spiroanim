@@ -177,7 +177,6 @@ describe('Third Order VTG settings', () => {
 
   it('opposes an Initial timing dropdown while leaving undefined values undefined', () => {
     const source = createAnimation()
-    const resolvedRight = resolveAnimationFrames(source.props[1]!.anim)
     const applied = applyVtgThirdOrderSettings(
       source,
       [{ initial: '2:3-anti' }, { strength: 25, timing: '1:5-pro' }],

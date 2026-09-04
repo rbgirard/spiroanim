@@ -212,7 +212,6 @@ export const extractVtgThirdOrderSettings = (
     const timing = detectTimingAcrossFrames(animation, propIndex, timingStartIndex, true)
     const firstFrame = prop.anim[firstEditableFrameIndex]
     const initialFrame = prop.anim[0]
-    const resolved = resolveAnimationFrames(prop.anim)
     const initialWarp = initialFrame?.warp
 
     return {
