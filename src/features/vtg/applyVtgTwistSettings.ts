@@ -1,4 +1,4 @@
-import type { VtgTwistMode, VtgTwistValues } from '@/features/concepts/stores/useConceptsStore'
+import type { VtgTwistMode, VtgTwistValues } from '@/features/vtg/propertyTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 export interface ApplyVtgTwistSettingsOptions {

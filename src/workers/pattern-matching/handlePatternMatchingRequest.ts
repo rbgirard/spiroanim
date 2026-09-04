@@ -5,7 +5,44 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
+  VtgCandidateLayoutRequest,
+  VtgPreviewCandidatesRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+import type { RootDataFinal } from '@/types/AnimTypes'
+
+export const createVtgPreviewCandidatesRequest = async ({
+  selections,
+  options,
+}: VtgPreviewCandidatesRequest): Promise<readonly (RootDataFinal | undefined)[]> => {
+  const { createVtgPreviewCandidate } =
+    await import('@/features/concepts/createVtgPreviewCandidate')
+  return selections.map((selection) => createVtgPreviewCandidate(selection, options))
+}
+
+export const compareVtgCandidateLayoutRequest = async ({
+  selections,
+  options,
+}: VtgCandidateLayoutRequest): Promise<boolean> => {
+  const [{ createVtgPreviewCandidate }, { requiresPairedVtgCandidateLayout }] = await Promise.all([
+    import('@/features/concepts/createVtgPreviewCandidate'),
+    import('@/features/vtg/math/requiresPairedVtgCandidateLayout'),
+  ])
+  const selectionByReference = new Map(
+    selections.map((selection) => [selection.reference, selection]),
+  )
+  const createCandidate = (reference: (typeof selections)[number]['reference']) => {
+    const selection = selectionByReference.get(reference)
+    return selection ? createVtgPreviewCandidate(selection, options) : undefined
+  }
+  const createBaselineCandidate = (reference: (typeof selections)[number]['reference']) => {
+    const selection = selectionByReference.get(reference)
+    if (!selection) return undefined
+    const { properties: _properties, ...baselineOptions } = options
+    return createVtgPreviewCandidate(selection, baselineOptions)
+  }
+
+  return requiresPairedVtgCandidateLayout(createCandidate, createBaselineCandidate)
+}
 
 const matchedVtg = (
   match: Extract<VtgPatternMatchResult, { source: 'vtg' }>['match'],

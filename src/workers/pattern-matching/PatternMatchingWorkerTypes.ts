@@ -1,4 +1,6 @@
 import type { EightStepPatternMatch, EightStepPatternSelection } from '@/features/eight-step/types'
+import type { VtgBuilderPatternSelection } from '@/features/builder/types'
+import type { VtgPropertySettings } from '@/features/vtg/propertySettings'
 import type {
   QstPatternMatch,
   QstPatternMatchPreferences,
@@ -51,6 +53,24 @@ export type QstPatternMatchResult =
   | { status: 'unmatched' }
   | { status: 'matched'; match: QstPatternMatch }
 
+export interface VtgCandidateLayoutRequest {
+  selections: readonly [VtgBuilderPatternSelection, VtgBuilderPatternSelection]
+  options: {
+    source?: RootDataFinal
+    builderInsertionIndex?: number
+    properties: VtgPropertySettings
+  }
+}
+
+export interface VtgPreviewCandidatesRequest {
+  selections: readonly VtgBuilderPatternSelection[]
+  options: {
+    source?: RootDataFinal
+    builderInsertionIndex?: number
+    properties?: VtgPropertySettings
+  }
+}
+
 export interface PatternMatchingBridgeMap {
   matchVtg: {
     arg: VtgPatternMatchRequest
@@ -64,10 +84,22 @@ export interface PatternMatchingBridgeMap {
     arg: QstPatternMatchRequest
     ret: QstPatternMatchResult
   }
+  compareVtgCandidateLayout: {
+    arg: VtgCandidateLayoutRequest
+    ret: boolean
+  }
+  createVtgPreviewCandidates: {
+    arg: VtgPreviewCandidatesRequest
+    ret: readonly (RootDataFinal | undefined)[]
+  }
 }
 
 export interface PatternMatchingClient {
   matchVtg: (request: VtgPatternMatchRequest) => Promise<VtgPatternMatchResult>
   matchEightStep: (request: EightStepPatternMatchRequest) => Promise<EightStepPatternMatchResult>
   matchQst: (request: QstPatternMatchRequest) => Promise<QstPatternMatchResult>
+  compareVtgCandidateLayout?: (request: VtgCandidateLayoutRequest) => Promise<boolean>
+  createVtgPreviewCandidates?: (
+    request: VtgPreviewCandidatesRequest,
+  ) => Promise<readonly (RootDataFinal | undefined)[]>
 }

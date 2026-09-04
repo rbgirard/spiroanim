@@ -27,12 +27,12 @@ import {
 import { applyVtgTwistSettings, detectVtgTwistMode } from '@/features/vtg/applyVtgTwistSettings'
 import {
   applyVtgThirdOrderSettings,
-  detectVtgThirdOrderInitialTiming,
   detectVtgThirdOrderRelationship,
   extractVtgThirdOrderSettings,
   getVtgThirdOrderCycleCount,
   getVtgThirdOrderDisplaySettings,
   updateVtgThirdOrderSettings,
+  updateVtgThirdOrderTimingSetting,
   type VtgThirdOrderDisplaySettings,
   type VtgThirdOrderInitial,
   type VtgThirdOrderSettings,
@@ -41,11 +41,12 @@ import {
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
 import { getVtgTimingCycleCount, type VtgPatternSelection } from '@/features/vtg/types'
 import {
-  createVtgTransitionPreviewAnimations,
+  createVtgTransitionPreviewAnimation,
   resizeVtgTransitionPatternPreview,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { updateVtgMirroredSideSetting } from '@/features/vtg/propertySettings'
 
 interface UseVtgBuilderPortionPropertiesOptions {
   pattern: ComputedRef<RootDataFinal>
@@ -343,7 +344,7 @@ export const useVtgBuilderPortionProperties = ({
         )
       : pattern.value
     const animation = resizeCycle
-      ? source && createVtgTransitionPreviewAnimations(source)?.[index]
+      ? source && createVtgTransitionPreviewAnimation(source, index)
       : selectedControlAnimation.value
     if (!source || !animation) return
     commitWorkingProperties(
@@ -377,30 +378,18 @@ export const useVtgBuilderPortionProperties = ({
     applyThirdOrderSettings(settings, ['strength'])
   }
   const updateThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
-    let settings = thirdOrderSettings.value
-    const previousCycleCount = getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value)
-    const initial = settings[propIndex].initial
-    if (
-      value !== undefined &&
-      settings[propIndex].timing === undefined &&
-      typeof initial === 'string'
-    ) {
-      const animation = selectedControlAnimation.value
-      const initialWarp = animation && rootCompile(animation).props[propIndex]?.anim[0]?.warp
-      if (initialWarp !== undefined) {
-        settings = updateVtgThirdOrderSettings(settings, propIndex, { initial: initialWarp })
-      }
-    } else if (value === undefined && typeof initial === 'number') {
-      const animation = selectedControlAnimation.value
-      const initialFrame = animation && rootCompile(animation).props[propIndex]?.anim[0]
-      const inheritedTiming = initialFrame && detectVtgThirdOrderInitialTiming(initial)
-      if (inheritedTiming !== undefined) {
-        settings = updateVtgThirdOrderSettings(settings, propIndex, {
-          initial: inheritedTiming,
-        })
-      }
-    }
-    settings = updateVtgThirdOrderSettings(settings, propIndex, { timing: value })
+    const animation = selectedControlAnimation.value
+    if (!animation) return
+    const previousCycleCount = getVtgThirdOrderCycleCount(
+      thirdOrderSettings.value,
+      thirdOrderMirror.value,
+    )
+    const settings = updateVtgThirdOrderTimingSetting(
+      animation,
+      thirdOrderSettings.value,
+      propIndex,
+      value,
+    )
     applyThirdOrderSettings(
       settings,
       ['warp'],
@@ -476,29 +465,40 @@ export const useVtgBuilderPortionProperties = ({
     const sources = simpleFoldSources()
     const previousBeat = foldBeat.value[propIndex]
     const source = sources[propIndex][String(previousBeat)]
-    foldBeat.value[propIndex] = beat
-    if (foldMirror.value && propIndex === 0) foldBeat.value[1] = beat
+    foldBeat.value = updateVtgMirroredSideSetting(foldBeat.value, propIndex, beat, foldMirror.value)
     delete sources[propIndex][String(previousBeat)]
     if (source) sources[propIndex][String(beat)] = source
     applyFoldValues(sources)
   }
   const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
     const sources = simpleFoldSources()
-    foldRepeat.value[propIndex] = repeat
-    if (foldMirror.value && propIndex === 0) foldRepeat.value[1] = repeat
+    foldRepeat.value = updateVtgMirroredSideSetting(
+      foldRepeat.value,
+      propIndex,
+      repeat,
+      foldMirror.value,
+    )
     if (!repeat) foldAlternate.value[propIndex] = false
     applyFoldValues(sources)
   }
   const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
     const sources = simpleFoldSources()
-    foldEvery.value[propIndex] = every
-    if (foldMirror.value && propIndex === 0) foldEvery.value[1] = every
+    foldEvery.value = updateVtgMirroredSideSetting(
+      foldEvery.value,
+      propIndex,
+      every,
+      foldMirror.value,
+    )
     applyFoldValues(sources)
   }
   const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
     const sources = simpleFoldSources()
-    foldAlternate.value[propIndex] = alternate
-    if (foldMirror.value && propIndex === 0) foldAlternate.value[1] = alternate
+    foldAlternate.value = updateVtgMirroredSideSetting(
+      foldAlternate.value,
+      propIndex,
+      alternate,
+      foldMirror.value,
+    )
     applyFoldValues(sources)
   }
   const updateFoldSpan = (span: VtgFoldSpan) => {

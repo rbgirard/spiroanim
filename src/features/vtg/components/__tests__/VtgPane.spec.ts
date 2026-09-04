@@ -35,7 +35,8 @@ import type { QtrPatternSelection, VtgPatternSelection, VtgSpeedRatio } from '@/
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
-import type { RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import { rootCompile } from '@/math/animation/AnimFunc'
+import type { RootDataFinal } from '@/types/AnimTypes'
 import type {
   PatternMatchingClient,
   VtgPatternMatchResult,
@@ -110,6 +111,7 @@ class FakeWorker {
     let data: unknown
     if (message.type === 'warnStr') data = message.data
     else if (message.type === 'initialize') data = true
+    else if (message.type === 'loadFinalData') data = 0
     else if (message.type === 'reqimgs') {
       FakeWorker.activePreviewRequests++
       FakeWorker.maxActivePreviewRequests = Math.max(
@@ -145,8 +147,22 @@ const settlePreviewRendering = async () => {
   await nextTick()
 }
 
-const countWorkerMessages = (type: string) =>
-  FakeWorker.instances[0]?.messages.filter((message) => message.type === type).length ?? 0
+const countWorkerMessages = (type: string) => {
+  const workerType = type === 'data' ? 'loadFinalData' : type
+  return (
+    FakeWorker.instances[0]?.messages.filter((message) => message.type === workerType).length ?? 0
+  )
+}
+
+const decodeCurrentQuery = async (query: string) => {
+  const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
+  const codec = await useSpiroAnimQS(
+    version.VDEF,
+    useBaseQS(version.VDEF, { charset: version.CHARSET }),
+    CURRENT_SPIRO_ANIM_QS_VERSION,
+  )
+  return codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+}
 
 enableAutoUnmount(afterEach)
 
@@ -551,19 +567,11 @@ describe('VtgPane', () => {
     )
 
     await selectSpeedRatio(wrapper, '2:1')
-    for (const [reference, vertical, horizontal] of [
-      ['5-6', 'top', 'left'],
-      ['6-6', 'top', 'right'],
-      ['5-5', 'bottom', 'left'],
-      ['6-5', 'bottom', 'right'],
-    ] as const) {
+    for (const reference of ['5-6', '6-6', '5-5', '6-5'] as const) {
       await wrapper.get(`[data-cell-reference="${reference}"]`).trigger('click')
-      expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
-        `vtg-tile__spin-toggle--${vertical}`,
-      )
-      expect(wrapper.get('[data-role="vtg-spin-toggle"]').classes()).toContain(
-        `vtg-tile__spin-toggle--${horizontal}`,
-      )
+      const classes = wrapper.get('[data-role="vtg-spin-toggle"]').classes()
+      expect(classes).not.toContain('vtg-tile__spin-toggle--left')
+      expect(classes).not.toContain('vtg-tile__spin-toggle--right')
     }
   })
 
@@ -1263,9 +1271,9 @@ describe('VtgPane', () => {
     await settlePreviewRendering()
 
     const compiledPreviews = FakeWorker.instances[0]!.messages.filter(
-      (message) => message.type === 'data',
+      (message) => message.type === 'loadFinalData',
     )
-      .map((message) => message.data as RootDataCompiled)
+      .map((message) => rootCompile(message.data as RootDataFinal))
       .slice(-18)
     expect(compiledPreviews).toHaveLength(18)
     expect(getCompiledVtgBuilderMotion(compiledPreviews[16]!, 1).spins).toEqual(['A', 'I'])
@@ -1287,8 +1295,8 @@ describe('VtgPane', () => {
 
     const previews =
       FakeWorker.instances[0]?.messages
-        .filter(({ type }) => type === 'data')
-        .map(({ data }) => data as RootDataCompiled) ?? []
+        .filter(({ type }) => type === 'loadFinalData')
+        .map(({ data }) => rootCompile(data as RootDataFinal)) ?? []
     const handsPreview = previews.find((preview) => preview.hands === true)
     const thirdOrderPreview = [...previews]
       .reverse()
@@ -3085,9 +3093,11 @@ describe('VtgPane', () => {
     ).toEqual({ girth: 2, timeline: false, thumbnail: true })
 
     const renderMessages = FakeWorker.instances[0]?.messages
-      .filter(({ type }) => type === 'data' || type === 'reqimgs')
+      .filter(({ type }) => type === 'loadFinalData' || type === 'reqimgs')
       .map(({ type }) => type)
-    expect(renderMessages).toEqual(Array.from({ length: 9 }, () => ['data', 'reqimgs']).flat())
+    expect(renderMessages).toEqual(
+      Array.from({ length: 9 }, () => ['loadFinalData', 'reqimgs']).flat(),
+    )
   })
 
   it.each(['1:1', '1:3', '1:5'] as const)(
@@ -3118,15 +3128,19 @@ describe('VtgPane', () => {
   )
 
   it.each(['2:1', '2:3', '2:5'] as const)(
-    'uses the paired VTG layout at %s',
+    'uses the shared VTG layout for unmodified %s candidates',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await selectSpeedRatio(wrapper, speedRatio)
       await nextTick()
 
-      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
-      expect(wrapper.findAll('.vtg-tile')[0]?.classes()).toContain('vtg-tile--paired-left')
-      expect(wrapper.findAll('.vtg-tile')[1]?.classes()).toContain('vtg-tile--paired-right')
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+      expect(wrapper.get('[data-cell-reference="1-1"]').classes()).toContain(
+        'vtg-tile--shared-preview-top',
+      )
+      expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
+        'vtg-tile--shared-preview-bottom',
+      )
       expect(wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').element.value).toBe(
         '-90',
       )
@@ -3138,11 +3152,51 @@ describe('VtgPane', () => {
     store.vtgThirdOrderSettings = [{ initial: '1:3-pro', strength: 1, timing: '1:3-pro' }, {}]
     store.vtgThirdOrderMirror = true
     const wrapper = mount(VtgPane)
-    await nextTick()
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    })
 
-    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
     expect(wrapper.findAll('.vtg-tile')[0]?.classes()).toContain('vtg-tile--paired-left')
     expect(wrapper.findAll('.vtg-tile')[1]?.classes()).toContain('vtg-tile--paired-right')
+  })
+
+  it('retains the current layout until the newest worker comparison resolves', async () => {
+    const store = useConceptsStore()
+    store.vtgThirdOrderSettings = [{ initial: '1:3-pro', strength: 1, timing: '1:3-pro' }, {}]
+    const comparisons: ReturnType<typeof createDeferred<boolean>>[] = []
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+      compareVtgCandidateLayout: () => {
+        const comparison = createDeferred<boolean>()
+        comparisons.push(comparison)
+        return comparison.promise
+      },
+    }
+    const wrapper = mount(VtgPane, { props: { patternMatcher } })
+
+    await vi.waitFor(() => expect(comparisons).toHaveLength(1))
+    comparisons[0]!.resolve(true)
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    })
+
+    store.setVtgThirdOrderStrength(0, 2)
+    await nextTick()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    await vi.waitFor(() => expect(comparisons).toHaveLength(2))
+
+    store.setVtgThirdOrderStrength(0, 3)
+    await nextTick()
+    await vi.waitFor(() => expect(comparisons).toHaveLength(3))
+    comparisons[1]!.resolve(true)
+    await flushPromises()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+
+    comparisons[2]!.resolve(false)
+    await flushPromises()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
   })
 
   it('returns to shared Full Grid thumbnails when the Builder Drop target is selected', async () => {
@@ -3151,17 +3205,20 @@ describe('VtgPane', () => {
     store.vtgThirdOrderMirror = true
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')
+    const animationWithProperties = store.applyVtgPropertyControls(animation)
     const wrapper = mount(VtgPane, {
       props: {
-        animation,
+        animation: animationWithProperties,
         builderActive: true,
         builderFullCatalog: true,
         builderInsertionIndex: 0,
-        builderMatchAnimation: animation,
+        builderMatchAnimation: animationWithProperties,
       },
     })
 
-    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    })
 
     await wrapper.setProps({ builderInsertionIndex: 1, builderMatchAnimation: undefined })
 
@@ -3171,18 +3228,8 @@ describe('VtgPane', () => {
   })
 
   it('pairs the first but shares the second portion of the reported three-portion pattern', async () => {
-    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      CURRENT_SPIRO_ANIM_QS_VERSION,
-    )
-    const animation = codec.decodeQS(
-      Object.fromEntries(
-        new URLSearchParams(
-          'r=Gw48Yk11Y&p0=Q__.blE-ZU.5JE_6k........5JE-ZU_ZE........___-ZU.......&x0=Qo____Yw.____L7L_........____NBf_........____NXL_&m0=_1_mxqv__&p1=N__.blE_98.5L__6k........5JE_6k........___-ZU.......&x1=Qo____Yw.____L7L_........____Luf_........____NXL_&c=_i_bhq&v=12',
-        ),
-      ),
+    const animation = await decodeCurrentQuery(
+      'r=Gw48Yk11Y&p0=Q__.blE-ZU.5JE_6k........5JE-ZU_ZE........___-ZU.......&x0=Qo____Yw.____L7L_........____NBf_........____NXL_&m0=_1_mxqv__&p1=N__.blE_98.5L__6k........5JE_6k........___-ZU.......&x1=Qo____Yw.____L7L_........____Luf_........____NXL_&c=_i_bhq&v=12',
     )
     const previews = createVtgTransitionPreviewAnimations(animation)
     const first = resolveVtgBuilderPatternMatchAnimation(previews, 0)
@@ -3201,26 +3248,92 @@ describe('VtgPane', () => {
     })
 
     await settlePreviewRendering()
-    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    })
 
     await wrapper.setProps({ builderInsertionIndex: 1, builderMatchAnimation: second })
     await settlePreviewRendering()
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    })
+  })
+
+  it('shares the reported third portion in Builder while pairing its standalone equivalent', async () => {
+    const pattern = await decodeCurrentQuery(
+      'r=Gw48Yk11Y&p0=Q__.blE-ZU.5JE_6k........5JE-ZU_ZE........5GQ-__................___-ZU.......&x0=Qo____Yw.____L7L_........____NBf_........____NXL_&m0=_1_mxqv__&p1=N__.blE_98.5L__6k........5JE_6k........5GQ_4d_WQ................___-ZU.......&x1=Qo____Yw.____L7L_........____Luf_........____NXL_&c=_i_bhq&v=12',
+    )
+    const previews = createVtgTransitionPreviewAnimations(pattern)
+    const third = resolveVtgBuilderPatternMatchAnimation(previews, 2)
+    if (!third) throw new Error('Expected the reported pattern to have a third Builder portion')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation: pattern,
+        animationReady: true,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: 2,
+        builderMatchAnimation: third,
+      },
+    })
+
+    await settlePreviewRendering()
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('input[value="2:3"]').element.checked).toBe(true)
+    })
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+
+    const standalone = await decodeCurrentQuery(
+      'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-___U0...............&x0=Qo____Yw.____NXL_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0_4d_WQ...............&x1=Qo____Yw.____NXL_&c=_i_bhq&v=12',
+    )
+    await wrapper.setProps({
+      animation: standalone,
+      builderActive: false,
+      builderInsertionIndex: undefined,
+      builderMatchAnimation: undefined,
+    })
+    await settlePreviewRendering()
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('input[value="2:3"]').element.checked).toBe(true)
+    })
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    })
+  })
+
+  it('shares the reported second portion after a three-beat first Builder portion', async () => {
+    const pattern = await decodeCurrentQuery(
+      'r=Gw48Yk11Y&p0=Q__.blE-ZU.5JE_6k......5JE-ZU_ZE.....5GQ-__................___-ZU.......&x0=Qo____Yw.____L7L_......____NBf_.....____NXL_&m0=_1_mxqv__&p1=N__.blE_98.5L__6k......5JE_6k.....5GQ_4d_WQ................___-ZU.......&x1=Qo____Yw.____L7L_......____Luf_.....____NXL_&c=_i_bhq&v=12',
+    )
+    const previews = createVtgTransitionPreviewAnimations(pattern)
+    const second = resolveVtgBuilderPatternMatchAnimation(previews, 1)
+    if (!second) throw new Error('Expected the reported pattern to have a second Builder portion')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation: pattern,
+        animationReady: true,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderFullGrid: true,
+        builderInsertionIndex: previews?.length,
+      },
+    })
+
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    await wrapper.setProps({ builderInsertionIndex: 1 })
+    await nextTick()
+    await wrapper.setProps({ builderMatchAnimation: second })
+    await vi.waitFor(() => {
+      expect(wrapper.get<HTMLInputElement>('input[value="1:3"]').element.checked).toBe(true)
+    })
+    await vi.waitFor(() => {
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    })
   })
 
   it('shares equivalent generated thumbnails for the reported standalone pattern', async () => {
-    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      CURRENT_SPIRO_ANIM_QS_VERSION,
-    )
-    const animation = codec.decodeQS(
-      Object.fromEntries(
-        new URLSearchParams(
-          'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-ZU_U0.......&x0=Qo____Yw.____NBf_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0_6k_WQ.......&x1=Qo____Yw.____Luf_&c=_i_bhq&v=12',
-        ),
-      ),
+    const animation = await decodeCurrentQuery(
+      'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-ZU_U0.......&x0=Qo____Yw.____NBf_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0_6k_WQ.......&x1=Qo____Yw.____Luf_&c=_i_bhq&v=12',
     )
     const wrapper = mount(VtgPane, { props: { animation, animationReady: true } })
 
@@ -3243,18 +3356,8 @@ describe('VtgPane', () => {
   })
 
   it('keeps detected properties when selecting another cell in the reported tilted pattern', async () => {
-    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      CURRENT_SPIRO_ANIM_QS_VERSION,
-    )
-    const animation = codec.decodeQS(
-      Object.fromEntries(
-        new URLSearchParams(
-          'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-ZU_U0.......&x0=Qo____Yw.____NXL_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0-ZU_WQ.......&x1=Qo____Yw.____NXL_&c=_i_bhq&v=12',
-        ),
-      ),
+    const animation = await decodeCurrentQuery(
+      'r=Gw48Yk11Y&p0=Q__.bg0____WQ.5L_-ZU_U0.......&x0=Qo____Yw.____NXL_&m0=_1_mxqv__&p1=N__.bg0____WQ.5E0-ZU_WQ.......&x1=Qo____Yw.____NXL_&c=_i_bhq&v=12',
     )
     const wrapper = mount(VtgPane, { props: { animation, animationReady: true } })
     await settlePreviewRendering()
@@ -3328,7 +3431,7 @@ describe('VtgPane', () => {
 
     const previewAnimations = () =>
       FakeWorker.instances[0]?.messages
-        .filter(({ type }) => type === 'data')
+        .filter(({ type }) => type === 'loadFinalData')
         .map(({ data }) => data as RootDataFinal) ?? []
 
     expect(
@@ -3655,7 +3758,7 @@ describe('VtgPane', () => {
     await settlePreviewRendering()
     const previewAnimations = () =>
       FakeWorker.instances[0]?.messages
-        .filter(({ type }) => type === 'data')
+        .filter(({ type }) => type === 'loadFinalData')
         .map(({ data }) => data as RootDataFinal) ?? []
     await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
     const firstTileElements = () =>
@@ -3702,7 +3805,7 @@ describe('VtgPane', () => {
     await settlePreviewRendering()
     const previewAnimations = () =>
       FakeWorker.instances[0]?.messages
-        .filter(({ type }) => type === 'data')
+        .filter(({ type }) => type === 'loadFinalData')
         .map(({ data }) => data as RootDataFinal) ?? []
     const expectedFirst = createVtgBuilderDropPreview(animation, selection, 0)
     const expectedSecond = createVtgBuilderDropPreview(animation, selection, 1)

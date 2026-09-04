@@ -1,5 +1,7 @@
 import { createMessageChannel } from '@/workers/createMessageChannel'
 import {
+  compareVtgCandidateLayoutRequest,
+  createVtgPreviewCandidatesRequest,
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
@@ -13,3 +15,5 @@ const { register } = createMessageChannel<PatternMatchingBridgeMap>(
 register('matchVtg', matchVtgPatternRequest)
 register('matchEightStep', matchEightStepPatternRequest)
 register('matchQst', matchQstPatternRequest)
+register('compareVtgCandidateLayout', compareVtgCandidateLayoutRequest)
+register('createVtgPreviewCandidates', createVtgPreviewCandidatesRequest)

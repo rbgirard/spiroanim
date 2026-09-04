@@ -6,8 +6,10 @@ import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPatt
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import {
+  createVtgTransitionPreviewAnimation,
   createVtgTransitionQuickSlotAnimationCandidates,
   createVtgTransitionPreviewAnimations,
+  getVtgTransitionPreviewCount,
   getVtgTransitionPreviewBeatCount,
   resizeVtgTransitionPatternPreview,
   reverseVtgTransitionPatternPreview,
@@ -52,6 +54,25 @@ const selectDetectableAnimations = (
 }
 
 describe('createVtgTransitionQuickSlotAnimations', () => {
+  it('extracts one preview without changing the full-list result', () => {
+    const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    const second = first
+      ? appendVtgBuilderPattern(first, { reference: '5-2', speedRatio: '1:3' })
+      : undefined
+    const source = second
+      ? appendVtgBuilderPattern(second, { reference: '5-5', speedRatio: '1:3' })
+      : undefined
+    if (!source) throw new Error('Expected three Builder portions')
+
+    const previews = createVtgTransitionPreviewAnimations(source)
+    expect(getVtgTransitionPreviewCount(source)).toBe(3)
+    expect(previews).toHaveLength(3)
+    previews?.forEach((preview, index) => {
+      expect(createVtgTransitionPreviewAnimation(source, index)).toEqual(preview)
+    })
+    expect(createVtgTransitionPreviewAnimation(source, 3)).toBeUndefined()
+  })
+
   it('rotates the supplied Anti portion without changing its spin classification', async () => {
     const version = await loadSpiroAnimQSVersion(6)
     const codec = await useSpiroAnimQS(

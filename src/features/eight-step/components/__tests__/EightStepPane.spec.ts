@@ -67,6 +67,7 @@ class FakeWorker {
     let data: unknown
     if (message.type === 'warnStr') data = message.data
     else if (message.type === 'initialize') data = true
+    else if (message.type === 'loadFinalData') data = 0
     else if (message.type === 'reqimgs') {
       FakeWorker.activePreviewRequests++
       FakeWorker.maxActivePreviewRequests = Math.max(
@@ -102,8 +103,12 @@ const settlePreviewRendering = async () => {
   await nextTick()
 }
 
-const countWorkerMessages = (type: string) =>
-  FakeWorker.instances[0]?.messages.filter((message) => message.type === type).length ?? 0
+const countWorkerMessages = (type: string) => {
+  const workerType = type === 'data' ? 'loadFinalData' : type
+  return (
+    FakeWorker.instances[0]?.messages.filter((message) => message.type === workerType).length ?? 0
+  )
+}
 
 describe('EightStepPane', () => {
   beforeEach(() => {

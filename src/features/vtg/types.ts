@@ -107,9 +107,8 @@ export const getVtgTimingCycleCount = (speedRatio: VtgSpeedRatio): number => {
   return leastCommonMultiple(leftParts.numerator, rightParts.numerator)
 }
 
-/** Whether adjacent VTG rows diverge and therefore need independently rendered path previews. */
+/** Whether an even denominator intrinsically needs independently rendered path previews. */
 export const requiresPairedVtgPreviewLayout = (speedRatio: VtgSpeedRatio): boolean =>
-  getVtgTimingCycleCount(speedRatio) > 1 ||
   getVtgPropSpeedRatios(speedRatio).some((ratio) => {
     const parts = parseVtgIndividualSpeedRatio(ratio)
     return parts !== undefined && parts.denominator % 2 === 0

@@ -1,6 +1,9 @@
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
-import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import {
+  createVtgTransitionPreviewAnimation,
+  createVtgTransitionPreviewAnimations,
+} from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { getVtgTimingCycleCount } from '@/features/vtg/types'
 import { getVtgBuilderMotion } from '@/features/builder/describeVtgBuilderMotion'
 import { rejoinVtgBuilderJunction } from '@/features/builder/rejoinVtgBuilderJunction'
@@ -11,16 +14,12 @@ import { orthoAngle } from '@/math/animation/OrthogonalFunc'
 import type { AnimData, AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 import { MathUtils, Vector3 } from 'three'
 import type { VtgBuilderPatternSelection } from '@/features/builder/types'
-import { applyVtgThirdOrderSettings, type VtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
+import { applyVtgPropertySettings, type VtgPropertySettings } from '@/features/vtg/propertySettings'
 
 const doubledFourBeatIntervalCount = 8
 export interface VtgBuilderPatternOptions {
   minimumCycleCount?: 1 | 2
-  thirdOrder?: {
-    settings: VtgThirdOrderSettings
-    mirror: boolean
-    opposed: boolean
-  }
+  properties?: VtgPropertySettings
 }
 const getBuilderPieceIntervalCount = (
   selection: VtgBuilderPatternSelection,
@@ -37,11 +36,8 @@ const createBuilderPatternAnimation = (
     'quarters' in selection
       ? createQtrAnimation(current, selection)
       : createVtgAnimation(current, selection, options)
-  return animation && options.thirdOrder
-    ? applyVtgThirdOrderSettings(animation, options.thirdOrder.settings, {
-        mirror: options.thirdOrder.mirror,
-        opposed: options.thirdOrder.opposed,
-      })
+  return animation && options.properties
+    ? applyVtgPropertySettings(animation, options.properties)
     : animation
 }
 const normalizeSignedAngle = (angle: number): number => {
@@ -335,7 +331,7 @@ export const insertVtgBuilderPattern = (
     insertionIndex,
     getVtgBuilderMotion(source),
   )
-  const followingPreview = createVtgTransitionPreviewAnimations(current)?.[previewIndex]
+  const followingPreview = createVtgTransitionPreviewAnimation(current, previewIndex)
   return alignedInserted && followingPreview
     ? rejoinVtgBuilderJunction(
         alignedInserted,

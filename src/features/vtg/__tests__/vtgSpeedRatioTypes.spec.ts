@@ -58,13 +58,13 @@ describe('VTG speed ratio helpers', () => {
     ['1:3', false],
     ['1:4', true],
     ['1:5', false],
-    ['2:1', true],
-    ['2:3', true],
-    ['2:5', true],
+    ['2:1', false],
+    ['2:3', false],
+    ['2:5', false],
     ['1:1v3', false],
     ['1:1v2', true],
-    ['1:1v2:3', true],
-    ['3:1', true],
+    ['1:1v2:3', false],
+    ['3:1', false],
   ] as const)(
     'derives whether %s needs independently paired path previews',
     (speedRatio, expected) => {

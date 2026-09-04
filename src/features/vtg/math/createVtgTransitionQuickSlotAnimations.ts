@@ -17,6 +17,26 @@ const transitionSegmentCount = 4
 export type VtgTransitionQuickSlotCandidates = readonly RootDataFinal[]
 export type VtgTransitionPreviewAnimations = readonly RootDataFinal[]
 
+const getVtgTransitionPreviewSliceStarts = (animation: RootDataFinal): number[] | undefined => {
+  const firstProp = animation.props[0]
+  if (
+    !firstProp ||
+    animation.props.length !== 2 ||
+    animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)
+  ) {
+    return undefined
+  }
+
+  const relationshipChangeFrames = findExplicitPlaneOrTurnsFrameIndices(
+    animation,
+    extractedPatternSourceFrameCount,
+  )
+  return [0, ...relationshipChangeFrames.map((frameIndex) => frameIndex - 1)]
+}
+
+export const getVtgTransitionPreviewCount = (animation: RootDataFinal): number | undefined =>
+  getVtgTransitionPreviewSliceStarts(animation)?.length
+
 export const getVtgTransitionPreviewBeatCount = (animation: RootDataFinal): number => {
   const frames = rootCompile(animation).props[0]?.anim
   if (!frames || frames.length < 2) return 0
@@ -177,7 +197,7 @@ export const removeVtgTransitionPatternPreview = (
         }),
       })),
     }
-    const followingPreview = createVtgTransitionPreviewAnimations(animation)?.[1]
+    const followingPreview = createVtgTransitionPreviewAnimation(animation, 1)
     return followingPreview
       ? selectVtgBuilderJunctionPlane(withBoundaries, 1, getVtgBuilderMotion(followingPreview))
       : undefined
@@ -197,7 +217,7 @@ export const removeVtgTransitionPatternPreview = (
       })),
     }
   }
-  const followingPreview = createVtgTransitionPreviewAnimations(animation)?.[previewIndex + 1]
+  const followingPreview = createVtgTransitionPreviewAnimation(animation, previewIndex + 1)
   if (!followingPreview) return undefined
 
   return rejoinVtgBuilderJunction(
@@ -289,42 +309,53 @@ const extractDoubledCycle = (
  * duration. A relationship authored on frame N describes the path from N-1 into N, so adjacent
  * slices share frame N-1 and the following slice owns that complete visual segment.
  */
+const createVtgTransitionPreviewAnimationAt = (
+  animation: RootDataFinal,
+  sliceStarts: readonly number[],
+  previewIndex: number,
+): RootDataFinal | undefined => {
+  const firstProp = animation.props[0]
+  const startFrameIndex = sliceStarts[previewIndex]
+  if (!firstProp || startFrameIndex === undefined) return undefined
+
+  const shifted = shiftClosedAnimation(animation, startFrameIndex, true)
+  if (!shifted) return undefined
+
+  const nextStartFrameIndex = sliceStarts[previewIndex + 1]
+  const sliceFrameCount =
+    nextStartFrameIndex === undefined
+      ? firstProp.anim.length - startFrameIndex
+      : nextStartFrameIndex - startFrameIndex + 1
+
+  return {
+    ...shifted,
+    props: shifted.props.map((prop) => ({
+      ...prop,
+      anim: prop.anim.slice(0, sliceFrameCount).map((frame) => ({ ...frame })),
+    })),
+  }
+}
+
+/** Extracts only one Builder preview without compiling every other portion. */
+export const createVtgTransitionPreviewAnimation = (
+  animation: RootDataFinal,
+  previewIndex: number,
+): RootDataFinal | undefined => {
+  const sliceStarts = getVtgTransitionPreviewSliceStarts(animation)
+  return sliceStarts
+    ? createVtgTransitionPreviewAnimationAt(animation, sliceStarts, previewIndex)
+    : undefined
+}
+
 export const createVtgTransitionPreviewAnimations = (
   animation: RootDataFinal,
 ): VtgTransitionPreviewAnimations | undefined => {
-  const firstProp = animation.props[0]
-  if (
-    !firstProp ||
-    animation.props.length !== 2 ||
-    animation.props.some((prop) => prop.anim.length !== firstProp.anim.length)
-  ) {
-    return undefined
-  }
+  const sliceStarts = getVtgTransitionPreviewSliceStarts(animation)
+  if (!sliceStarts) return undefined
 
-  const relationshipChangeFrames = findExplicitPlaneOrTurnsFrameIndices(
-    animation,
-    extractedPatternSourceFrameCount,
+  const previews = sliceStarts.map((_, previewIndex) =>
+    createVtgTransitionPreviewAnimationAt(animation, sliceStarts, previewIndex),
   )
-  const sliceStarts = [0, ...relationshipChangeFrames.map((frameIndex) => frameIndex - 1)]
-
-  const previews = sliceStarts.map((startFrameIndex, sliceIndex) => {
-    const shifted = shiftClosedAnimation(animation, startFrameIndex, true)
-    if (!shifted) return undefined
-
-    const nextStartFrameIndex = sliceStarts[sliceIndex + 1]
-    const sliceFrameCount =
-      nextStartFrameIndex === undefined
-        ? firstProp.anim.length - startFrameIndex
-        : nextStartFrameIndex - startFrameIndex + 1
-
-    return {
-      ...shifted,
-      props: shifted.props.map((prop) => ({
-        ...prop,
-        anim: prop.anim.slice(0, sliceFrameCount).map((frame) => ({ ...frame })),
-      })),
-    }
-  })
   if (previews.some((preview) => preview === undefined)) return undefined
 
   return previews.map((preview) => preview!)

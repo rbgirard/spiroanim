@@ -10,6 +10,8 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
+  VtgCandidateLayoutRequest,
+  VtgPreviewCandidatesRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 const patternMatchingWorkerIdleMs = 30_000
@@ -44,6 +46,20 @@ const matchQstWithoutWorker = async (
   const { matchQstPatternRequest } =
     await import('@/workers/pattern-matching/handlePatternMatchingRequest')
   return matchQstPatternRequest(request)
+}
+
+const compareVtgCandidateLayoutWithoutWorker = async (
+  request: VtgCandidateLayoutRequest,
+): Promise<boolean> => {
+  const { compareVtgCandidateLayoutRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return compareVtgCandidateLayoutRequest(request)
+}
+
+const createVtgPreviewCandidatesWithoutWorker = async (request: VtgPreviewCandidatesRequest) => {
+  const { createVtgPreviewCandidatesRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return createVtgPreviewCandidatesRequest(request)
 }
 
 export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
@@ -122,6 +138,18 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
       () => matchQstWithoutWorker(request),
     )
 
+  const compareVtgCandidateLayout = (request: VtgCandidateLayoutRequest) =>
+    callWorker(
+      (activeChannel) => activeChannel.call('compareVtgCandidateLayout', request),
+      () => compareVtgCandidateLayoutWithoutWorker(request),
+    )
+
+  const createVtgPreviewCandidates = (request: VtgPreviewCandidatesRequest) =>
+    callWorker(
+      (activeChannel) => activeChannel.call('createVtgPreviewCandidates', request),
+      () => createVtgPreviewCandidatesWithoutWorker(request),
+    )
+
   const acquire = () => {
     if (disposed) return () => undefined
 
@@ -144,7 +172,13 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
   })
 
   return {
-    client: { matchVtg, matchEightStep, matchQst },
+    client: {
+      matchVtg,
+      matchEightStep,
+      matchQst,
+      compareVtgCandidateLayout,
+      createVtgPreviewCandidates,
+    },
     acquire,
   }
 }

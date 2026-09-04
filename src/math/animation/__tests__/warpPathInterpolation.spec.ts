@@ -5,9 +5,9 @@ import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
 
 describe('applyWarpPath', () => {
   it('preserves established Scale behavior while both vectors are aligned', () => {
-    const canonical = new Vector3(0, 1, 0)
+    const canonical = new Vector3(0.1, 0.2, 0.3)
     expect(applyWarpPath(canonical, canonical, 0.8, 0.75, new Vector3()).toArray()).toEqual([
-      0, 0.8, 0,
+      0.08000000000000002, 0.16000000000000003, 0.24,
     ])
   })
 

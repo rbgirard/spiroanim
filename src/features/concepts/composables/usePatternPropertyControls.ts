@@ -11,15 +11,15 @@ import {
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
 import {
-  detectVtgThirdOrderInitialTiming,
   extractVtgThirdOrderSettings,
   getVtgThirdOrderDisplaySettings,
+  updateVtgThirdOrderTimingSetting,
   type VtgThirdOrderDisplaySettings,
   type VtgThirdOrderInitial,
   type VtgThirdOrderTiming,
 } from '@/features/vtg/thirdOrder'
-import { resolveAnimationFrames } from '@/math/animation/frameSemantics'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { updateVtgMirroredSideSetting } from '@/features/vtg/propertySettings'
 
 interface PatternPropertyControlOptions {
   animation: Readonly<Ref<RootDataFinal | undefined>>
@@ -113,24 +113,16 @@ export const usePatternPropertyControls = ({
 
   const updateThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
     const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
-    const side = vtgThirdOrderSettings.value[propIndex]
-    if (
-      value !== undefined &&
-      side.timing === undefined &&
-      typeof side.initial === 'string' &&
-      animation.value
-    ) {
-      const frames = animation.value.props[propIndex]?.anim ?? []
-      const initialWarp = resolveAnimationFrames(frames)[0]?.warp
-      if (initialWarp !== undefined) conceptsStore.setVtgThirdOrderInitial(propIndex, initialWarp)
-    } else if (value === undefined && typeof side.initial === 'number' && animation.value) {
-      const initialFrame = resolveAnimationFrames(animation.value.props[propIndex]?.anim ?? [])[0]
-      const inheritedTiming = initialFrame && detectVtgThirdOrderInitialTiming(side.initial)
-      if (inheritedTiming !== undefined) {
-        conceptsStore.setVtgThirdOrderInitial(propIndex, inheritedTiming)
-      }
+    if (animation.value) {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderTimingSetting(
+        animation.value,
+        vtgThirdOrderSettings.value,
+        propIndex,
+        value,
+      )
+    } else {
+      conceptsStore.setVtgThirdOrderTiming(propIndex, value)
     }
-    conceptsStore.setVtgThirdOrderTiming(propIndex, value)
     emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
   }
 
@@ -182,8 +174,12 @@ export const usePatternPropertyControls = ({
     const sources = getSimpleFoldSources()
     const previousBeat = vtgFoldBeat.value[propIndex]
     const source = sources[propIndex][String(previousBeat)]
-    vtgFoldBeat.value[propIndex] = beat
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldBeat.value[1] = beat
+    vtgFoldBeat.value = updateVtgMirroredSideSetting(
+      vtgFoldBeat.value,
+      propIndex,
+      beat,
+      vtgFoldMirror.value,
+    )
     delete sources[propIndex][String(previousBeat)]
     if (source) sources[propIndex][String(beat)] = source
     materializeSimpleFoldValues(sources)
@@ -192,8 +188,12 @@ export const usePatternPropertyControls = ({
 
   const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
     const sources = getSimpleFoldSources()
-    vtgFoldRepeat.value[propIndex] = repeat
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldRepeat.value[1] = repeat
+    vtgFoldRepeat.value = updateVtgMirroredSideSetting(
+      vtgFoldRepeat.value,
+      propIndex,
+      repeat,
+      vtgFoldMirror.value,
+    )
     if (!repeat) vtgFoldAlternate.value[propIndex] = false
     materializeSimpleFoldValues(sources)
     emitPropertyAnimation()
@@ -201,16 +201,24 @@ export const usePatternPropertyControls = ({
 
   const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
     const sources = getSimpleFoldSources()
-    vtgFoldEvery.value[propIndex] = every
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldEvery.value[1] = every
+    vtgFoldEvery.value = updateVtgMirroredSideSetting(
+      vtgFoldEvery.value,
+      propIndex,
+      every,
+      vtgFoldMirror.value,
+    )
     materializeSimpleFoldValues(sources)
     emitPropertyAnimation()
   }
 
   const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
     const sources = getSimpleFoldSources()
-    vtgFoldAlternate.value[propIndex] = alternate
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldAlternate.value[1] = alternate
+    vtgFoldAlternate.value = updateVtgMirroredSideSetting(
+      vtgFoldAlternate.value,
+      propIndex,
+      alternate,
+      vtgFoldMirror.value,
+    )
     materializeSimpleFoldValues(sources)
     emitPropertyAnimation()
   }

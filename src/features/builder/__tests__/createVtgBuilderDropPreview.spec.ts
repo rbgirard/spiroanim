@@ -11,6 +11,7 @@ import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { createDefaultVtgPropertySettings } from '@/features/vtg/propertySettings'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 
@@ -69,13 +70,13 @@ describe('createVtgBuilderDropPreview', () => {
 
   it('uses the native two-cycle 45 degree duration for Third Order 2:* previews', () => {
     const source = createTwoPortionPattern()
+    const properties = createDefaultVtgPropertySettings()
+    properties.twist.values[0]['0.5'] = 90
+    properties.fold.values[0]['2'] = { yaw: 45 }
+    properties.thirdOrder.settings = [{ strength: 55, timing: '2:3-anti' }, {}]
     const standalone = createVtgBuilderDropPreview(source, selection, 0, {
       minimumCycleCount: 2,
-      thirdOrder: {
-        settings: [{ strength: 55, timing: '2:3-anti' }, {}],
-        mirror: true,
-        opposed: false,
-      },
+      properties,
     })
     const inserted = createVtgBuilderDropPreview(source, selection, 1, {
       minimumCycleCount: 2,
@@ -84,6 +85,8 @@ describe('createVtgBuilderDropPreview', () => {
     expect(standalone?.props[0]?.anim).toHaveLength(17)
     expect(inserted?.props[0]?.anim).toHaveLength(17)
     expect(standalone?.props[0]?.anim[0]?.strength).toBe(550)
+    expect(standalone?.props[0]?.anim[1]?.twist).toBe(90)
+    expect(standalone?.props[0]?.anim[4]?.yaw).toBe(45)
     expect(standalone?.props[0]?.anim[1]?.warp).toBeTypeOf('number')
     expect(standalone?.props[0]?.anim.slice(2).every((frame) => frame.warp === undefined)).toBe(
       true,

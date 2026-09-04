@@ -15,6 +15,7 @@ import { applyAnimatorPathModes } from '@/workers/animation/applyAnimatorPathMod
 
 import { CMODES } from '@/domain/animation/AnimStruct'
 import { CAMERATIMES, MOTIONTIMES, PROPTIMES, UNQTIMES } from '@/math/animation/PlayerFunc'
+import { rootCompile } from '@/math/animation/AnimFunc'
 import {
   videoExportAnimationTimeMs,
   videoExportFrameCount,
@@ -240,8 +241,8 @@ register(
   },
 )
 
-// Setup scene and SpiroAnimators when "compiled" data is received
-on('data', (compiled) => {
+// Setup scene and SpiroAnimators when compiled data is received.
+const loadCompiledData = (compiled: Parameters<typeof PROPTIMES>[0]) => {
   const manualWasActive = cameraAnimator?.manual ?? false
   const manualPose = manualWasActive ? cameraAnimator?.acquire() : undefined
   if (scene) disposeScene(scene)
@@ -332,6 +333,12 @@ on('data', (compiled) => {
   // TODO: Why is this necessary when the values are supplied above?
   // (appears to affect lines when new data is received, if this isn't called)
   animatorDim()
+}
+
+on('data', loadCompiledData)
+register('loadFinalData', (animation) => {
+  loadCompiledData(rootCompile(animation))
+  return propTimes[0]?.at(-1) ?? 0
 })
 
 function applyPathModes() {

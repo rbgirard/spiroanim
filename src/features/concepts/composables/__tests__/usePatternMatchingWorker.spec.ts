@@ -8,11 +8,17 @@ import {
 } from '@/features/concepts/composables/usePatternMatchingWorker'
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgPropertySettings } from '@/features/vtg/propertySettings'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 interface FakeWorkerMessage {
   id?: string
-  type: 'matchVtg' | 'matchEightStep' | 'matchQst'
+  type:
+    | 'matchVtg'
+    | 'matchEightStep'
+    | 'matchQst'
+    | 'compareVtgCandidateLayout'
+    | 'createVtgPreviewCandidates'
   data: unknown
 }
 
@@ -37,7 +43,12 @@ class FakeWorker extends EventTarget implements Worker {
     const request = message as FakeWorkerMessage
     if (!request.id) return
 
-    const data = { status: 'unmatched' as const }
+    const data =
+      request.type === 'compareVtgCandidateLayout'
+        ? false
+        : request.type === 'createVtgPreviewCandidates'
+          ? [undefined]
+          : { status: 'unmatched' as const }
     const respond = () => {
       const event = new MessageEvent('message', {
         data: { id: request.id, type: request.type, data },
@@ -100,6 +111,25 @@ describe('usePatternMatchingWorker', () => {
     await expect(client.matchEightStep({ animation })).resolves.toEqual({ status: 'unmatched' })
     expect(FakeWorker.instances).toHaveLength(1)
     expect(FakeWorker.instances[0]!.terminated).toBe(false)
+
+    await expect(
+      client.compareVtgCandidateLayout?.({
+        selections: [
+          { reference: '1-6', speedRatio: '1:3' },
+          { reference: '2-6', speedRatio: '1:3' },
+        ],
+        options: { properties: createDefaultVtgPropertySettings() },
+      }),
+    ).resolves.toBe(false)
+    expect(FakeWorker.instances).toHaveLength(1)
+
+    await expect(
+      client.createVtgPreviewCandidates?.({
+        selections: [{ reference: '1-1', speedRatio: '1:3' }],
+        options: {},
+      }),
+    ).resolves.toEqual([undefined])
+    expect(FakeWorker.instances).toHaveLength(1)
 
     const qstAnimation = createDefaultQstAnimation({ concept: 'qst', reference: 'breaks-1' })
     if (!qstAnimation) throw new Error('Expected a QST animation')

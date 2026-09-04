@@ -371,10 +371,12 @@ corresponding non-Tilted pattern.
 The top-header prop diagrams are not displayed in QTR mode.
 
 VTG normally shares one rendered path thumbnail across each four-cell group. Ratios whose adjacent
-rows diverge use the paired 18-thumbnail layout instead. The pane compares the final compiled path
-changes for the representative `1-6` and `2-6` candidates in the active context, including Builder
-insertion context and any effective Third Order settings. Equivalent results retain the shared
-nine-thumbnail layout.
+rows diverge use the paired 18-thumbnail layout instead. The pane compares the final compiled paths
+for the representative `1-6` and `2-6` candidates in the active context, including Builder
+insertion context and all effective VTG property settings. Equivalent results retain the shared
+nine-thumbnail layout. Candidate generation and compiled-path comparison run in the shared pattern
+matching worker, while rapid control changes are batched and stale results are ignored. The same
+candidate-generation path supplies both this comparison and the rendered thumbnails.
 
 In Pattern Builder, selecting the empty Drop target clears the effective per-portion Third Order
 preview context. Enabling Full Grid from that target therefore returns to the shared layout and

@@ -14,6 +14,10 @@ export const applyWarpPath = (
   strength: number,
   target: Vector3,
 ): Vector3 => {
+  if (strength === 0 || canonical.equals(auxiliary)) {
+    return target.copy(canonical).multiplyScalar(scale)
+  }
+
   const auxiliaryWeight = strength / 2
   return target
     .copy(canonical)

@@ -14,6 +14,7 @@ import type {
   VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
+import { isQtrPatternSelection } from '@/features/concepts/types'
 import type { PropInd, RootDataFinal } from '@/types/AnimTypes'
 
 interface UseVtgPreviewsOptions {
@@ -40,6 +41,10 @@ interface UseVtgPreviewsOptions {
   createVtgPreview?: (
     selection: VtgPatternSelection | QtrPatternSelection,
   ) => RootDataFinal | undefined
+  createVtgPreviews?: (
+    selections: readonly (VtgPatternSelection | QtrPatternSelection)[],
+  ) => Promise<readonly (RootDataFinal | undefined)[]>
+  createSelection?: (reference: VtgCellReference) => VtgPatternSelection | QtrPatternSelection
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
@@ -85,6 +90,8 @@ export const usePatternPreviews = ({
   active,
   previewContext,
   createVtgPreview,
+  createVtgPreviews,
+  createSelection,
 }: UseVtgPreviewsOptions) => {
   const activePreviewIndexes = computed(() => {
     return activeReferences.value.map((reference) =>
@@ -129,10 +136,21 @@ export const usePatternPreviews = ({
     partialIndexes: spinPreviewIndexes,
     activeIndexes: activePreviewIndexes,
     active,
+    ...(createVtgPreviews
+      ? {
+          createAnimations: (references: readonly VtgCellReference[]) =>
+            createVtgPreviews(
+              references.map(
+                (reference) => createSelection?.(reference) ?? buildSelection(reference),
+              ),
+            ),
+        }
+      : undefined),
     createAnimation: (reference) => {
-      const selection = buildSelection(reference)
+      const selection: VtgPatternSelection | QtrPatternSelection =
+        createSelection?.(reference) ?? buildSelection(reference)
       if (createVtgPreview) return createVtgPreview(selection)
-      return 'quarters' in selection
+      return isQtrPatternSelection(selection)
         ? createQtrPreviewAnimation(selection)
         : createVtgPreviewAnimation(selection)
     },

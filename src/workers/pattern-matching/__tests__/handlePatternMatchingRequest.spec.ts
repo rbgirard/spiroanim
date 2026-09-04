@@ -5,15 +5,46 @@ import { createDefaultEightStepAnimation } from '@/features/eight-step/createEig
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { createDefaultVtgPropertySettings } from '@/features/vtg/propertySettings'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
+  compareVtgCandidateLayoutRequest,
+  createVtgPreviewCandidatesRequest,
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
 } from '@/workers/pattern-matching/handlePatternMatchingRequest'
 
 describe('handlePatternMatchingRequest', () => {
+  it('generates a batch of final VTG preview candidates', async () => {
+    const candidates = await createVtgPreviewCandidatesRequest({
+      selections: [
+        { reference: '1-1', speedRatio: '1:3' },
+        { reference: '3-3', speedRatio: '1:3' },
+      ],
+      options: {},
+    })
+
+    expect(candidates).toHaveLength(2)
+    expect(candidates.every((candidate) => candidate?.props.length === 2)).toBe(true)
+  })
+
+  it('compares final VTG candidate paths for thumbnail layout', async () => {
+    const properties = createDefaultVtgPropertySettings()
+    properties.thirdOrder.settings = [{ initial: '1:3-pro', strength: 1, timing: '1:3-pro' }, {}]
+
+    await expect(
+      compareVtgCandidateLayoutRequest({
+        selections: [
+          { reference: '1-6', speedRatio: '1:3' },
+          { reference: '2-6', speedRatio: '1:3' },
+        ],
+        options: { properties },
+      }),
+    ).resolves.toBe(true)
+  })
+
   it('matches VTG and preserves a selection that produced the animation', async () => {
     const selection = {
       reference: '2-2',

@@ -641,11 +641,7 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
 
   const generationOptions = {
     minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
-    thirdOrder: {
-      settings: conceptsStore.vtgThirdOrderSettings,
-      mirror: conceptsStore.vtgThirdOrderMirror,
-      opposed: conceptsStore.vtgThirdOrderOpposed,
-    },
+    properties: conceptsStore.getVtgPropertySettings(),
   }
   const generated =
     drop.previewIndex === previewCount

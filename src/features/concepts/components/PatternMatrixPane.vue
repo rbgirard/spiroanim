@@ -472,8 +472,8 @@ import {
   createVtgAnimation,
   toVtgPreviewAnimation,
 } from '@/features/vtg/createVtgAnimation'
-import { applyVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
+import { createVtgPreviewCandidate } from '@/features/concepts/createVtgPreviewCandidate'
 import { describeVtgBuilderPreviewRelationship } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
@@ -528,7 +528,7 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
-import { requiresPairedVtgThirdOrderPreviewLayout } from '@/features/vtg/math/requiresPairedVtgThirdOrderPreviewLayout'
+import { cloneVtgPropertySettings, hasVtgPropertySettings } from '@/features/vtg/propertySettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { toColor } from '@/utils/UtilFunc'
@@ -735,55 +735,147 @@ const compactBuilder = computed(() => props.builderActive && !props.builderFullC
 const usesClassicLayout = computed(
   () => (vtgAdvanced.value ? classicLayout.value : true) && !compactBuilder.value,
 )
-const appliesThirdOrderToPreviews = computed(
+const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+const createPreviewSelection = (
+  reference: VtgCellReference,
+): VtgPatternSelection | QtrPatternSelection => {
+  const selection: VtgPatternSelection = {
+    reference,
+    speedRatio: speedRatio.value,
+    scale: scale.value,
+    spacing: spacing.value,
+    propColors: [leftPropColor.value, rightPropColor.value],
+    prop: prop.value,
+    hands: hands.value,
+    ...(spinToggleCells.has(reference) ? { isAnti: isAnti.value } : undefined),
+    ...(swapProps.value ? { swapProps: true } : undefined),
+    ...(reversePlane.value ? { reversePlane: true } : undefined),
+    ...(beat.value === 1 ? undefined : { beat: beat.value }),
+    ...(transition.value ? { transition: true } : undefined),
+    ...(transition.value && transitionAfterBeat.value ? { transitionAfterBeat: true } : undefined),
+    ...(initialTurnsOffset.value === undefined
+      ? undefined
+      : {
+          initialTurnsOffset: initialTurnsOffset.value,
+          initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
+        }),
+    ...(orientation.value !== 0 ? { orientation: orientation.value } : undefined),
+    ...(propRotationOffsets.value === undefined
+      ? undefined
+      : { propRotationOffsets: [...propRotationOffsets.value] as readonly [number, number] }),
+  }
+  return isQtr.value ? { ...selection, quarters: 1 } : selection
+}
+const appliesPropertiesToPreviews = computed(
   () => !props.builderActive || props.builderMatchAnimation !== undefined,
 )
-const usesPairedPreviewLayout = computed(
-  () =>
-    compactBuilder.value ||
-    requiresPairedVtgPreviewLayout(speedRatio.value) ||
-    (!isQtr.value &&
-      requiresPairedVtgThirdOrderPreviewLayout(
-        speedRatio.value,
-        appliesThirdOrderToPreviews.value ? vtgThirdOrderSettings.value : [{}, {}],
-        {
-          mirror: vtgThirdOrderMirror.value,
-          opposed: vtgThirdOrderOpposed.value,
-          createAnimation: (reference, minimumCycleCount) =>
-            props.animation && props.builderInsertionIndex !== undefined
-              ? createVtgBuilderDropPreview(
-                  props.animation,
-                  { reference, speedRatio: speedRatio.value },
-                  props.builderInsertionIndex,
-                  { minimumCycleCount },
-                )
-              : createDefaultVtgAnimation(
-                  { reference, speedRatio: speedRatio.value },
-                  {
-                    minimumCycleCount,
-                  },
-                ),
-          createTransformedAnimation: (reference, minimumCycleCount) =>
-            props.animation && props.builderInsertionIndex !== undefined
-              ? createVtgBuilderDropPreview(
-                  props.animation,
-                  { reference, speedRatio: speedRatio.value },
-                  props.builderInsertionIndex,
-                  {
-                    minimumCycleCount,
-                    thirdOrder: {
-                      settings: appliesThirdOrderToPreviews.value
-                        ? vtgThirdOrderSettings.value
-                        : [{}, {}],
-                      mirror: vtgThirdOrderMirror.value,
-                      opposed: vtgThirdOrderOpposed.value,
-                    },
-                  },
-                )
-              : undefined,
-        },
-      )),
+const previewPropertySettings = computed(() =>
+  appliesPropertiesToPreviews.value ? conceptsStore.getVtgPropertySettings() : undefined,
 )
+const createPreviewCandidate = (
+  selection: VtgPatternSelection | QtrPatternSelection,
+  applyProperties = true,
+) =>
+  createVtgPreviewCandidate(selection, {
+    ...(props.animation && props.builderInsertionIndex !== undefined
+      ? { source: props.animation, builderInsertionIndex: props.builderInsertionIndex }
+      : undefined),
+    ...(applyProperties && previewPropertySettings.value
+      ? { properties: previewPropertySettings.value }
+      : undefined),
+  })
+const contextualPropertyPairing = ref<boolean>()
+const layoutComparisonKey = computed(() =>
+  JSON.stringify([
+    speedRatio.value,
+    scale.value,
+    spacing.value,
+    isAnti.value,
+    swapProps.value,
+    reversePlane.value,
+    beat.value,
+    transition.value,
+    transitionAfterBeat.value,
+    initialTurnsOffset.value,
+    initialTurnsOffsetBeat.value,
+    orientation.value,
+    propRotationOffsets.value,
+    previewPropertySettings.value,
+  ]),
+)
+let layoutComparisonRevision = 0
+let layoutComparisonTimer: ReturnType<typeof setTimeout> | undefined
+const compareCandidateLayout = async (
+  request: Parameters<NonNullable<PatternMatchingClient['compareVtgCandidateLayout']>>[0],
+) => {
+  if (props.patternMatcher?.compareVtgCandidateLayout) {
+    return props.patternMatcher.compareVtgCandidateLayout(request)
+  }
+  const { compareVtgCandidateLayoutRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return compareVtgCandidateLayoutRequest(request)
+}
+watch(
+  [
+    layoutComparisonKey,
+    isQtr,
+    () => props.animation,
+    () => props.animationRevision,
+    () => props.builderInsertionIndex,
+  ],
+  () => {
+    const revision = ++layoutComparisonRevision
+    if (layoutComparisonTimer !== undefined) {
+      clearTimeout(layoutComparisonTimer)
+      layoutComparisonTimer = undefined
+    }
+    const activeProperties = previewPropertySettings.value
+    if (
+      isQtr.value ||
+      activeProperties === undefined ||
+      !hasVtgPropertySettings(activeProperties)
+    ) {
+      contextualPropertyPairing.value = undefined
+      return
+    }
+    const properties = cloneVtgPropertySettings(activeProperties)
+
+    layoutComparisonTimer = setTimeout(() => {
+      layoutComparisonTimer = undefined
+      const request = {
+        selections: [createPreviewSelection('1-6'), createPreviewSelection('2-6')],
+        options: {
+          properties,
+          ...(props.animation !== undefined && props.builderInsertionIndex !== undefined
+            ? {
+                source: toRaw(props.animation),
+                builderInsertionIndex: props.builderInsertionIndex,
+              }
+            : undefined),
+        },
+      } as const
+      void compareCandidateLayout(request).then(
+        (paired) => {
+          if (revision === layoutComparisonRevision) contextualPropertyPairing.value = paired
+        },
+        () => {
+          if (revision === layoutComparisonRevision) contextualPropertyPairing.value = undefined
+        },
+      )
+    }, 50)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  layoutComparisonRevision += 1
+  if (layoutComparisonTimer !== undefined) clearTimeout(layoutComparisonTimer)
+})
+const usesPairedPreviewLayout = computed(() => {
+  if (compactBuilder.value) return true
+  return (
+    requiresPairedVtgPreviewLayout(speedRatio.value) || contextualPropertyPairing.value === true
+  )
+})
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
 const hideColumnHeaderDetails = computed(
   () => compactBuilder.value || isQtr.value || !topHeaderRule.value.showDetails,
@@ -814,7 +906,6 @@ const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
     tether: toColor(colorSet[2]),
   }
 })
-const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 const createQSlots = async () => {
   quickSlotCreationError.value = undefined
   if (!props.animation) return
@@ -897,31 +988,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
         !compactBuilder.value || ((address.row === 1 || address.row === 6) && address.column <= 4),
     )
     .map((address) => {
-      const baseSelection: VtgPatternSelection = {
-        reference: address.reference,
-        speedRatio: speedRatio.value,
-        ...(spinToggleCells.has(address.reference) ? { isAnti: isAnti.value } : undefined),
-        ...(swapProps.value ? { swapProps: true } : undefined),
-        ...(reversePlane.value ? { reversePlane: true } : undefined),
-        ...(beat.value === 1 ? undefined : { beat: beat.value }),
-        ...(transition.value ? { transition: true } : undefined),
-        ...(transition.value && transitionAfterBeat.value
-          ? { transitionAfterBeat: true }
-          : undefined),
-        ...(initialTurnsOffset.value === undefined
-          ? undefined
-          : {
-              initialTurnsOffset: initialTurnsOffset.value,
-              initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
-            }),
-        ...(orientation.value !== 0 ? { orientation: orientation.value } : undefined),
-        ...(propRotationOffsets.value === undefined
-          ? undefined
-          : { propRotationOffsets: propRotationOffsets.value }),
-      }
-      const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
-        ? { ...baseSelection, quarters: 1 }
-        : baseSelection
+      const selection = createPreviewSelection(address.reference)
 
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
       const builderAnimation =
@@ -2051,47 +2118,35 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
   active: previewsReady,
+  createSelection: createPreviewSelection,
   previewContext: computed(() => [
     props.animationRevision,
     props.builderInsertionIndex,
-    JSON.stringify(vtgThirdOrderSettings.value),
-    vtgThirdOrderMirror.value,
-    vtgThirdOrderOpposed.value,
+    transition.value,
+    transitionAfterBeat.value,
+    JSON.stringify(previewPropertySettings.value),
   ]),
+  createVtgPreviews: async (selections) => {
+    const activeProperties = previewPropertySettings.value
+    const options = {
+      ...(props.animation !== undefined && props.builderInsertionIndex !== undefined
+        ? { source: toRaw(props.animation), builderInsertionIndex: props.builderInsertionIndex }
+        : undefined),
+      ...(activeProperties === undefined
+        ? undefined
+        : { properties: cloneVtgPropertySettings(activeProperties) }),
+    }
+    const candidates = props.patternMatcher?.createVtgPreviewCandidates
+      ? await props.patternMatcher.createVtgPreviewCandidates({ selections, options })
+      : selections.map((selection) => createVtgPreviewCandidate(selection, options))
+    return candidates.map((animation) =>
+      animation ? toVtgPreviewAnimation(animation, { hands: hands.value }) : undefined,
+    )
+  },
   createVtgPreview: (selection) => {
-    const minimumCycleCount = appliesThirdOrderToPreviews.value
-      ? conceptsStore.getVtgPropertyCycleCount()
-      : 1
-    const isBuilderPreview =
-      props.builderActive &&
-      props.builderInsertionIndex !== undefined &&
-      props.animation !== undefined
-    const animation = isBuilderPreview
-      ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
-          minimumCycleCount,
-          ...(appliesThirdOrderToPreviews.value
-            ? {
-                thirdOrder: {
-                  settings: vtgThirdOrderSettings.value,
-                  mirror: vtgThirdOrderMirror.value,
-                  opposed: vtgThirdOrderOpposed.value,
-                },
-              }
-            : undefined),
-        })
-      : 'quarters' in selection
-        ? createDefaultQtrAnimation(selection)
-        : createDefaultVtgAnimation(selection, { minimumCycleCount })
+    const animation = createPreviewCandidate(selection)
     if (!animation) return undefined
-    const withThirdOrder = isBuilderPreview
-      ? animation
-      : appliesThirdOrderToPreviews.value
-        ? applyVtgThirdOrderSettings(animation, vtgThirdOrderSettings.value, {
-            mirror: vtgThirdOrderMirror.value,
-            opposed: vtgThirdOrderOpposed.value,
-          })
-        : animation
-    return toVtgPreviewAnimation(withThirdOrder, { hands: hands.value })
+    return toVtgPreviewAnimation(animation, { hands: hands.value })
   },
 })
 
@@ -2114,6 +2169,7 @@ onMounted(() => {
   if (typeof ResizeObserver === 'undefined') return
 
   const observer = new ResizeObserver((entries) => {
+    let renderDimensionsChanged = false
     for (const entry of entries) {
       if (!(entry.target instanceof HTMLElement)) continue
 
@@ -2121,12 +2177,17 @@ onMounted(() => {
       const dimensions = blankDimensions[index]
       if (!dimensions) continue
 
-      dimensions.width = roundDimension(entry.contentRect.width)
-      dimensions.height = roundDimension(entry.contentRect.height)
+      const width = roundDimension(entry.contentRect.width)
+      const height = roundDimension(entry.contentRect.height)
+      renderDimensionsChanged ||=
+        Math.round(dimensions.width) !== Math.round(width) ||
+        Math.round(dimensions.height) !== Math.round(height)
+      dimensions.width = width
+      dimensions.height = height
       blankWidth.value = dimensions.width
       blankHeight.value = dimensions.height
     }
-    requestPreviews()
+    if (renderDimensionsChanged) requestPreviews()
   })
   blankObserver = observer
 

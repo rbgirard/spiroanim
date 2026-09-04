@@ -4,7 +4,7 @@ import type {
   VtgFoldSpan,
   VtgFoldValue,
   VtgFoldValues,
-} from '@/features/concepts/stores/useConceptsStore'
+} from '@/features/vtg/propertyTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 export interface VtgFoldSimpleSettings {
