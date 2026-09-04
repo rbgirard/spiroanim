@@ -52,16 +52,21 @@
               <span v-if="previewRatios[index]" class="vtg-transition-previews__ratio">
                 {{ previewRatios[index] }}
               </span>
-              <ElementalRelationshipIcons
-                v-if="elementalLayout"
-                class="vtg-transition-previews__label"
-                :hands="previewRelationships[index]?.hands"
-                :props="previewRelationships[index]?.props"
-                :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
-                :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
-                :size="16"
-              />
-              <span v-else class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
+              <Transition name="vtg-label-swap">
+                <ElementalRelationshipIcons
+                  v-if="elementalLayout"
+                  key="elemental"
+                  class="vtg-transition-previews__label"
+                  :hands="previewRelationships[index]?.hands"
+                  :props="previewRelationships[index]?.props"
+                  :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
+                  :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
+                  :size="16"
+                />
+                <span v-else key="classic" class="vtg-transition-previews__label">
+                  {{ previewLabels[index] }}
+                </span>
+              </Transition>
             </button>
           </template>
         </AppTooltip>
@@ -713,6 +718,28 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 
 .vtg-transition-previews__ratio {
   inset-inline-start: var(--space-1);
+}
+
+.vtg-label-swap-enter-active,
+.vtg-label-swap-leave-active {
+  transition:
+    opacity var(--transition-label-swap),
+    scale var(--transition-label-swap),
+    filter var(--transition-label-swap);
+}
+
+.vtg-label-swap-enter-from,
+.vtg-label-swap-leave-to {
+  opacity: 0;
+  scale: 0.72;
+  filter: blur(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtg-label-swap-enter-active,
+  .vtg-label-swap-leave-active {
+    transition: none;
+  }
 }
 
 .vtg-transition-previews--drag-active .vtg-transition-previews__delete {

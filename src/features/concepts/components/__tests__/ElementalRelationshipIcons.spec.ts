@@ -1,12 +1,12 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
-import airIconUrl from '@/assets/icons/elements/air.svg'
-import earthIconUrl from '@/assets/icons/elements/earth.svg'
-import fireIconUrl from '@/assets/icons/elements/fire.svg'
-import moonIconUrl from '@/assets/icons/elements/moon.svg'
-import sunIconUrl from '@/assets/icons/elements/sun.svg'
-import waterIconUrl from '@/assets/icons/elements/water.svg'
+import airIconUrl from '@austencloud/tka-elements/icons/air.webp'
+import earthIconUrl from '@austencloud/tka-elements/icons/earth.webp'
+import fireIconUrl from '@austencloud/tka-elements/icons/fire.webp'
+import moonIconUrl from '@austencloud/tka-elements/icons/moon.webp'
+import sunIconUrl from '@austencloud/tka-elements/icons/sun.webp'
+import waterIconUrl from '@austencloud/tka-elements/icons/water.webp'
 import ElementalRelationshipIcons from '@/features/concepts/components/ElementalRelationshipIcons.vue'
 
 describe('ElementalRelationshipIcons', () => {

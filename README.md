@@ -81,6 +81,12 @@ The production build also prerenders the landing, About, and Tips pages for sear
 keeping the editor and PWA browser-only. See [docs/SEO.md](docs/SEO.md) for the route boundary and
 [docs/PRERENDERING.md](docs/PRERENDERING.md) when adding another public page.
 
+## Attribution
+
+The elemental icons and the lineage of SpiroAnim's elemental relationship terminology are
+documented in [ATTRIBUTION.md](ATTRIBUTION.md). The icons are by Austen Cloud of
+[The Kinetic Alphabet](https://tkaflowarts.com).
+
 ### Lint with [ESLint](https://eslint.org/)
 
 ```sh

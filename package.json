@@ -30,6 +30,7 @@
     "generate:vtg3-art": "node scripts/export-vtg3-pattern-art.mjs"
   },
   "dependencies": {
+    "@austencloud/tka-elements": "^1.0.0",
     "@mdi/js": "^7.4.47",
     "@types/three": "^0.185.1",
     "@vue/server-renderer": "^3.5.39",

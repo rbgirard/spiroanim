@@ -235,18 +235,24 @@
                 @pointercancel="cancelBuilderPointerDrag"
                 @lostpointercapture="cancelBuilderPointerDrag"
               >
-                <span class="vtg-tile__label">
-                  <span v-if="elementalLayout" class="vtg-tile__label-text vtg-tile__elements">
-                    <span v-if="compactBuilder">{{ getBuilderSpinLabel(tile) }} /</span>
-                    <ElementalRelationshipIcons
-                      responsive
-                      :hands="tile.hands"
-                      :props="tile.props"
-                      :hands-indeterminate="tile.handsIndeterminate"
-                      :props-indeterminate="tile.propsIndeterminate"
-                    />
-                  </span>
-                  <span v-else class="vtg-tile__label-text">{{ tile.label }}</span>
+                <span class="vtg-tile__label" :style="getTileLabelSwapStyle(tile)">
+                  <Transition name="vtg-label-swap">
+                    <span
+                      v-if="elementalLayout"
+                      key="elemental"
+                      class="vtg-tile__label-text vtg-tile__elements"
+                    >
+                      <span v-if="compactBuilder">{{ getBuilderSpinLabel(tile) }} /</span>
+                      <ElementalRelationshipIcons
+                        responsive
+                        :hands="tile.hands"
+                        :props="tile.props"
+                        :hands-indeterminate="tile.handsIndeterminate"
+                        :props-indeterminate="tile.propsIndeterminate"
+                      />
+                    </span>
+                    <span v-else key="classic" class="vtg-tile__label-text">{{ tile.label }}</span>
+                  </Transition>
                 </span>
               </button>
               <AppTooltip
@@ -936,6 +942,16 @@ const getTileGridStyle = (tile: VtgMatrixTile) => {
   if (!compactBuilder.value && !usesClassicLayout.value) return undefined
   const position = getTileGridPosition(tile)
   return { gridColumn: String(position.column), gridRow: String(position.row) }
+}
+
+/**
+ * Staggers the classic/elemental label crossfade so the swap ripples across the
+ * board instead of every tile flipping on the same frame.
+ */
+const getTileLabelSwapStyle = (tile: VtgMatrixTile) => {
+  const topRow = Math.max(...matrixTiles.value.map(getTileBoardRow))
+  const wave = topRow - getTileBoardRow(tile) + getTileBoardColumn(tile) - 1
+  return { '--vtg-label-swap-delay': `calc(${wave} * var(--delay-label-swap-step))` }
 }
 
 const getTileBoardColumn = (tile: VtgMatrixTile) =>
@@ -2614,6 +2630,30 @@ defineExpose({
   white-space: nowrap;
 }
 
+.vtg-tile__label {
+  display: grid;
+  place-items: center;
+}
+
+.vtg-tile__label > .vtg-tile__label-text {
+  grid-area: 1 / 1;
+}
+
+.vtg-label-swap-enter-active,
+.vtg-label-swap-leave-active {
+  transition:
+    opacity var(--transition-label-swap) var(--vtg-label-swap-delay, 0ms),
+    scale var(--transition-label-swap) var(--vtg-label-swap-delay, 0ms),
+    filter var(--transition-label-swap) var(--vtg-label-swap-delay, 0ms);
+}
+
+.vtg-label-swap-enter-from,
+.vtg-label-swap-leave-to {
+  opacity: 0;
+  scale: 0.72;
+  filter: blur(3px);
+}
+
 .vtg-tile__elements {
   display: inline-flex;
   align-items: center;
@@ -2720,5 +2760,12 @@ defineExpose({
   white-space: nowrap;
   border: 0;
   clip-path: inset(50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtg-label-swap-enter-active,
+  .vtg-label-swap-leave-active {
+    transition: none;
+  }
 }
 </style>

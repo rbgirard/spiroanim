@@ -4,6 +4,9 @@ Use this index to find the document that owns a behavior before changing it. Kee
 focused on its named responsibility, and link to related guides instead of duplicating their
 details.
 
+The elemental icons and the lineage of SpiroAnim's elemental relationship terminology are
+documented in [`ATTRIBUTION.md`](../ATTRIBUTION.md).
+
 ## Animation and editor data
 
 - [`QUERY_STRING_AND_PROPERTY_MODEL.md`](./QUERY_STRING_AND_PROPERTY_MODEL.md) - overview of the

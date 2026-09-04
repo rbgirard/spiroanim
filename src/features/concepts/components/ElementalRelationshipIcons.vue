@@ -25,14 +25,19 @@
 </template>
 
 <script setup lang="ts">
+// Element artwork by Austen Cloud, The Kinetic Alphabet (https://tkaflowarts.com),
+// CC BY 4.0. The icons come straight from the @austencloud/tka-elements package so
+// SpiroAnim always shows exactly what TKA renders on its pictographs; bump the
+// package to pick up new artwork. Sun and Moon (quarter-time relationships) are
+// Austen's extension of the elemental model. See ATTRIBUTION.md.
+import airIconUrl from '@austencloud/tka-elements/icons/air.webp'
+import earthIconUrl from '@austencloud/tka-elements/icons/earth.webp'
+import fireIconUrl from '@austencloud/tka-elements/icons/fire.webp'
+import moonIconUrl from '@austencloud/tka-elements/icons/moon.webp'
+import sunIconUrl from '@austencloud/tka-elements/icons/sun.webp'
+import waterIconUrl from '@austencloud/tka-elements/icons/water.webp'
 import { mdiCancel } from '@mdi/js'
 
-import airIconUrl from '@/assets/icons/elements/air.svg'
-import earthIconUrl from '@/assets/icons/elements/earth.svg'
-import fireIconUrl from '@/assets/icons/elements/fire.svg'
-import moonIconUrl from '@/assets/icons/elements/moon.svg'
-import sunIconUrl from '@/assets/icons/elements/sun.svg'
-import waterIconUrl from '@/assets/icons/elements/water.svg'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import {
   relationshipElement,

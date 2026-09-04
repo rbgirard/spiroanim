@@ -7,6 +7,12 @@ export interface ElementalRelationship {
   direction: VtgDirectionCode
 }
 
+/**
+ * Earth, Water, Air, and Fire are folk-community labels applied to VTG timing-and-direction
+ * categories; they are not original VTG terminology. Sun and Moon (quarter-time relationships)
+ * were created by Austen Cloud for The Kinetic Alphabet (https://tkaflowarts.com), and the
+ * element artwork SpiroAnim renders comes from TKA. See ATTRIBUTION.md.
+ */
 export const relationshipElement = (
   relationship: ElementalRelationship | undefined,
 ): ElementName | undefined => {

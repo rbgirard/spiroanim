@@ -65,6 +65,34 @@
           </div>
         </div>
 
+        <div class="detail-block">
+          <span class="detail-marker" aria-hidden="true"></span>
+          <div>
+            <h2>Elemental icons by Austen Cloud</h2>
+            <p>
+              The Earth, Water, Air, Fire, Sun, and Moon icons in the VTG concept pane were created
+              by Austen Cloud for
+              <a
+                class="inline-link"
+                href="https://tkaflowarts.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                >The Kinetic Alphabet</a
+              >
+              and are the same icons TKA renders on its pictographs, loaded from Austen's
+              <code>@austencloud/tka-elements</code> package. Sun and Moon are Austen's extension of
+              the elemental model to quarter-time relationships. See
+              <a
+                class="inline-link"
+                href="https://github.com/rbgirard/spiroanim/blob/main/ATTRIBUTION.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                >ATTRIBUTION.md</a
+              >.
+            </p>
+          </div>
+        </div>
+
         <p class="coming-soon">
           <strong>Still moving forward.</strong> Many upgrades are in the works and coming soon.
         </p>
@@ -232,6 +260,23 @@ h2 {
   margin: 0;
   color: var(--color-text-muted);
   line-height: 1.65;
+}
+
+.inline-link {
+  color: var(--color-action-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.inline-link:hover,
+.inline-link:focus-visible {
+  color: var(--color-text);
+}
+
+.inline-link:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-action-primary) 45%, var(--color-text));
+  outline-offset: 2px;
 }
 
 .coming-soon {
