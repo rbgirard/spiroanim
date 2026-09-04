@@ -17,7 +17,7 @@ import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
 import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { createSpiroAnimator, type LineMaterial2 } from '@/workers/animation/createSpiroAnimator'
-import type { MotionData, RootData } from '@/types/AnimTypes'
+import type { MotionData, PropInd, RootData } from '@/types/AnimTypes'
 
 type CartesianMotionFrame = Omit<MotionData, 'arc' | 'plane' | 'distance'> & {
   move?: [number, number, number]
@@ -213,6 +213,93 @@ it('draws a path for all five Fan heads and rotates them with Twist', () => {
   expect(additionalPaths.every((path) => path.parent?.visible === false)).toBe(true)
   animator.setAllHeadPaths(true)
   expect(additionalPaths.every((path) => path.parent?.visible === true)).toBe(true)
+})
+
+it.each([
+  ['Fan', 3],
+  ['Triad', 4],
+] as const)(
+  'draws the primary %s path at the same endpoints as the other props',
+  (_name, propType) => {
+    const renderPrimaryPath = (propType: PropInd): Vector3[] => {
+      const root = createRoot(false)
+      root.prop = propType
+      root.paths = true
+      const scene = new Scene()
+      const compiled = rootCompile(rootFinal(root))
+
+      createSpiroAnimator({
+        scene,
+        speed: 1,
+        girth: 2,
+        bpm: compiled.bpm,
+        smooth: compiled.smooth,
+        prop: compiled.props[0]!,
+        completed: () => undefined,
+        width: 800,
+        height: 600,
+        distance: 22,
+        fov: 45,
+        timeline: false,
+      })
+
+      const primaryPath = scene
+        .getObjectsByProperty('isLine2', true)
+        .find(
+          (object): object is Line2 =>
+            object instanceof Line2 &&
+            (object.material as LineMaterial2).color.getHex() === COLSET[2]![0] &&
+            object.parent?.parent?.parent !== scene,
+        )
+      if (!primaryPath) throw new Error('Expected a primary prop path')
+      return getLinePoints(primaryPath)
+    }
+
+    const poiPoints = renderPrimaryPath(0)
+    const propPoints = renderPrimaryPath(propType)
+
+    expect(propPoints).toHaveLength(poiPoints.length)
+    for (let index = 0; index < poiPoints.length; index++)
+      expect(propPoints[index]!.distanceTo(poiPoints[index]!)).toBeCloseTo(0)
+  },
+)
+
+it('draws three equal-radius Triad head paths', () => {
+  const root = createRoot(false)
+  root.prop = 4
+  root.paths = true
+  const scene = new Scene()
+  const compiled = rootCompile(rootFinal(root))
+
+  createSpiroAnimator({
+    scene,
+    speed: 1,
+    girth: 2,
+    bpm: compiled.bpm,
+    smooth: compiled.smooth,
+    prop: compiled.props[0]!,
+    completed: () => undefined,
+    width: 800,
+    height: 600,
+    distance: 22,
+    fov: 45,
+    timeline: false,
+  })
+
+  const paths = scene
+    .getObjectsByProperty('isLine2', true)
+    .filter(
+      (object): object is Line2 =>
+        object instanceof Line2 &&
+        (object.material as LineMaterial2).color.getHex() === COLSET[2]![0],
+    )
+  expect(paths).toHaveLength(3)
+
+  const headPoints = paths.map((path) => getLinePoints(path)[0]!)
+  const center = headPoints.reduce((sum, point) => sum.add(point), new Vector3()).divideScalar(3)
+  const radii = headPoints.map((point) => point.distanceTo(center))
+  expect(radii[1]).toBeCloseTo(radii[0]!)
+  expect(radii[2]).toBeCloseTo(radii[0]!)
 })
 
 describe('createSpiroAnimator Arms rendering', () => {

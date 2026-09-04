@@ -348,6 +348,20 @@ describe('useSpiroAnimQS', () => {
     expect(decoded.props[0]!.prop).toBe(3)
   })
 
+  it('round-trips Triads as prop index 4 in version 12 without changing older ranges', async () => {
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    root.prop = 4
+    root.props[0]!.prop = 4
+
+    const decoded = query.decodeQS(query.encodeQS(root, false))
+
+    expect(VDEF_V11.prop[1]).toBe(3)
+    expect(VDEF_V12.prop).toEqual([0, 4, 4])
+    expect(decoded.prop).toBe(4)
+    expect(decoded.props[0]!.prop).toBe(4)
+  })
+
   it('stores extended Animation values in compact optional x tracks in version 10', async () => {
     const query = await useSpiroAnimQS(VDEF_V10, useBaseQS(VDEF_V10, { charset: CHARSET_V10 }), 10)
     const { distance: _legacyDistance, ...root } = createRoot()

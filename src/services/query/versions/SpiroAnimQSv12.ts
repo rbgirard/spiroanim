@@ -48,6 +48,7 @@ export const HALF_DEGREE_QUERY_CODEC: QueryValueCodec = {
 
 export const VDEF = {
   ...LEGACY_VDEF,
+  prop: [0, 4, 4],
   scale: [SCALE_MIN, SCALE_MAX, 10],
   strength: [STRENGTH_MIN, STRENGTH_MAX, 10],
   turns: [TIMING_ANGLE_MIN, TIMING_ANGLE_MAX, 13, HALF_DEGREE_QUERY_CODEC],

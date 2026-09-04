@@ -2,12 +2,20 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { findExplicitPlaneOrTurnsFrameIndices } from '@/math/animation/findExplicitPlaneOrTurnsFrameIndices'
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 
-export type VtgBuilderPortionPropertyKey = 'scale' | 'twist' | 'yaw' | 'rotate'
+export type VtgBuilderPortionPropertyKey =
+  | 'scale'
+  | 'twist'
+  | 'yaw'
+  | 'rotate'
+  | 'warp'
+  | 'strength'
 
 const inheritedPortionPropertyKeys = [
   'scale',
   'twist',
   'yaw',
+  'warp',
+  'strength',
 ] as const satisfies readonly VtgBuilderPortionPropertyKey[]
 
 export interface VtgBuilderPortionRange {

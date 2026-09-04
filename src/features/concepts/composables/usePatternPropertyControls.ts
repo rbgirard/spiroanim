@@ -10,21 +10,35 @@ import {
   deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
+import {
+  detectVtgThirdOrderInitialTiming,
+  extractVtgThirdOrderSettings,
+  getVtgThirdOrderDisplaySettings,
+  type VtgThirdOrderDisplaySettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
+import { resolveAnimationFrames } from '@/math/animation/frameSemantics'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 interface PatternPropertyControlOptions {
   animation: Readonly<Ref<RootDataFinal | undefined>>
   onAnimationUpdate: (animation: RootDataFinal) => void
+  rebuildAnimationForThirdOrderCycle?: (minimumCycleCount: 1 | 2) => RootDataFinal | undefined
 }
 
 export const usePatternPropertyControls = ({
   animation,
   onAnimationUpdate,
+  rebuildAnimationForThirdOrderCycle,
 }: PatternPropertyControlOptions) => {
   const conceptsStore = useConceptsStore()
   const {
     vtgTwistMode,
     vtgTwistValues,
+    vtgThirdOrderSettings,
+    vtgThirdOrderMirror,
+    vtgThirdOrderOpposed,
     vtgFoldValues,
     vtgFoldValuesMaterialized,
     vtgFoldMode,
@@ -37,9 +51,19 @@ export const usePatternPropertyControls = ({
     vtgActiveProperty,
   } = storeToRefs(conceptsStore)
 
-  const emitPropertyAnimation = () => {
+  const vtgThirdOrderDisplaySettings = computed<VtgThirdOrderDisplaySettings>(() =>
+    animation.value
+      ? getVtgThirdOrderDisplaySettings(animation.value, vtgThirdOrderSettings.value)
+      : { initial: [undefined, undefined], strength: [100, 100], timing: [undefined, undefined] },
+  )
+
+  const emitPropertyAnimation = (rebuildThirdOrderCycle = false) => {
     if (!animation.value) return
-    onAnimationUpdate(conceptsStore.applyVtgPropertyControls(animation.value))
+    const source = rebuildThirdOrderCycle
+      ? (rebuildAnimationForThirdOrderCycle?.(conceptsStore.getVtgPropertyCycleCount()) ??
+        animation.value)
+      : animation.value
+    onAnimationUpdate(conceptsStore.applyVtgPropertyControls(source))
   }
 
   const getSimpleFoldSources = () =>
@@ -73,6 +97,56 @@ export const usePatternPropertyControls = ({
 
   const updateTwistMode = (mode: VtgTwistMode) => {
     vtgTwistMode.value = mode
+    emitPropertyAnimation()
+  }
+
+  const updateThirdOrderInitial = (propIndex: 0 | 1, value?: VtgThirdOrderInitial) => {
+    const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
+    conceptsStore.setVtgThirdOrderInitial(propIndex, value)
+    emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
+  }
+
+  const updateThirdOrderStrength = (propIndex: 0 | 1, value?: number) => {
+    conceptsStore.setVtgThirdOrderStrength(propIndex, value)
+    emitPropertyAnimation()
+  }
+
+  const updateThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
+    const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
+    const side = vtgThirdOrderSettings.value[propIndex]
+    if (
+      value !== undefined &&
+      side.timing === undefined &&
+      typeof side.initial === 'string' &&
+      animation.value
+    ) {
+      const frames = animation.value.props[propIndex]?.anim ?? []
+      const initialWarp = resolveAnimationFrames(frames)[0]?.warp
+      if (initialWarp !== undefined) conceptsStore.setVtgThirdOrderInitial(propIndex, initialWarp)
+    } else if (value === undefined && typeof side.initial === 'number' && animation.value) {
+      const initialFrame = resolveAnimationFrames(animation.value.props[propIndex]?.anim ?? [])[0]
+      const inheritedTiming = initialFrame && detectVtgThirdOrderInitialTiming(side.initial)
+      if (inheritedTiming !== undefined) {
+        conceptsStore.setVtgThirdOrderInitial(propIndex, inheritedTiming)
+      }
+    }
+    conceptsStore.setVtgThirdOrderTiming(propIndex, value)
+    emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
+  }
+
+  const updateThirdOrderMirror = (mirror: boolean) => {
+    const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
+    if (!mirror && vtgThirdOrderMirror.value && animation.value) {
+      vtgThirdOrderSettings.value = extractVtgThirdOrderSettings(animation.value)
+    }
+    vtgThirdOrderMirror.value = mirror
+    if (!mirror) vtgThirdOrderOpposed.value = false
+    emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
+  }
+
+  const updateThirdOrderOpposed = (opposed: boolean) => {
+    if (!vtgThirdOrderMirror.value) return
+    vtgThirdOrderOpposed.value = opposed
     emitPropertyAnimation()
   }
 
@@ -164,6 +238,10 @@ export const usePatternPropertyControls = ({
   return {
     vtgTwistMode,
     vtgTwistValues,
+    vtgThirdOrderSettings,
+    vtgThirdOrderDisplaySettings,
+    vtgThirdOrderMirror,
+    vtgThirdOrderOpposed,
     vtgFoldValues,
     vtgFoldValuesMaterialized,
     vtgFoldMode,
@@ -176,6 +254,11 @@ export const usePatternPropertyControls = ({
     vtgActiveProperty,
     updateTwistSetting,
     updateTwistMode,
+    updateThirdOrderInitial,
+    updateThirdOrderStrength,
+    updateThirdOrderTiming,
+    updateThirdOrderMirror,
+    updateThirdOrderOpposed,
     updateFoldSetting,
     updateFoldMode,
     updateFoldBeat,

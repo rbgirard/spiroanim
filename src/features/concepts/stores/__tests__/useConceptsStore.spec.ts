@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { applyVtgThirdOrderSettings, createVtgThirdOrderWarp } from '@/features/vtg/thirdOrder'
+import { resolveAnimationFrames } from '@/math/animation/frameSemantics'
 
 const mountStore = () => {
   const pinia = createPinia().use(piniaPluginPersistedstate)
@@ -62,6 +64,9 @@ describe('useConceptsStore', () => {
     expect(store.elementalLayout).toBe(false)
     expect(store.vtgTwistMode).toBe('simple')
     expect(store.vtgTwistValues).toEqual([{}, {}])
+    expect(store.vtgThirdOrderSettings).toEqual([{}, {}])
+    expect(store.vtgThirdOrderMirror).toBe(true)
+    expect(store.vtgThirdOrderOpposed).toBe(false)
     expect(store.vtgFoldValues).toEqual([{}, {}])
     expect(store.vtgFoldValuesMaterialized).toBe(false)
     expect(store.vtgFoldMode).toBe('simple')
@@ -96,7 +101,86 @@ describe('useConceptsStore', () => {
     app.unmount()
   })
 
-  it('does not persist pattern-derived Twist and Fold controls', () => {
+  it('keeps Third Order settings while applying them to different VTG cells', () => {
+    const { app, store } = mountStore()
+    const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    const second = createDefaultVtgAnimation({ reference: '2-2', speedRatio: '2:3' })
+    if (!first || !second) throw new Error('Expected supported VTG animations')
+    store.setVtgThirdOrderInitial(0, '1:3-anti')
+    store.setVtgThirdOrderStrength(0, 60)
+    store.setVtgThirdOrderTiming(0, '2:3-pro')
+    store.vtgThirdOrderOpposed = true
+
+    const appliedFirst = store.applyVtgPropertyControls(first)
+    const appliedSecond = store.applyVtgPropertyControls(second)
+    const resolvedFirst = resolveAnimationFrames(first.props[0]!.anim)
+    const resolvedSecond = resolveAnimationFrames(second.props[0]!.anim)
+
+    expect(store.vtgThirdOrderSettings[0]).toEqual({
+      initial: '1:3-anti',
+      strength: 60,
+      timing: '2:3-pro',
+    })
+    expect(appliedFirst.props[0]?.anim[0]?.strength).toBe(600)
+    expect(appliedSecond.props[0]?.anim[0]?.strength).toBe(600)
+    expect(appliedFirst.props[1]?.anim[0]?.strength).toBe(600)
+    expect(appliedFirst.props[0]?.anim[1]?.warp).toBe(
+      createVtgThirdOrderWarp(resolvedFirst[1]!.arc, '2:3-pro'),
+    )
+    expect(appliedSecond.props[0]?.anim[1]?.warp).toBe(
+      createVtgThirdOrderWarp(resolvedSecond[1]!.arc, '2:3-pro'),
+    )
+    expect(appliedFirst.props[1]?.anim[1]?.warp).toBe(
+      createVtgThirdOrderWarp(resolveAnimationFrames(first.props[1]!.anim)[1]!.arc, '2:3-anti'),
+    )
+    app.unmount()
+  })
+
+  it('hydrates Third Order authored values from a loaded animation', () => {
+    const { app, store } = mountStore()
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const authored = structuredClone(animation)
+    const resolved = resolveAnimationFrames(authored.props[0]!.anim)
+    authored.props[0]!.anim[0]!.warp = 135
+    authored.props[0]!.anim[0]!.strength = 450
+    for (let frameIndex = 1; frameIndex < authored.props[0]!.anim.length; frameIndex += 1) {
+      authored.props[0]!.anim[frameIndex]!.warp = createVtgThirdOrderWarp(
+        resolved[frameIndex]!.arc,
+        '1:2-pro',
+      )
+    }
+
+    store.hydrateVtgPropertyControls(authored)
+
+    expect(store.vtgThirdOrderSettings[0]).toEqual({
+      initial: 135,
+      strength: 45,
+      timing: '1:2-pro',
+    })
+    expect(store.vtgThirdOrderMirror).toBe(false)
+    expect(store.vtgThirdOrderOpposed).toBe(false)
+    app.unmount()
+  })
+
+  it('detects an opposed Third Order relationship from loaded animation data', () => {
+    const { app, store } = mountStore()
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!animation) throw new Error('Expected a supported VTG animation')
+    const opposed = applyVtgThirdOrderSettings(
+      animation,
+      [{ initial: '1:4-anti', strength: 70, timing: '2:5-pro' }, {}],
+      { mirror: true, opposed: true },
+    )
+
+    store.hydrateVtgPropertyControls(opposed)
+
+    expect(store.vtgThirdOrderMirror).toBe(true)
+    expect(store.vtgThirdOrderOpposed).toBe(true)
+    app.unmount()
+  })
+
+  it('does not persist pattern-derived Twist, Fold, or Third Order controls', () => {
     const first = mountStore()
     first.store.vtgTwistMode = 'advanced'
     first.store.setVtgTwistValue(0, 0.5, 45)
@@ -104,6 +188,11 @@ describe('useConceptsStore', () => {
     first.store.setVtgTwistValue(1, 3, -45)
     first.store.setVtgFoldValue(0, 2.5, 'yaw', 45)
     first.store.setVtgFoldValue(0, 2.5, 'rotate', 90)
+    first.store.setVtgThirdOrderInitial(0, '1:3-anti')
+    first.store.setVtgThirdOrderStrength(0, 50)
+    first.store.setVtgThirdOrderTiming(0, '2:3-pro')
+    first.store.vtgThirdOrderMirror = false
+    first.store.vtgThirdOrderOpposed = true
     first.store.vtgFoldMode = 'simple'
     first.store.vtgFoldBeat = [2, 3]
     first.store.vtgFoldRepeat = [true, false]
@@ -118,6 +207,9 @@ describe('useConceptsStore', () => {
     expect(second.store.vtgTwistMode).toBe('simple')
     expect(second.store.vtgTwistValues).toEqual([{}, {}])
     expect(second.store.vtgFoldValues).toEqual([{}, {}])
+    expect(second.store.vtgThirdOrderSettings).toEqual([{}, {}])
+    expect(second.store.vtgThirdOrderMirror).toBe(true)
+    expect(second.store.vtgThirdOrderOpposed).toBe(false)
     expect(second.store.vtgFoldBeat).toEqual([2, 2])
     expect(second.store.vtgFoldRepeat).toEqual([true, true])
     expect(second.store.vtgFoldEvery).toEqual([2, 2])

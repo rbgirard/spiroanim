@@ -8,6 +8,7 @@ import {
 import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import {
   applyVtgInitialTurnsPlayback,
   withVtgInitialTurnsOffsetBeat,
@@ -147,5 +148,9 @@ export const createQtrPreviewAnimation = (
   selection: QtrPatternSelection,
 ): RootDataFinal | undefined => {
   const animation = createDefaultQtrAnimation(selection)
-  return animation ? toVtgPreviewAnimation(animation) : undefined
+  return animation
+    ? toVtgPreviewAnimation(animation, {
+        hands: selection.hands ?? vtgPlayerSettings.hands,
+      })
+    : undefined
 }

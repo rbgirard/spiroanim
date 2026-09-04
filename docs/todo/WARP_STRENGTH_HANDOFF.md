@@ -11,10 +11,9 @@ At the final local update, the repository was on branch `dev` at commit `6ab38b2
 `dev` before resuming from another computer. Inspect `git status --short` and recent `dev` history
 first; do not discard any remaining changes if the push has not happened.
 
-**First task for September 4, 2026:** evaluate the query-string v12 layout while keeping the version
-number at 12. The current field ranges and behavior are accepted, but the ordering and grouping may
-be revised before v12 is treated as settled. Do not assume that the current `pN`/`xN` ordering is the
-desired final layout merely because it is implemented and tested.
+**September 4, 2026 decision:** the implemented query-string v12 field ranges, ordering, and
+grouping are accepted and locked. Keep the version number at 12 and treat the documented `pN`/`xN`
+layout as the durable v12 contract.
 
 The central result is a pair of Animation properties:
 
@@ -351,19 +350,52 @@ Current controls:
 The visible Warp slider increment and serialized precision are separate decisions: the slider can
 move by 5 degrees while typed/generated values can preserve half degrees.
 
+### Third Order pattern controls
+
+VTG and the Builder/Viewer selected-portion Properties panel now expose a final `Third Order` tab.
+It provides independent Left and Right Initial, Strength, and Timing controls under the description
+`Hand path manipulations`.
+
+- Initial and Timing offer Anti and Pro definitions for `1:1`, `2:1`, `1:2`, `1:3`, `2:3`, `1:4`,
+  `1:5`, and `2:5`, plus `Undefined`.
+- Pro is the in-spin relationship. `1:1 Pro` therefore produces explicit Warp `0`.
+- Initial presets use the established canonical 45-degree VTG timing values because frame zero is a
+  starting pose rather than a movement interval. Timing presets calculate Warp from each editable
+  continuation frame's actual resolved Arc, preserving their relationship when a portion is
+  resampled.
+- Timing authors Warp sparsely on the first editable continuation frame and only authors it again
+  when a changed resolved Arc requires a different value. Intervening frames inherit Warp.
+- Once Timing is authored, Initial becomes a 0-360 degree slider with 5-degree steps.
+- Strength is a 0-100 percent slider with 5-percent steps.
+- Mirror defaults on, hides Right, and applies Left to both props. Opposed is enabled only with
+  Mirror and swaps Anti/Pro on Right while preserving numeric Initial phase and Strength.
+- Mirror and Opposed are detected from loaded animation data when the relationship is exactly
+  reproducible; disabling Mirror materializes Right before exposing its independent controls.
+- Trash actions delete the raw field and reveal the inherited/default display value.
+- With no authored Timing, Timing displays Initial as its inherited value without writing Warp on
+  continuation frames. An inherited `2:*` Timing still selects the two-cycle duration.
+- Initial is omitted for later Builder/Viewer portions because their local frame zero is context,
+  not editable data. Warp and Strength use minimal successor guards so editing one portion does not
+  change the next portion's inherited behavior.
+- VTG keeps the authored settings while cells or speed timings change, matching the existing
+  Offset, Rotate, and related property workflow.
+- A continuing `2:*` Third Order Timing gives `1:*` grid patterns the same two-cycle duration as
+  native `2:*` prop timing. This includes ordinary VTG, Trans, thumbnails, and Builder/Viewer
+  45-degree portions; matching and slider behavior remain intentionally unchanged.
+- VTG thumbnails render these Third Order channels and follow Customize's Hands toggle while
+  retaining canonical Paths-on and Arms-off preview presentation.
+- Customize BPM now accepts 20-140.
+
+The shared transform and detection logic lives in `src/features/vtg/thirdOrder.ts`. This work does
+not alter the locked v12 query layout.
+
 ## Query-string version and packing
 
 The query-string version remains **12**. Do not bump it for these current changes.
 
-The first task on September 4 is to review this layout before doing more hand-path work. Keep the
-version at 12, but reconsider the ordering and grouping of fields in `pN` and `xN`, including the
-effect on sparse-frame compactness and readability. Preserve real v1-v11 decoding and the one-time
-Scale/Turns migration. Temporary v12 layouts remain disposable during this development pass. Once
-the ordering is decided, update `SpiroAnimQSv12.ts`, its query tests, `docs/QUERY_STRING_FORMAT.md`,
-and this handoff together.
-
-The remainder of this section describes the currently implemented and tested layout, not a final
-decision that tomorrow's review must retain.
+The current `pN` and `xN` ordering and grouping were accepted as final for v12 on September 4, 2026.
+Future incompatible packing changes require a new query version. Preserve real v1-v11 decoding and
+the one-time Scale/Turns migration.
 
 ### Current v12 angle definitions
 
@@ -445,9 +477,9 @@ The new normalization code is in:
 
 ## URLs used during the discussion
 
-These are useful for context, but they may contain one of the temporary v12 layouts produced while
-the format was changing. If a URL decodes unexpectedly, compare it with the packing history before
-assuming the current implementation is wrong.
+These are useful for historical context, but some predate the locked v12 layout. If one decodes
+unexpectedly, compare it with the packing history before assuming the current implementation is
+wrong. Newly emitted v12 URLs use the durable layout and must remain compatible.
 
 Original one-prop circle example:
 
@@ -536,16 +568,11 @@ contains Turns, and the shared Shift fixture now closes its auxiliary Warp vecto
 ## Next-session pickup order
 
 1. Pull or inspect the latest `dev` state and confirm whether the closeout diff above was pushed.
-2. Review the v12 query layout first, keeping the version number at 12.
-3. Compare candidate `pN` and `xN` field ordering/grouping against common sparse frames, complete
-   frame length, decode clarity, and the reserved-undefined bit rules.
-4. Preserve the accepted half-degree Turns/Warp range and v1-v11 migration unless the review finds a
-   concrete reason to change them.
-5. Treat temporary v12 URLs as development data; do not add compatibility code for discarded v12
-   layouts.
-6. After choosing the layout, update implementation, query tests, `docs/QUERY_STRING_FORMAT.md`, and
-   this handoff together, then rerun the focused and standard unit suites. Do not run exhaustive
-   audits unless separately requested.
+2. Preserve the locked v12 `pN` and `xN` layout, half-degree Turns/Warp range, and v1-v11 migration.
+3. Continue subsequent hand-path work without repacking v12. Use a new query version for any future
+   incompatible format change.
+4. Rerun focused and standard unit suites after related changes. Do not run exhaustive audits unless
+   separately requested.
 
 ## Known caveats and next decisions
 
@@ -558,8 +585,7 @@ contains Turns, and the shared Shift fixture now closes its auxiliary Warp vecto
 - Warp zero does not reset prior phase; Strength zero disables the visible deformation.
 - Some Linear transitions cannot be exactly Double/Halve represented under the current angular and
   scalar property model. The correct current behavior is to disable the operation.
-- The current v12 field order is deliberately provisional pending the next-session review. Keep the
-  version at 12 while that layout changes.
+- The v12 field order is locked. Any incompatible packing change requires a later query version.
 
 ## Design invariants to preserve
 
@@ -574,5 +600,4 @@ When making subsequent fixes, keep these invariants together:
 6. Spherical samples the continuous dual-vector curve.
 7. Linear connects fully rendered endpoints with one straight line.
 8. Editing operations must preserve exact compiled/rendered playback or disable themselves.
-9. Current QS version stays at 12, with real v1-v11 conversion and no promise for transient v12
-   development layouts.
+9. Current QS version stays at 12, with its locked layout and real v1-v11 conversion preserved.

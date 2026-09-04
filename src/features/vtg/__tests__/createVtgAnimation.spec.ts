@@ -57,6 +57,37 @@ const expectVectorClose = (actual: readonly number[], expected: readonly number[
 }
 
 describe('createVtgAnimation', () => {
+  it('uses the same doubled cycle for a Third Order minimum as a native 2:* timing', () => {
+    const doubled = createVtgAnimationForSelection(
+      createCurrentAnimation(),
+      { reference: '1-1', speedRatio: '1:3' },
+      { minimumCycleCount: 2 },
+    )
+    const native = createVtgAnimationForSelection(createCurrentAnimation(), {
+      reference: '1-1',
+      speedRatio: '2:3',
+    })
+    const doubledTransition = createVtgAnimationForSelection(
+      createCurrentAnimation(),
+      { reference: '1-1', speedRatio: '1:3', transition: true },
+      { minimumCycleCount: 2 },
+    )
+    const nativeTransition = createVtgAnimationForSelection(createCurrentAnimation(), {
+      reference: '1-1',
+      speedRatio: '2:3',
+      transition: true,
+    })
+    if (!doubled || !native || !doubledTransition || !nativeTransition) {
+      throw new Error('Expected one-cycle and two-cycle VTG animations')
+    }
+
+    expect(doubled.props[0]?.anim).toHaveLength(17)
+    expect(doubled.props[0]?.anim).toHaveLength(native.props[0]?.anim.length ?? 0)
+    expect(doubledTransition.props[0]?.anim).toHaveLength(
+      nativeTransition.props[0]?.anim.length ?? 0,
+    )
+  })
+
   it('assigns compound ratios to prop indexes', () => {
     const propRatios = (speedRatio: '1:2v3' | '1:3v2') => {
       const animation = createDefaultVtgAnimation({ reference: '1-5', speedRatio })
@@ -323,7 +354,7 @@ describe('createVtgAnimation', () => {
     expect(preview?.thick).toBe(15)
   })
 
-  it('applies rendering controls to the player without changing thumbnail rendering', () => {
+  it('applies the Hands control to thumbnails while retaining lightweight preview rendering', () => {
     const selection = {
       reference: '1-6',
       speedRatio: '1:3',
@@ -341,10 +372,10 @@ describe('createVtgAnimation', () => {
         (prop) => !prop.paths && prop.hands === true && prop.arms === true,
       ),
     ).toBe(true)
-    expect(preview).toMatchObject({ paths: true, hands: false, arms: false })
+    expect(preview).toMatchObject({ paths: true, hands: true, arms: false })
     expect(
       preview.props.every(
-        (prop) => prop.paths === true && prop.hands === false && prop.arms === false,
+        (prop) => prop.paths === true && prop.hands === true && prop.arms === false,
       ),
     ).toBe(true)
   })
@@ -620,7 +651,7 @@ describe('createVtgAnimation', () => {
       scale: 0.5,
     })
 
-    expect(minimum).toMatchObject({ bpm: 80, distance: 14 })
+    expect(minimum).toMatchObject({ bpm: 40, distance: 14 })
     expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([50, 50])
     expect(pivot).toMatchObject({ distance: 15 })
     expect(maximum).toMatchObject({ bpm: 280, distance: 25 })

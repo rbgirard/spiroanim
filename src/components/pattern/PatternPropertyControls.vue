@@ -537,6 +537,185 @@
           </section>
         </div>
       </template>
+      <template v-else-if="property.key === 'third-order'">
+        <p
+          class="pattern-property-controls__usage-note"
+          :data-role="`${context}-property-third-order-note`"
+        >
+          Hand path manipulations
+        </p>
+        <div class="pattern-property-controls__fold-option-row">
+          <fieldset class="pattern-property-controls__option-group">
+            <legend class="pattern-property-controls__visually-hidden">
+              Third Order mirroring
+            </legend>
+            <label>
+              <input
+                type="checkbox"
+                :checked="thirdOrderMirror"
+                aria-label="Mirror Third Order"
+                @change="emitThirdOrderMirror"
+              />
+              <span>Mirror</span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                :checked="thirdOrderOpposed"
+                :disabled="!thirdOrderMirror"
+                aria-label="Opposed Third Order"
+                @change="emitThirdOrderOpposed"
+              />
+              <span>Opposed</span>
+            </label>
+          </fieldset>
+        </div>
+        <div class="pattern-property-controls__twist-columns">
+          <template v-for="(label, propIndex) in propLabels" :key="label">
+            <section
+              v-if="!thirdOrderMirror || propIndex === 0"
+              class="pattern-property-controls__twist-column pattern-property-controls__third-order-column"
+              :aria-label="`${label} Third Order`"
+            >
+              <h3>{{ label }}</h3>
+
+              <div
+                v-if="firstEditableFrameIndex === 0"
+                class="pattern-property-controls__third-order-row"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited':
+                    thirdOrderSettings[propIndex]?.initial === undefined,
+                  'pattern-property-controls__value-set':
+                    thirdOrderSettings[propIndex]?.initial !== undefined,
+                }"
+              >
+                <span>Initial</span>
+                <input
+                  v-if="thirdOrderSettings[propIndex]?.timing !== undefined"
+                  type="range"
+                  min="0"
+                  max="360"
+                  step="5"
+                  :value="thirdOrderInitialAngle(propIndex)"
+                  :aria-valuetext="`${thirdOrderInitialAngle(propIndex)}°`"
+                  :aria-label="`${label} Third Order Initial`"
+                  :data-role="`${context}-third-order-initial-${propIndex}`"
+                  @input="setThirdOrderInitialAngle(propIndex, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <select
+                  v-else
+                  :value="thirdOrderInitialTiming(propIndex)"
+                  :aria-label="`${label} Third Order Initial`"
+                  :data-role="`${context}-third-order-initial-${propIndex}`"
+                  @change="setThirdOrderInitialTiming(propIndex, $event)"
+                >
+                  <option value="">Undefined</option>
+                  <option
+                    v-for="option in vtgThirdOrderTimingOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <output v-if="thirdOrderSettings[propIndex]?.timing !== undefined">
+                  {{ thirdOrderInitialAngle(propIndex) }}°
+                </output>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="thirdOrderSettings[propIndex]?.initial === undefined"
+                  :aria-label="`Clear ${label} Third Order Initial`"
+                  @click="emitThirdOrderInitial(propIndex)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </div>
+
+              <div
+                class="pattern-property-controls__third-order-row"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited':
+                    thirdOrderSettings[propIndex]?.strength === undefined,
+                  'pattern-property-controls__value-set':
+                    thirdOrderSettings[propIndex]?.strength !== undefined,
+                }"
+              >
+                <span>Strength</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  :value="thirdOrderDisplaySettings.strength[propIndex]"
+                  :aria-valuetext="`${thirdOrderDisplaySettings.strength[propIndex]}%`"
+                  :aria-label="`${label} Third Order Strength`"
+                  :data-role="`${context}-third-order-strength-${propIndex}`"
+                  @input="setThirdOrderStrength(propIndex, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <output>{{ thirdOrderDisplaySettings.strength[propIndex] }}%</output>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="thirdOrderSettings[propIndex]?.strength === undefined"
+                  :aria-label="`Clear ${label} Third Order Strength`"
+                  @click="emitThirdOrderStrength(propIndex)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </div>
+
+              <div
+                class="pattern-property-controls__third-order-row"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited':
+                    thirdOrderSettings[propIndex]?.timing === undefined,
+                  'pattern-property-controls__value-set':
+                    thirdOrderSettings[propIndex]?.timing !== undefined,
+                }"
+              >
+                <span>Timing</span>
+                <select
+                  :value="thirdOrderDisplaySettings.timing[propIndex] ?? ''"
+                  :aria-label="`${label} Third Order Timing`"
+                  :data-role="`${context}-third-order-timing-${propIndex}`"
+                  @change="setThirdOrderTiming(propIndex, $event)"
+                >
+                  <option value="">Undefined</option>
+                  <option
+                    v-for="option in vtgThirdOrderTimingOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
+                  :aria-label="`Clear ${label} Third Order Timing`"
+                  @click="emitThirdOrderTiming(propIndex)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </div>
+            </section>
+          </template>
+        </div>
+      </template>
       <p v-else>{{ propertyName(property) }} controls will go here.</p>
     </div>
   </section>
@@ -564,6 +743,13 @@ import type { VtgBuilderScaleMode, VtgBuilderScaleValues } from '@/features/buil
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
 import type { VtgPatternSelection } from '@/features/vtg/types'
+import {
+  vtgThirdOrderTimingOptions,
+  type VtgThirdOrderDisplaySettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderSettings,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
 
 type PatternPropertyContext = 'vtg' | 'builder' | 'eight-step'
 type PatternPropertyKey = VtgPropertyKey | 'scale'
@@ -581,6 +767,10 @@ const props = withDefaults(
     twistMode?: VtgTwistMode
     twistValues?: VtgTwistValues
     twistDisplayValues?: VtgTwistValues
+    thirdOrderSettings?: VtgThirdOrderSettings
+    thirdOrderDisplaySettings?: VtgThirdOrderDisplaySettings
+    thirdOrderMirror?: boolean
+    thirdOrderOpposed?: boolean
     initialYawValues?: readonly [number, number]
     firstEditableFrameIndex?: number
     allowTwistZero?: boolean
@@ -605,6 +795,14 @@ const props = withDefaults(
     twistMode: 'simple',
     twistValues: () => [{}, {}],
     twistDisplayValues: () => [{}, {}],
+    thirdOrderSettings: () => [{}, {}],
+    thirdOrderDisplaySettings: () => ({
+      initial: [undefined, undefined],
+      strength: [100, 100],
+      timing: [undefined, undefined],
+    }),
+    thirdOrderMirror: true,
+    thirdOrderOpposed: false,
     initialYawValues: () => [90, 90],
     firstEditableFrameIndex: 0,
     allowTwistZero: false,
@@ -627,6 +825,11 @@ const emit = defineEmits<{
   scaleUpdate: [propIndex: 0 | 1, beat: number, value?: number]
   'update:scaleMode': [mode: VtgBuilderScaleMode]
   twistUpdate: [propIndex: 0 | 1, beat: number, value?: number]
+  thirdOrderInitialUpdate: [propIndex: 0 | 1, value?: VtgThirdOrderInitial]
+  thirdOrderStrengthUpdate: [propIndex: 0 | 1, value?: number]
+  thirdOrderTimingUpdate: [propIndex: 0 | 1, value?: VtgThirdOrderTiming]
+  'update:thirdOrderMirror': [mirror: boolean]
+  'update:thirdOrderOpposed': [opposed: boolean]
   'update:twistMode': [mode: VtgTwistMode]
   foldUpdate: [propIndex: 0 | 1, beat: number, fold: keyof VtgFoldValue, value?: number]
   'update:foldMode': [mode: VtgFoldMode]
@@ -656,6 +859,7 @@ const properties = [
   { key: 'axis', name: 'Rotate', label: 'Rotate' },
   { key: 'twist', name: 'Twist', label: 'Twist' },
   { key: 'turns', name: 'Turns', label: 'Turns' },
+  { key: 'third-order', name: 'Third Order', label: 'Third Order' },
 ] as const satisfies readonly { key: PatternPropertyKey; name: string; label: string }[]
 
 const controlId = `pattern-properties-${useId()}`
@@ -668,7 +872,8 @@ const visibleProperties = computed(() =>
     (property) =>
       (property.key !== 'turns' || props.showTurns) &&
       (property.key !== 'offset' || props.showOffset) &&
-      (property.key !== 'scale' || props.context === 'builder'),
+      (property.key !== 'scale' || props.context === 'builder') &&
+      (property.key !== 'third-order' || props.context !== 'eight-step'),
   ),
 )
 const propertyLabel = (property: (typeof properties)[number]) => property.label
@@ -720,6 +925,48 @@ const endOffsetText = (propIndex: number) => {
 const clearOffset = (propIndex: number) => {
   if (!isPropIndex(propIndex)) return
   emit('offsetUpdate', propIndex)
+}
+
+const thirdOrderInitialTiming = (propIndex: number) => {
+  const value = props.thirdOrderDisplaySettings.initial[propIndex]
+  return typeof value === 'string' ? value : ''
+}
+const thirdOrderInitialAngle = (propIndex: number) => {
+  const value = props.thirdOrderDisplaySettings.initial[propIndex]
+  return typeof value === 'number' ? value : 0
+}
+const emitThirdOrderInitial = (propIndex: number, value?: VtgThirdOrderInitial) => {
+  if (!isPropIndex(propIndex)) return
+  emit('thirdOrderInitialUpdate', propIndex, value)
+}
+const setThirdOrderInitialTiming = (propIndex: number, event: Event) => {
+  const value = (event.target as HTMLSelectElement).value
+  emitThirdOrderInitial(propIndex, value === '' ? undefined : (value as VtgThirdOrderTiming))
+}
+const setThirdOrderInitialAngle = (propIndex: number, event: Event) => {
+  emitThirdOrderInitial(propIndex, Number((event.target as HTMLInputElement).value))
+}
+const emitThirdOrderStrength = (propIndex: number, value?: number) => {
+  if (!isPropIndex(propIndex)) return
+  emit('thirdOrderStrengthUpdate', propIndex, value)
+}
+const setThirdOrderStrength = (propIndex: number, event: Event) => {
+  emitThirdOrderStrength(propIndex, Number((event.target as HTMLInputElement).value))
+}
+const emitThirdOrderTiming = (propIndex: number, value?: VtgThirdOrderTiming) => {
+  if (!isPropIndex(propIndex)) return
+  emit('thirdOrderTimingUpdate', propIndex, value)
+}
+const setThirdOrderTiming = (propIndex: number, event: Event) => {
+  const value = (event.target as HTMLSelectElement).value
+  emitThirdOrderTiming(propIndex, value === '' ? undefined : (value as VtgThirdOrderTiming))
+}
+const emitThirdOrderMirror = (event: Event) => {
+  emit('update:thirdOrderMirror', (event.target as HTMLInputElement).checked)
+}
+const emitThirdOrderOpposed = (event: Event) => {
+  if (!props.thirdOrderMirror) return
+  emit('update:thirdOrderOpposed', (event.target as HTMLInputElement).checked)
 }
 
 const scaleColumns = computed(() =>
@@ -987,7 +1234,13 @@ const collapseFromTabRow = (event: MouseEvent) => {
 }
 
 const revealOpenedProperty = async (property: PatternPropertyKey | null) => {
-  if (property !== 'offset' && property !== 'scale' && property !== 'axis' && property !== 'twist')
+  if (
+    property !== 'offset' &&
+    property !== 'scale' &&
+    property !== 'axis' &&
+    property !== 'twist' &&
+    property !== 'third-order'
+  )
     return
   await nextTick()
   const root = rootElement.value
@@ -1282,6 +1535,54 @@ watch(() => props.activeProperty, revealOpenedProperty)
 
 .pattern-property-controls__twist-column + .pattern-property-controls__twist-column {
   border-inline-start: 1px solid var(--color-border);
+}
+
+.pattern-property-controls__third-order-column > h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.pattern-property-controls__third-order-row {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) 3.25rem 2rem;
+  min-height: 2.25rem;
+  color: var(--color-text);
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pattern-property-controls__third-order-row + .pattern-property-controls__third-order-row {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.pattern-property-controls__third-order-row input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--color-action-primary);
+}
+
+.pattern-property-controls__third-order-row select {
+  grid-column: 2 / 4;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
+  font-weight: 700;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-property-controls__third-order-row select:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.pattern-property-controls__third-order-row output {
+  font-size: 0.75rem;
+  text-align: end;
+  white-space: nowrap;
 }
 
 .pattern-property-controls__fold-schedule {

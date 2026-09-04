@@ -34,6 +34,10 @@ const axesPointInSameDirection = (first: readonly number[], second: readonly num
 
 const vtgIntervalsPerHandRotation = 8
 
+export interface CreateVtgAnimationOptions {
+  minimumCycleCount?: 1 | 2
+}
+
 export const applyVtgPropRotationOffsets = (
   animation: RootDataFinal,
   offsets: VtgPatternSelection['propRotationOffsets'],
@@ -77,11 +81,13 @@ export const applyVtgPropRotationOffsets = (
 const addDefaultFrames = (
   pattern: VtgReadableAnimation,
   speedRatio: VtgPatternSelection['speedRatio'],
+  options: CreateVtgAnimationOptions,
 ): VtgReadableAnimation => ({
   ...pattern,
   props: pattern.props.map((prop, index) => {
     const defaults = vtgPropSettings[index]
-    const frameCount = getVtgTimingCycleCount(speedRatio) * vtgIntervalsPerHandRotation + 1
+    const cycleCount = Math.max(getVtgTimingCycleCount(speedRatio), options.minimumCycleCount ?? 1)
+    const frameCount = cycleCount * vtgIntervalsPerHandRotation + 1
 
     return {
       ...defaults,
@@ -151,6 +157,7 @@ export const applyVtgPlaybackControls = (
 export const createVtgAnimation = (
   current: RootDataFinal,
   selection: VtgPatternSelection,
+  options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
   const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
@@ -164,6 +171,7 @@ export const createVtgAnimation = (
       arms: selection.arms ?? vtgPlayerSettings.arms,
     },
     selection.speedRatio,
+    options,
   )
   const pattern = {
     ...patternWithDefaults,
@@ -206,7 +214,8 @@ export const createVtgAnimation = (
  */
 export const createDefaultVtgAnimation = (
   selection: VtgPatternSelection,
-): RootDataFinal | undefined => createVtgAnimation(vtgStandaloneBase, selection)
+  options: CreateVtgAnimationOptions = {},
+): RootDataFinal | undefined => createVtgAnimation(vtgStandaloneBase, selection, options)
 
 /**
  * Builds VTG data without inheriting settings from the active player.
@@ -217,5 +226,9 @@ export const createVtgPreviewAnimation = (
   selection: VtgPatternSelection,
 ): RootDataFinal | undefined => {
   const animation = createDefaultVtgAnimation(selection)
-  return animation ? toVtgPreviewAnimation(animation) : undefined
+  return animation
+    ? toVtgPreviewAnimation(animation, {
+        hands: selection.hands ?? vtgPlayerSettings.hands,
+      })
+    : undefined
 }

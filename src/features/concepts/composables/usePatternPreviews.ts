@@ -25,6 +25,7 @@ interface UseVtgPreviewsOptions {
   beat: Ref<VtgBeat>
   scale: Ref<number>
   spacing: Ref<number>
+  hands: Ref<boolean>
   quarters: Ref<QtrMode | false>
   leftPropColor: Ref<PatternPropColor>
   rightPropColor: Ref<PatternPropColor>
@@ -71,6 +72,7 @@ export const usePatternPreviews = ({
   beat,
   scale,
   spacing,
+  hands,
   quarters,
   leftPropColor,
   rightPropColor,
@@ -100,6 +102,7 @@ export const usePatternPreviews = ({
       spacing: spacing.value,
       propColors: [leftPropColor.value, rightPropColor.value],
       prop: prop.value,
+      hands: hands.value,
     }
 
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
@@ -144,6 +147,7 @@ export const usePatternPreviews = ({
       beat,
       scale,
       spacing,
+      hands,
       quarters,
       leftPropColor,
       rightPropColor,

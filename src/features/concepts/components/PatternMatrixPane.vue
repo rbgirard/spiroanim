@@ -377,6 +377,10 @@
           :offset-values="propRotationOffsets"
           :twist-mode="vtgTwistMode"
           :twist-values="vtgTwistValues"
+          :third-order-settings="vtgThirdOrderSettings"
+          :third-order-display-settings="vtgThirdOrderDisplaySettings"
+          :third-order-mirror="vtgThirdOrderMirror"
+          :third-order-opposed="vtgThirdOrderOpposed"
           :fold-values="vtgFoldValues"
           :fold-values-materialized="vtgFoldValuesMaterialized"
           :fold-mode="vtgFoldMode"
@@ -390,6 +394,11 @@
           :sliders="sliders"
           @offset-update="updatePropRotationOffset"
           @twist-update="updateTwistSetting"
+          @third-order-initial-update="updateThirdOrderInitial"
+          @third-order-strength-update="updateThirdOrderStrength"
+          @third-order-timing-update="updateThirdOrderTiming"
+          @update:third-order-mirror="updateThirdOrderMirror"
+          @update:third-order-opposed="updateThirdOrderOpposed"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
           @update:fold-mode="updateFoldMode"
@@ -452,7 +461,12 @@ import {
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { exactlyMatchesQtrSelection } from '@/features/vtg/qtr/matchQtrAnimation'
-import { createDefaultVtgAnimation, toVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
+import {
+  createDefaultVtgAnimation,
+  createVtgAnimation,
+  toVtgPreviewAnimation,
+} from '@/features/vtg/createVtgAnimation'
+import { applyVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 import { describeVtgBuilderPreviewRelationship } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
@@ -599,6 +613,10 @@ const {
 const {
   vtgTwistMode,
   vtgTwistValues,
+  vtgThirdOrderSettings,
+  vtgThirdOrderDisplaySettings,
+  vtgThirdOrderMirror,
+  vtgThirdOrderOpposed,
   vtgFoldValues,
   vtgFoldValuesMaterialized,
   vtgFoldMode,
@@ -611,6 +629,11 @@ const {
   vtgActiveProperty,
   updateTwistSetting,
   updateTwistMode,
+  updateThirdOrderInitial,
+  updateThirdOrderStrength,
+  updateThirdOrderTiming,
+  updateThirdOrderMirror,
+  updateThirdOrderOpposed,
   updateFoldSetting,
   updateFoldMode,
   updateFoldBeat,
@@ -622,6 +645,15 @@ const {
 } = usePatternPropertyControls({
   animation: toRef(props, 'animation'),
   onAnimationUpdate: (animation) => emit('animationUpdate', animation),
+  rebuildAnimationForThirdOrderCycle: (minimumCycleCount) => {
+    if (props.builderActive || !props.animation || isQtr.value) return undefined
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (!tile) return undefined
+    const selection = createPatternSelection(tile)
+    return 'quarters' in selection
+      ? undefined
+      : createVtgAnimation(props.animation, selection, { minimumCycleCount })
+  },
 })
 const isAnti = ref(false)
 const speedRatioRows = computed(() =>
@@ -841,7 +873,9 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
       const builderAnimation =
         props.builderActive && props.builderInsertionIndex !== undefined && props.animation
-          ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
+          ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
+              minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+            })
           : undefined
       const displayedRelationships =
         builderAnimation && (props.builderInsertionIndex ?? 0) > 0
@@ -1948,6 +1982,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   beat,
   scale,
   spacing,
+  hands,
   quarters: activeQtrMode,
   leftPropColor,
   rightPropColor,
@@ -1958,15 +1993,29 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
   active: previewsReady,
-  previewContext: computed(() => [props.animationRevision, props.builderInsertionIndex]),
+  previewContext: computed(() => [
+    props.animationRevision,
+    props.builderInsertionIndex,
+    JSON.stringify(vtgThirdOrderSettings.value),
+    vtgThirdOrderMirror.value,
+    vtgThirdOrderOpposed.value,
+  ]),
   createVtgPreview: (selection) => {
+    const minimumCycleCount = conceptsStore.getVtgPropertyCycleCount()
     const animation =
       props.builderActive && props.builderInsertionIndex !== undefined && props.animation
-        ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
+        ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
+            minimumCycleCount,
+          })
         : 'quarters' in selection
           ? createDefaultQtrAnimation(selection)
-          : createDefaultVtgAnimation(selection)
-    return animation ? toVtgPreviewAnimation(animation) : undefined
+          : createDefaultVtgAnimation(selection, { minimumCycleCount })
+    if (!animation) return undefined
+    const withThirdOrder = applyVtgThirdOrderSettings(animation, vtgThirdOrderSettings.value, {
+      mirror: vtgThirdOrderMirror.value,
+      opposed: vtgThirdOrderOpposed.value,
+    })
+    return toVtgPreviewAnimation(withThirdOrder, { hands: hands.value })
   },
 })
 

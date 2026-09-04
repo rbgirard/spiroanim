@@ -259,7 +259,7 @@ alignment and trailing empty-frame removal follow the same rules as the other op
 ## Version 12 Turns, Warp, Strength, and Scale layout
 
 Version 12 adds inherited `warp` and `strength`, changes Scale's internal unit from tenths to
-hundredths, and gives Turns and Warp the VTG-derived range and half-degree precision. The current
+hundredths, and gives Turns and Warp the VTG-derived range and half-degree precision. Its locked
 definitions are:
 
 | Field      | Current range | Bits | Meaning                                      |
@@ -269,7 +269,11 @@ definitions are:
 | `turns`    | `-2160..1440` |   13 | Half-degree relative prop rotation           |
 | `warp`     | `-2160..1440` |   13 | Half-degree auxiliary hand-path rotation     |
 
-The `xN` values are reordered into three groups per frame:
+Version 12 also adds Triads as prop index `4`. The existing four-bit Prop field has capacity for
+indices `0..14` while retaining its all-ones `undefined` code, so this does not change the packed
+layout. Version 1-11 Prop ranges remain immutable.
+
+The locked `xN` layout contains three groups per frame:
 
 1. Two characters: `scale` (10 bits)
 2. Two characters: `beats` (6 bits), `depth` (6 bits)

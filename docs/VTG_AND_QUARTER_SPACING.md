@@ -73,15 +73,15 @@ represent `props[0]` and `props[1]` and default to checked. Unchecking one write
 they are inherited and omitted from the query string. At least one prop must remain enabled;
 disabling the only enabled side automatically enables the other side. VTG and Quarter Spacing
 players default to Paths on, Hands off, and Arms on; non-default choices are added to the pattern
-selection before the player animation is built. These choices are intentionally excluded from
-`usePatternPreviews`: thumbnail animations always use their canonical Paths-on, Hands-off,
-Arms-off rendering settings.
+selection before the player animation is built. VTG thumbnails retain their lightweight canonical
+Paths-on and Arms-off rendering, but now follow the shared Hands toggle so Third Order hand-path
+motion can be inspected directly.
 
 Current VTG numeric behavior is:
 
 | Control                | UI range and step    | Stored transform                                                    |
 | ---------------------- | -------------------- | ------------------------------------------------------------------- |
-| BPM                    | 40..140, step 1      | Explicitly clamped by `clampVtgBpm()`                               |
+| BPM                    | 20..140, step 1      | Explicitly clamped by `clampVtgBpm()`                               |
 | Scale                  | 0.5..1.4, step 0.1   | Explicitly clamped, multiplied by 10, and rounded for frame `scale` |
 | Scale-derived Distance | Piecewise 14..15..25 | Interpolated from Scale and rounded to the nearest whole number     |
 | Thick                  | 1..15, step 1        | Defaults to 5 and is passed directly from the UI selection          |

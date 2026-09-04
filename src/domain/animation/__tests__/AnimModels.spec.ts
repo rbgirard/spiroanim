@@ -1,7 +1,7 @@
-import { Box3, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
+import { Box3, Mesh, MeshStandardMaterial, MeshToonMaterial, TorusGeometry, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { CLUBS, FANS, POI, STAFF } from '@/domain/animation/AnimModels'
+import { CLUBS, FANS, POI, STAFF, TRIADS } from '@/domain/animation/AnimModels'
 
 describe('AnimModels prop lighting', () => {
   it.each([
@@ -68,15 +68,61 @@ describe('AnimModels prop lighting', () => {
       [500, 866, 0],
       [866, 500, 0],
     ])
+
+    const triadHeads = TRIADS(1, 0, 1).additionalPathHeadPositions
+    expect(triadHeads).toHaveLength(2)
+    expect(triadHeads?.map(([x, y, z]) => [Math.round(x * 1000), Math.round(y * 1000), z])).toEqual(
+      [
+        [866, -500, 0],
+        [-866, -500, 0],
+      ],
+    )
   })
 
   it('builds Fans with one ring, five spokes, five wicks, and two braces', () => {
     const fans = FANS(1, 4, 1)
-    const bounds = new Box3().setFromObject(fans)
+    const poi = POI(1, 4, 1)
+    const fanWicks = [2, 4, 6, 8, 10].map((index) => fans.children[index]!)
 
     expect(fans.children).toHaveLength(13)
-    expect(fans.size).toBe(2.5)
-    expect(bounds.min.y).toBeLessThan(0)
-    expect(bounds.max.y).toBeCloseTo(2.5, 1)
+    expect(fans.size).toBe(poi.size)
+    for (const wick of fanWicks) expect(wick.position.length()).toBeCloseTo(fans.size)
+  })
+
+  it('builds Triads with the Fan grip, three identical spokes, and equal 120-degree angles', () => {
+    const triads = TRIADS(1, 4, 1)
+    const fans = FANS(1, 4, 1)
+    const triadRing = triads.children[0]
+    const fanRing = fans.children[0]
+
+    expect(triads.children).toHaveLength(7)
+    expect(triads.size).toBe(fans.size)
+    for (const end of [triads.children[2]!, triads.children[4]!, triads.children[6]!])
+      expect(end.position.length()).toBeCloseTo(triads.size)
+    expect(triadRing).toBeInstanceOf(Mesh)
+    expect(fanRing).toBeInstanceOf(Mesh)
+    if (
+      !(triadRing instanceof Mesh) ||
+      !(fanRing instanceof Mesh) ||
+      !(triadRing.geometry instanceof TorusGeometry) ||
+      !(fanRing.geometry instanceof TorusGeometry)
+    )
+      throw new Error('Expected Triad and Fan grip rings')
+    expect(triadRing.geometry.parameters.radius).toBe(fanRing.geometry.parameters.radius)
+    expect(triadRing.geometry.parameters.tube).toBe(fanRing.geometry.parameters.tube)
+
+    const directions = [
+      new Vector3(0, 1, 0),
+      ...(triads.additionalPathHeadPositions ?? []).map((position) =>
+        new Vector3().fromArray(position),
+      ),
+    ]
+    expect(directions).toHaveLength(3)
+    for (let index = 0; index < directions.length; index++) {
+      const current = directions[index]!
+      const next = directions[(index + 1) % directions.length]!
+      expect(current.length()).toBeCloseTo(1)
+      expect(current.angleTo(next)).toBeCloseTo((Math.PI * 2) / 3)
+    }
   })
 })

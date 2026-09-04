@@ -175,7 +175,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(59)
+    expect(wrapper.findAll('button')).toHaveLength(63)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -1266,6 +1266,30 @@ describe('VtgPane', () => {
     expect(getCompiledVtgBuilderMotion(compiledPreviews[16]!, 1).spins).toEqual(['A', 'I'])
   })
 
+  it('renders Hands and Third Order timing in VTG thumbnails', async () => {
+    const wrapper = mount(VtgPane)
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const store = useConceptsStore()
+    store.hands = true
+    store.setVtgThirdOrderTiming(0, '2:3-anti')
+    await nextTick()
+    await settlePreviewRendering()
+
+    const preview = FakeWorker.instances[0]?.messages
+      .filter(({ type }) => type === 'data')
+      .map(({ data }) => data as RootDataCompiled)
+      .at(-1)
+    expect(preview).toMatchObject({ hands: true })
+    expect(preview?.props.every((prop) => prop.hands === true)).toBe(true)
+    expect(preview?.props[0]?.anim).toHaveLength(17)
+    expect(preview?.props[0]?.anim.slice(1).every((frame) => frame.warp !== 0)).toBe(true)
+
+    wrapper.unmount()
+  })
+
   it('retains the distinct QTR 1-2 pattern and its rotation after refresh', async () => {
     const version = await loadSpiroAnimQSVersion(11)
     const codec = await useSpiroAnimQS(
@@ -1836,7 +1860,7 @@ describe('VtgPane', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
-    expect(bpm.attributes()).toMatchObject({ min: '40', max: '140', step: '1' })
+    expect(bpm.attributes()).toMatchObject({ min: '20', max: '140', step: '1' })
     expect(scale.attributes()).toMatchObject({ min: '0.5', max: '1.4', step: '0.1' })
     expect(thick.attributes()).toMatchObject({ min: '1', max: '15', step: '1' })
     expect(spacing.attributes()).toMatchObject({ min: '0', max: '20', step: '1' })
@@ -3214,10 +3238,16 @@ describe('VtgPane', () => {
 
     const beforeRenderingControls = countWorkerMessages('data')
     await wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').setValue(false)
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').setValue(true)
-    await wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').setValue(false)
     await settlePreviewRendering()
     expect(countWorkerMessages('data')).toBe(beforeRenderingControls)
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').setValue(true)
+    await settlePreviewRendering()
+    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 9)
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').setValue(false)
+    await settlePreviewRendering()
+    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 9)
 
     await expectNineMorePreviews(() => reportAllBlankDimensions(80, 76))
   })

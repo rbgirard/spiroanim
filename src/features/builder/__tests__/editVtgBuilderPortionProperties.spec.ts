@@ -8,6 +8,7 @@ import {
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { applyVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
@@ -164,7 +165,52 @@ describe('editVtgBuilderPortionProperties', () => {
 
     expect(restored?.props[0]?.anim[range.firstOwnedFrameIndex]?.scale).toBeUndefined()
     expect(restored?.props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBeUndefined()
-    expect(rootCompile(restored!).props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBe(8)
+    expect(rootCompile(restored!).props[0]?.anim[range.successorFirstOwnedFrameIndex]?.scale).toBe(
+      8,
+    )
+  })
+
+  it('preserves inherited Warp and Strength after editing one Builder portion', () => {
+    const animation = createThreePortions()
+    animation.props[0]!.anim[0] = {
+      ...animation.props[0]!.anim[0],
+      warp: 90,
+      strength: 500,
+    }
+    const preview = createVtgTransitionPreviewAnimations(animation)?.[1]
+    const range = getVtgBuilderPortionRanges(animation)[1]
+    if (!preview || !range?.successorFirstOwnedFrameIndex) {
+      throw new Error('Expected a middle portion with a successor')
+    }
+
+    const working = applyVtgThirdOrderSettings(preview, [{ strength: 25, timing: '1:2-pro' }, {}], {
+      firstEditableFrameIndex: 1,
+    })
+    const updated = applyVtgBuilderPortionProperties(animation, 1, working, ['warp', 'strength'])
+    if (!updated) throw new Error('Expected a Third Order update')
+
+    const successor = range.successorFirstOwnedFrameIndex
+    expect(updated.props[0]?.anim[range.firstOwnedFrameIndex]?.strength).toBe(250)
+    expect(updated.props[0]?.anim[successor]).toMatchObject({ warp: 90, strength: 500 })
+    expect(rootCompile(updated).props[0]?.anim[successor]).toMatchObject({
+      warp: 90,
+      strength: 500,
+    })
+
+    const updatedPreview = createVtgTransitionPreviewAnimations(updated)?.[1]
+    if (!updatedPreview) throw new Error('Expected the updated middle portion')
+    const cleared = applyVtgThirdOrderSettings(updatedPreview, [{}, {}], {
+      firstEditableFrameIndex: 1,
+    })
+    const restored = applyVtgBuilderPortionProperties(updated, 1, cleared, ['warp', 'strength'])
+
+    expect(restored?.props[0]?.anim[range.firstOwnedFrameIndex]?.strength).toBeUndefined()
+    expect(restored?.props[0]?.anim[successor]?.warp).toBeUndefined()
+    expect(restored?.props[0]?.anim[successor]?.strength).toBeUndefined()
+    expect(rootCompile(restored!).props[0]?.anim[successor]).toMatchObject({
+      warp: 90,
+      strength: 500,
+    })
   })
 
   it('reconstructs the supplied supported Builder pattern after editing Rotate', async () => {

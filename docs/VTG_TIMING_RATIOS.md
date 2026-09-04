@@ -38,6 +38,11 @@ Reciprocal Trans playback follows the same timing-cycle length. A one-rotation t
 relationship-change passes. When either prop requires a numerator-2 cycle, Trans performs eight
 passes so the reciprocal sequence closes across the complete eight-beat pattern.
 
+A continuing Third Order `2:*` Timing imposes that same two-rotation minimum even when both grid
+prop timings are `1:*`. Ordinary VTG, reciprocal Trans, thumbnails, and Builder/Viewer 45-degree
+pieces therefore all use the established seventeen-frame/eight-beat cycle. The slider and pattern
+matcher do not currently identify this Third Order-driven doubling.
+
 ## Individual timing definition
 
 A valid individual VTG timing is a positive reduced ratio `p:q`:
@@ -244,7 +249,8 @@ props. Selecting a second ratio creates the canonical compound timing for the tw
 
 Pattern Builder drag/drop operations retain one complete cycle of the selected timing. A
 numerator-1-only selection inserts a four-beat piece; a selection involving a numerator-2 timing,
-including a mixed compound such as `1:1v2:3`, inserts an eight-beat piece.
+including a mixed compound such as `1:1v2:3`, inserts an eight-beat piece. An active continuing
+Third Order `2:*` Timing raises an otherwise numerator-1 selection to the same eight-beat piece.
 
 Every Builder junction preserves the complete motion code. Append, prepend, insert, replace, swap,
 reverse, and suffix rejoin operations may adjust both Plane and Axis, and accept a junction only

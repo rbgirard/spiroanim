@@ -22,9 +22,16 @@ describe('PatternPropertyControls', () => {
     const offset = wrapper.get('[data-role="vtg-property-offset-toggle"]')
     const axis = wrapper.get('[data-role="vtg-property-axis-toggle"]')
     const twist = wrapper.get('[data-role="vtg-property-twist-toggle"]')
+    const thirdOrder = wrapper.get('[data-role="vtg-property-third-order-toggle"]')
     const turns = wrapper.find('[data-role="vtg-property-turns-toggle"]')
 
-    expect([offset.text(), axis.text(), twist.text()]).toEqual(['Offset', 'Rotate', 'Twist'])
+    expect([offset.text(), axis.text(), twist.text(), thirdOrder.text()]).toEqual([
+      'Offset',
+      'Rotate',
+      'Twist',
+      'Third Order',
+    ])
+    expect(wrapper.findAll('[role="tab"]').at(-1)?.text()).toBe('Third Order')
     expect(turns.exists()).toBe(false)
     expect(offset.attributes('aria-selected')).toBe('false')
     expect(axis.attributes('aria-expanded')).toBe('false')
@@ -214,6 +221,130 @@ describe('PatternPropertyControls', () => {
       'For Static Props, allowing off-axis turns',
     )
     expect(wrapper.find('[data-role="builder-property-turns-toggle"]').exists()).toBe(false)
+    expect(wrapper.findAll('[role="tab"]').at(-1)?.text()).toBe('Third Order')
+  })
+
+  it('offers authored and inherited Third Order controls for Left and Right', async () => {
+    const wrapper = mount(PatternPropertyControls, {
+      props: {
+        context: 'vtg',
+        activeProperty: 'third-order',
+        thirdOrderMirror: false,
+        thirdOrderSettings: [{ initial: '1:3-anti', strength: 55 }, { timing: '2:3-pro' }],
+        thirdOrderDisplaySettings: {
+          initial: ['1:3-anti', 90],
+          strength: [55, 80],
+          timing: ['1:1-pro', '2:3-pro'],
+        },
+      },
+    })
+
+    expect(wrapper.get('[data-role="vtg-property-third-order-note"]').text()).toBe(
+      'Hand path manipulations',
+    )
+    expect(
+      wrapper
+        .findAll('.pattern-property-controls__third-order-column > h3')
+        .map((heading) => heading.text()),
+    ).toEqual(['Left', 'Right'])
+
+    const leftInitial = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-initial-0"]')
+    expect(leftInitial.findAll('option').map((option) => option.text())).toEqual([
+      'Undefined',
+      '1:1 Anti',
+      '1:1 Pro',
+      '2:1 Anti',
+      '2:1 Pro',
+      '1:2 Anti',
+      '1:2 Pro',
+      '1:3 Anti',
+      '1:3 Pro',
+      '2:3 Anti',
+      '2:3 Pro',
+      '1:4 Anti',
+      '1:4 Pro',
+      '1:5 Anti',
+      '1:5 Pro',
+      '2:5 Anti',
+      '2:5 Pro',
+    ])
+    expect(leftInitial.element.value).toBe('1:3-anti')
+    await leftInitial.setValue('1:2-pro')
+    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([0, '1:2-pro'])
+
+    const leftStrength = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-strength-0"]')
+    expect(leftStrength.attributes()).toMatchObject({ min: '0', max: '100', step: '5' })
+    expect(leftStrength.attributes('aria-valuetext')).toBe('55%')
+    leftStrength.element.value = '0'
+    await leftStrength.trigger('input')
+    expect(wrapper.emitted('thirdOrderStrengthUpdate')?.at(-1)).toEqual([0, 0])
+
+    const rightInitial = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-1"]')
+    expect(rightInitial.attributes()).toMatchObject({
+      type: 'range',
+      min: '0',
+      max: '360',
+      step: '5',
+    })
+    expect(rightInitial.attributes('aria-valuetext')).toBe('90°')
+    rightInitial.element.value = '0'
+    await rightInitial.trigger('input')
+    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([1, 0])
+
+    const rightTiming = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-timing-1"]')
+    expect(rightTiming.element.value).toBe('2:3-pro')
+    await rightTiming.setValue('')
+    expect(wrapper.emitted('thirdOrderTimingUpdate')?.at(-1)).toEqual([1, undefined])
+
+    const leftInitialClear = wrapper.get<HTMLButtonElement>(
+      'button[aria-label="Clear Left Third Order Initial"]',
+    )
+    const rightStrengthClear = wrapper.get<HTMLButtonElement>(
+      'button[aria-label="Clear Right Third Order Strength"]',
+    )
+    expect(leftInitialClear.element.disabled).toBe(false)
+    expect(rightStrengthClear.element.disabled).toBe(true)
+    await leftInitialClear.trigger('click')
+    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([0, undefined])
+  })
+
+  it('defaults Third Order to mirrored and gates the Opposed option', async () => {
+    const wrapper = mount(PatternPropertyControls, {
+      props: { context: 'vtg', activeProperty: 'third-order' },
+    })
+    const mirror = wrapper.get<HTMLInputElement>('input[aria-label="Mirror Third Order"]')
+    const opposed = wrapper.get<HTMLInputElement>('input[aria-label="Opposed Third Order"]')
+
+    expect(mirror.element.checked).toBe(true)
+    expect(opposed.element.checked).toBe(false)
+    expect(opposed.element.disabled).toBe(false)
+    expect(wrapper.get('[aria-label="Left Third Order"]').isVisible()).toBe(true)
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(false)
+
+    await opposed.setValue(true)
+    expect(wrapper.emitted('update:thirdOrderOpposed')?.at(-1)).toEqual([true])
+    await wrapper.setProps({ thirdOrderOpposed: true })
+    expect(opposed.element.checked).toBe(true)
+
+    await mirror.setValue(false)
+    expect(wrapper.emitted('update:thirdOrderMirror')?.at(-1)).toEqual([false])
+    await wrapper.setProps({ thirdOrderMirror: false, thirdOrderOpposed: false })
+    expect(opposed.element.disabled).toBe(true)
+    expect(wrapper.get('[aria-label="Right Third Order"]').isVisible()).toBe(true)
+  })
+
+  it('hides Initial for later Builder portions and omits Third Order from Eight Step properties', () => {
+    const builder = mount(PatternPropertyControls, {
+      props: { context: 'builder', activeProperty: 'third-order', firstEditableFrameIndex: 1 },
+    })
+    const eightStep = mount(PatternPropertyControls, { props: { context: 'eight-step' } })
+
+    expect(builder.find('[data-role="builder-third-order-initial-0"]').exists()).toBe(false)
+    expect(builder.find('[data-role="builder-third-order-strength-0"]').exists()).toBe(true)
+    expect(builder.find('[data-role="builder-third-order-timing-0"]').exists()).toBe(true)
+    expect(eightStep.find('[data-role="eight-step-property-third-order-toggle"]').exists()).toBe(
+      false,
+    )
   })
 
   it('offers independent Builder-only Scale values from 0 through 1.4', async () => {
@@ -523,7 +654,8 @@ describe('PatternPropertyControls', () => {
       global: { plugins: [pinia] },
     })
 
-    expect(wrapper.findAll('input[type="range"]')).toHaveLength(0)
+    expect(wrapper.findAll('input[type="range"]')).toHaveLength(1)
+    wrapper.get('[data-role="vtg-third-order-strength-0"]')
     wrapper.get('[data-role="vtg-offset-0-stepper"]')
     wrapper.get('[data-role="vtg-offset-1-stepper"]')
     wrapper.get('[data-role="vtg-yaw-0-0-stepper"]')

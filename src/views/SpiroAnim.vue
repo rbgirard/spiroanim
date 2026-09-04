@@ -371,7 +371,9 @@ const playerSurfaceStyle = computed<CSSProperties>(() => ({
 }))
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const createdAnimation = createConceptPattern(ROOT.value, selection)
+  const createdAnimation = createConceptPattern(ROOT.value, selection, {
+    minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+  })
   if (createdAnimation) {
     const animation =
       isVtgPatternSelection(selection) || isEightStepPatternSelection(selection)
@@ -387,15 +389,23 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
   const animation =
     (isVtgPatternSelection(selection) || isQtrPatternSelection(selection)) &&
     selectedBuilderPreviewIndex.value !== undefined
-      ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value)
-      : createConceptPattern(ROOT.value, selection)
+      ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value, {
+          minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+        })
+      : createConceptPattern(ROOT.value, selection, {
+          minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+        })
   if (!animation) return
 
+  const previewAnimation = isVtgPatternSelection(selection)
+    ? conceptsStore.applyVtgPropertyControls(animation)
+    : animation
+
   playerStore.startPlaybackPreview(
-    toVtgBuilderDisplayAnimation(animation, undefined, {
+    toVtgBuilderDisplayAnimation(previewAnimation, undefined, {
       maximumScale: Math.max(
         getVtgBuilderMaximumScale(ROOT.value),
-        getVtgBuilderMaximumScale(animation),
+        getVtgBuilderMaximumScale(previewAnimation),
       ),
     }),
   )
@@ -407,7 +417,9 @@ const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
   const animation = isVtgPatternSelection(selection)
     ? applyVtgCustomization(ROOT.value, selection)
     : (() => {
-        const createdAnimation = createConceptPattern(ROOT.value, selection)
+        const createdAnimation = createConceptPattern(ROOT.value, selection, {
+          minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+        })
         return createdAnimation && isEightStepPatternSelection(selection)
           ? conceptsStore.applyVtgPropertyControls(createdAnimation)
           : createdAnimation

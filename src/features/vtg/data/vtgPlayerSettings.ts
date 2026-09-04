@@ -4,7 +4,7 @@ import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
 import { toDisplayScale, toInternalScale } from '@/domain/animation/scale'
 
 export const vtgBpmControl = {
-  min: 40,
+  min: 20,
   max: 140,
   step: 1,
   default: 40,

@@ -50,6 +50,13 @@ const createTetherMaterial = (color: number) =>
     }),
   )
 
+const PROP_PATH_RADIUS = 2.4
+const RADIAL_GRIP_RADIUS = 0.28
+const RADIAL_GRIP_TUBE_RADIUS = 0.055
+const RADIAL_SPOKE_START = 0.32
+const RADIAL_END_LENGTH = 0.42
+const RADIAL_SPOKE_END = PROP_PATH_RADIUS - RADIAL_END_LENGTH / 2
+
 export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGroup => {
     const emptyGroup = new Group() as ModelGroup
     emptyGroup.size = 0
@@ -91,7 +98,7 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     //model2.add( test1 )
     //model2.add( test2 )
 
-    model2.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
+    model2.size = PROP_PATH_RADIUS * multi // Used for Y offset manipulations, multiplied by -1 to 1
 
     return model2
   },
@@ -118,7 +125,7 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     model2.add(head1)
     model2.add(head2)
 
-    model2.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
+    model2.size = PROP_PATH_RADIUS * multi // Used for Y offset manipulations, multiplied by -1 to 1
     model2.additionalPathHeadPositions = [[0, -1, 0]]
 
     return model2
@@ -159,7 +166,7 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
 
     const model = new Group() as ModelGroup
     model.add(knob, handle, body, tip)
-    model.size = 2.4 * multi // Used for Y offset manipulations, multiplied by -1 to 1
+    model.size = PROP_PATH_RADIUS * multi // Used for Y offset manipulations, multiplied by -1 to 1
 
     return model
   },
@@ -169,12 +176,17 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
     const frameMaterial = createTetherMaterial(cset[2])
     const wickMaterial = createPropMaterial(cset[0])
     const frameRadius = 0.045 * multi * girth
-    const spokeStart = 0.32 * multi
-    const spokeEnd = 2.08 * multi
-    const wickLength = 0.42 * multi
+    const spokeStart = RADIAL_SPOKE_START * multi
+    const spokeEnd = RADIAL_SPOKE_END * multi
+    const wickLength = RADIAL_END_LENGTH * multi
 
     const ring = new Mesh(
-      new TorusGeometry(0.28 * multi, 0.055 * multi * girth, 12, 32),
+      new TorusGeometry(
+        RADIAL_GRIP_RADIUS * multi,
+        RADIAL_GRIP_TUBE_RADIUS * multi * girth,
+        12,
+        32,
+      ),
       frameMaterial,
     )
     model.add(ring)
@@ -208,8 +220,56 @@ export const NONE = (/*multi: number, color: ColorInd, girth: number*/): ModelGr
       model.add(brace)
     }
 
-    model.size = spokeEnd + wickLength
+    model.size = PROP_PATH_RADIUS * multi
     model.additionalPathHeadPositions = [-60, -30, 30, 60].map((angle) => {
+      const radians = (angle * Math.PI) / 180
+      return [Math.sin(radians), Math.cos(radians), 0] as const
+    })
+    return model
+  },
+  TRIADS = (multi: number, color: ColorInd, girth: number): ModelGroup => {
+    const cset = COLSET[color]!
+    const model = new Group() as ModelGroup
+    const frameMaterial = createTetherMaterial(cset[2])
+    const endMaterial = createPropMaterial(cset[0])
+    const frameRadius = 0.045 * multi * girth
+    const spokeStart = RADIAL_SPOKE_START * multi
+    const spokeEnd = RADIAL_SPOKE_END * multi
+    const endLength = RADIAL_END_LENGTH * multi
+
+    const ring = new Mesh(
+      new TorusGeometry(
+        RADIAL_GRIP_RADIUS * multi,
+        RADIAL_GRIP_TUBE_RADIUS * multi * girth,
+        12,
+        32,
+      ),
+      frameMaterial,
+    )
+    model.add(ring)
+
+    for (const angle of [0, 120, 240]) {
+      const radians = (angle * Math.PI) / 180
+      const spoke = new Mesh(
+        new CylinderGeometry(frameRadius, frameRadius, spokeEnd - spokeStart, 12),
+        frameMaterial,
+      )
+      const spokeMidpoint = (spokeStart + spokeEnd) / 2
+      spoke.position.set(Math.sin(radians) * spokeMidpoint, Math.cos(radians) * spokeMidpoint, 0)
+      spoke.rotation.z = -radians
+
+      const end = new Mesh(
+        new CylinderGeometry(0.13 * multi * girth, 0.13 * multi * girth, endLength, 16),
+        endMaterial,
+      )
+      const endMidpoint = spokeEnd + endLength / 2
+      end.position.set(Math.sin(radians) * endMidpoint, Math.cos(radians) * endMidpoint, 0)
+      end.rotation.z = -radians
+      model.add(spoke, end)
+    }
+
+    model.size = PROP_PATH_RADIUS * multi
+    model.additionalPathHeadPositions = [120, 240].map((angle) => {
       const radians = (angle * Math.PI) / 180
       return [Math.sin(radians), Math.cos(radians), 0] as const
     })

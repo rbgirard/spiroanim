@@ -12,6 +12,7 @@ import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation
 import { createVtgTransitionPreviewAnimations } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
+import { rootCompile } from '@/math/animation/AnimFunc'
 
 const createTwoPortionPattern = () => {
   const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
@@ -64,6 +65,45 @@ describe('createVtgBuilderDropPreview', () => {
 
     expect(preview).toEqual(expected)
     expect(createVtgBuilderDropPreview(source, selection, 3)).toBeUndefined()
+  })
+
+  it('uses the native two-cycle 45 degree duration for Third Order 2:* previews', () => {
+    const source = createTwoPortionPattern()
+    const standalone = createVtgBuilderDropPreview(source, selection, 0, {
+      minimumCycleCount: 2,
+      thirdOrder: {
+        settings: [{ strength: 55, timing: '2:3-anti' }, {}],
+        mirror: true,
+        opposed: false,
+      },
+    })
+    const inserted = createVtgBuilderDropPreview(source, selection, 1, {
+      minimumCycleCount: 2,
+    })
+
+    expect(standalone?.props[0]?.anim).toHaveLength(17)
+    expect(inserted?.props[0]?.anim).toHaveLength(17)
+    expect(standalone?.props[0]?.anim[0]?.strength).toBe(550)
+    expect(standalone?.props[0]?.anim[1]?.warp).toBeTypeOf('number')
+    expect(standalone?.props[0]?.anim.slice(2).every((frame) => frame.warp === undefined)).toBe(
+      true,
+    )
+  })
+
+  it('renders inherited Third Order values at a later insertion point', () => {
+    const source = createTwoPortionPattern()
+    source.props[0]!.anim[0] = {
+      ...source.props[0]!.anim[0],
+      warp: 90,
+      strength: 650,
+    }
+    const preview = createVtgBuilderDropPreview(source, selection, 1)
+    if (!preview) throw new Error('Expected a contextual Builder preview')
+
+    expect(rootCompile(preview).props[0]?.anim[0]).toMatchObject({
+      warp: 90,
+      strength: 650,
+    })
   })
 
   it('rebases the candidate relationships onto later insertion targets', () => {

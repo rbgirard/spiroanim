@@ -28,6 +28,16 @@ import {
   deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
+import {
+  applyVtgThirdOrderSettings,
+  detectVtgThirdOrderRelationship,
+  extractVtgThirdOrderSettings,
+  getVtgThirdOrderCycleCount,
+  updateVtgThirdOrderSettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderSettings,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
 
 const defaultQuickSlotCount = 0
 const restoredQuickSlotCount = 4
@@ -50,7 +60,7 @@ export type VtgFoldValues = [Record<string, VtgFoldValue>, Record<string, VtgFol
 export type VtgFoldMode = 'simple' | 'advanced'
 export type VtgFoldSpan = 'eighth' | 'quarter'
 export type VtgFoldSideSettings<T> = [T, T]
-export type VtgPropertyKey = 'offset' | 'axis' | 'twist' | 'turns'
+export type VtgPropertyKey = 'offset' | 'axis' | 'twist' | 'turns' | 'third-order'
 
 const quickSlotSetIdPrefix = 'quick-slot-set-'
 const defaultQuickSlotSetName = (number: number) => `Quick Slot Set #${number}`
@@ -90,6 +100,9 @@ export const useConceptsStore = defineStore(
     const sliders = ref(!isTouchDevice())
     const vtgTwistMode = ref<VtgTwistMode>('simple')
     const vtgTwistValues = ref<VtgTwistValues>([{}, {}])
+    const vtgThirdOrderSettings = ref<VtgThirdOrderSettings>([{}, {}])
+    const vtgThirdOrderMirror = ref(true)
+    const vtgThirdOrderOpposed = ref(false)
     const vtgFoldValues = ref<VtgFoldValues>([{}, {}])
     const vtgFoldValuesMaterialized = ref(false)
     const vtgFoldMode = ref<VtgFoldMode>('simple')
@@ -105,6 +118,27 @@ export const useConceptsStore = defineStore(
       const beatKey = String(beat)
       if (value === undefined) delete vtgTwistValues.value[propIndex][beatKey]
       else vtgTwistValues.value[propIndex][beatKey] = value
+    }
+    const setVtgThirdOrderInitial = (propIndex: 0 | 1, value?: VtgThirdOrderInitial) => {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderSettings(
+        vtgThirdOrderSettings.value,
+        propIndex,
+        { initial: value },
+      )
+    }
+    const setVtgThirdOrderStrength = (propIndex: 0 | 1, value?: number) => {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderSettings(
+        vtgThirdOrderSettings.value,
+        propIndex,
+        { strength: value },
+      )
+    }
+    const setVtgThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderSettings(
+        vtgThirdOrderSettings.value,
+        propIndex,
+        { timing: value },
+      )
     }
     const setVtgFoldValue = (
       propIndex: 0 | 1,
@@ -131,25 +165,39 @@ export const useConceptsStore = defineStore(
               vtgFoldValuesMaterialized.value,
             )
           : vtgFoldValues.value
-      return applyVtgFoldSettings(
-        applyVtgTwistSettings(animation, vtgTwistMode.value, vtgTwistValues.value),
-        foldValues,
+      return applyVtgThirdOrderSettings(
+        applyVtgFoldSettings(
+          applyVtgTwistSettings(animation, vtgTwistMode.value, vtgTwistValues.value),
+          foldValues,
+          {
+            mode: vtgFoldMode.value,
+            beat: vtgFoldBeat.value,
+            repeat: vtgFoldRepeat.value,
+            every: vtgFoldEvery.value,
+            alternate: vtgFoldAlternate.value,
+            span: vtgFoldSpan.value,
+            mirror: vtgFoldMirror.value,
+          },
+        ),
+        vtgThirdOrderSettings.value,
         {
-          mode: vtgFoldMode.value,
-          beat: vtgFoldBeat.value,
-          repeat: vtgFoldRepeat.value,
-          every: vtgFoldEvery.value,
-          alternate: vtgFoldAlternate.value,
-          span: vtgFoldSpan.value,
-          mirror: vtgFoldMirror.value,
+          mirror: vtgThirdOrderMirror.value,
+          opposed: vtgThirdOrderOpposed.value,
         },
       )
     }
+
+    const getVtgPropertyCycleCount = (): 1 | 2 =>
+      getVtgThirdOrderCycleCount(vtgThirdOrderSettings.value, vtgThirdOrderMirror.value)
 
     const hydrateVtgPropertyControls = (animation: RootDataFinal) => {
       const twistValues = extractVtgTwistValues(animation)
       vtgTwistValues.value = twistValues
       vtgTwistMode.value = detectVtgTwistMode(twistValues)
+      vtgThirdOrderSettings.value = extractVtgThirdOrderSettings(animation)
+      const thirdOrderRelationship = detectVtgThirdOrderRelationship(animation)
+      vtgThirdOrderMirror.value = thirdOrderRelationship.mirror
+      vtgThirdOrderOpposed.value = thirdOrderRelationship.opposed
 
       const foldValues = extractVtgFoldValues(animation)
       const simple = detectVtgFoldSimpleSettings(animation, foldValues)
@@ -343,10 +391,17 @@ export const useConceptsStore = defineStore(
       vtgTwistMode,
       vtgTwistValues,
       setVtgTwistValue,
+      vtgThirdOrderSettings,
+      vtgThirdOrderMirror,
+      vtgThirdOrderOpposed,
+      setVtgThirdOrderInitial,
+      setVtgThirdOrderStrength,
+      setVtgThirdOrderTiming,
       vtgFoldValues,
       vtgFoldValuesMaterialized,
       setVtgFoldValue,
       applyVtgPropertyControls,
+      getVtgPropertyCycleCount,
       hydrateVtgPropertyControls,
       vtgFoldMode,
       vtgFoldBeat,
@@ -527,7 +582,11 @@ export const useConceptsStore = defineStore(
           store.prop = 2
         }
         if (typeof store.sliders !== 'boolean') store.sliders = !isTouchDevice()
-        if (!['offset', 'axis', 'twist', 'turns', null].includes(store.vtgActiveProperty)) {
+        if (
+          !['offset', 'axis', 'twist', 'turns', 'third-order', null].includes(
+            store.vtgActiveProperty,
+          )
+        ) {
           store.vtgActiveProperty = null
         }
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false

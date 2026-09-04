@@ -106,6 +106,59 @@ Motion, Camera Orbit, and Camera Center expose the shared inheritable Precision 
 to Disabled and renders authored Move and Distance at one tenth scale without changing their raw
 editor or query values.
 
+### VTG and Builder/Viewer Third Order controls
+
+The shared pattern Properties panel ends with a `Third Order` tab in VTG and in the selected
+Builder/Viewer portion controls. It has independent Left and Right columns and the description
+`Hand path manipulations`. It does not use Simple and Advanced modes.
+
+Each Initial and Timing dropdown offers `Undefined`, followed by Anti and Pro choices for `1:1`,
+`2:1`, `1:2`, `1:3`, `2:3`, `1:4`, `1:5`, and `2:5`. Pro is the in-spin relationship. These
+choices are timing definitions. Timing Warp is calculated from each continuation frame's resolved
+Arc:
+
+```text
+Anti Warp = -Arc * (p + q) / p
+Pro Warp  =  Arc * (q - p) / p
+```
+
+Consequently, `1:1 Pro` generates explicit Warp `0`; no separate zero option is needed. Clearing a
+control deletes its authored animation field, after which the panel displays the effective inherited
+or default value.
+
+When Timing is undefined, its dropdown displays the Initial timing as its inherited value. This does
+not author continuation Warp: frame zero's numeric Warp inherits normally until an explicit Timing
+overrides it. An inherited `2:*` value still requires the complete two-cycle duration.
+
+Initial controls frame zero, which is a starting pose rather than a movement interval. Its dropdown
+therefore uses the established canonical 45-degree VTG timing values instead of deriving Warp from
+frame zero's Arc. Mirrored props receive the same Initial value unless Opposed swaps Anti and Pro.
+Once Timing is authored, Initial changes to a 0-360 degree slider in 5-degree increments. A later
+Builder/Viewer portion does not own frame zero, so it does not show Initial. Strength is a 0-100
+percent slider in 5-percent increments and is stored in the animation's tenths-of-a-percent units.
+Timing writes the Arc-derived Warp to the editable continuation frames.
+Builder/Viewer edits preserve the effective Warp and Strength of the following portion by using the
+same minimal successor-guard behavior as other inherited properties.
+
+Timing storage is sparse like VTG Turns storage: it authors Warp on the first editable continuation
+frame, then only when a later frame's resolved Arc changes the required Warp. Intervening frames
+inherit the prior value, so compact and fully repeated forms render identically.
+
+The continuing Timing also participates in cycle length. If either active Third Order side uses a
+`2:*` timing while the grid props use only `1:*` timings, VTG generates the same complete two-cycle
+duration as a native `2:*` prop pattern. This applies to ordinary patterns, reciprocal Trans
+playback, thumbnail rendering, and Builder/Viewer 45-degree portions. Matching continues to ignore
+Third Order channels and is not extended to identify these otherwise doubled `1:*` selections.
+
+Mirror is enabled by default and hides the Right column. In this mode, Left authors both sides.
+Opposed is available only while Mirror is enabled; it swaps Anti and Pro for the Right side while
+keeping Strength and a numeric Initial phase unchanged. Disabling Mirror materializes the generated
+Right settings before exposing its column. Loaded animation data automatically detects ordinary
+mirroring, opposed mirroring, or independent sides when those controls can reproduce it exactly.
+
+The implementation is shared by `src/features/vtg/thirdOrder.ts`,
+`src/components/pattern/PatternPropertyControls.vue`, and the VTG and Builder property composables.
+
 ## Property getters, selection, and inheritance display
 
 `usePropertiesStore.ts` derives the currently active raw frames, compiled frames, and props from

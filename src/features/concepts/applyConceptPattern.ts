@@ -10,9 +10,14 @@ import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
+export interface ApplyConceptPatternOptions {
+  minimumVtgCycleCount?: 1 | 2
+}
+
 export const applyConceptPattern = (
   root: RootDataFinal,
   selection: ConceptPatternSelection,
+  options: ApplyConceptPatternOptions = {},
 ): RootDataFinal | undefined =>
   isEightStepPatternSelection(selection)
     ? createEightStepAnimation(root, selection)
@@ -20,4 +25,6 @@ export const applyConceptPattern = (
       ? createQstAnimation(root, selection)
       : isQtrPatternSelection(selection)
         ? createQtrAnimation(root, selection)
-        : createVtgAnimation(root, selection)
+        : createVtgAnimation(root, selection, {
+            minimumCycleCount: options.minimumVtgCycleCount,
+          })

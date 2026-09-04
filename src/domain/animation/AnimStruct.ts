@@ -16,10 +16,10 @@ import { Vector3, Spherical } from 'three'
 
 // NOTE: The two following can and probably will differ slightly when more models are added
 // Text displayed in the UI
-export const PTEXT = ['POI', 'Staff', 'Juggling Clubs', 'Fans'] as const
+export const PTEXT = ['POI', 'Staff', 'Juggling Clubs', 'Fans', 'Triads'] as const
 
 // Name of the model / object (No spaces, etc. so its separate from the text)
-export const PROPSR = ['POI', 'STAFF', 'CLUBS', 'FANS'] as const
+export const PROPSR = ['POI', 'STAFF', 'CLUBS', 'FANS', 'TRIADS'] as const
 
 export const COLORS = ['Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta', 'Orange'] as const
 

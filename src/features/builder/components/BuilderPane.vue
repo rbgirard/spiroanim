@@ -99,6 +99,10 @@
                 :twist-mode="builderTwistMode"
                 :twist-values="builderTwistValues"
                 :twist-display-values="builderTwistDisplayValues"
+                :third-order-settings="builderThirdOrderSettings"
+                :third-order-display-settings="builderThirdOrderDisplaySettings"
+                :third-order-mirror="builderThirdOrderMirror"
+                :third-order-opposed="builderThirdOrderOpposed"
                 :fold-values="builderFoldValues"
                 :fold-values-materialized="true"
                 :fold-mode="builderFoldMode"
@@ -116,6 +120,11 @@
                 @offset-update="updateBuilderOffset"
                 @scale-update="updateBuilderScale"
                 @twist-update="updateBuilderTwist"
+                @third-order-initial-update="updateBuilderThirdOrderInitial"
+                @third-order-strength-update="updateBuilderThirdOrderStrength"
+                @third-order-timing-update="updateBuilderThirdOrderTiming"
+                @update:third-order-mirror="updateBuilderThirdOrderMirror"
+                @update:third-order-opposed="updateBuilderThirdOrderOpposed"
                 @fold-update="updateBuilderFold"
                 @update:twist-mode="updateBuilderTwistMode"
                 @update:scale-mode="updateBuilderScaleMode"
@@ -381,6 +390,7 @@ const { columns } = storeToRefs(builderSettingsStore)
 const { decreaseColumns, increaseColumns } = builderSettingsStore
 const conceptsStore = useConceptsStore()
 const {
+  speedRatio,
   bpm,
   thick,
   spacing,
@@ -567,6 +577,10 @@ const {
   twistMode: builderTwistMode,
   twistValues: builderTwistValues,
   twistDisplayValues: builderTwistDisplayValues,
+  thirdOrderSettings: builderThirdOrderSettings,
+  thirdOrderDisplaySettings: builderThirdOrderDisplaySettings,
+  thirdOrderMirror: builderThirdOrderMirror,
+  thirdOrderOpposed: builderThirdOrderOpposed,
   foldValues: builderFoldValues,
   foldMode: builderFoldMode,
   foldBeat: builderFoldBeat,
@@ -581,6 +595,11 @@ const {
   updateScaleMode: updateBuilderScaleMode,
   updateTwist: updateBuilderTwist,
   updateTwistMode: updateBuilderTwistMode,
+  updateThirdOrderInitial: updateBuilderThirdOrderInitial,
+  updateThirdOrderStrength: updateBuilderThirdOrderStrength,
+  updateThirdOrderTiming: updateBuilderThirdOrderTiming,
+  updateThirdOrderMirror: updateBuilderThirdOrderMirror,
+  updateThirdOrderOpposed: updateBuilderThirdOrderOpposed,
   updateFold: updateBuilderFold,
   updateFoldMode: updateBuilderFoldMode,
   updateFoldBeat: updateBuilderFoldBeat,
@@ -592,6 +611,7 @@ const {
 } = useVtgBuilderPortionProperties({
   pattern: computed(() => preparedPattern.value.pattern),
   previews: resizedPreviewAnimations,
+  speedRatio,
   initialPropRotationOffsets,
   selectedIndex: selectedPreviewIndex,
   commit: (updated) => applyBuilderPatternUpdate(updated, undefined, true),
@@ -619,10 +639,23 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
   })
   if (!dropAllowed) return
 
+  const generationOptions = {
+    minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+    thirdOrder: {
+      settings: conceptsStore.vtgThirdOrderSettings,
+      mirror: conceptsStore.vtgThirdOrderMirror,
+      opposed: conceptsStore.vtgThirdOrderOpposed,
+    },
+  }
   const generated =
     drop.previewIndex === previewCount
-      ? appendVtgBuilderPattern(preparedPattern.value.pattern, drop.selection)
-      : insertVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, drop.previewIndex)
+      ? appendVtgBuilderPattern(preparedPattern.value.pattern, drop.selection, generationOptions)
+      : insertVtgBuilderPattern(
+          preparedPattern.value.pattern,
+          drop.selection,
+          drop.previewIndex,
+          generationOptions,
+        )
   if (!generated) return
   const selectedIndex = selectedPreviewIndex.value
   const nextSelectedIndex = resolveVtgBuilderSelectionAfterInsert(selectedIndex, drop.previewIndex)
