@@ -872,8 +872,7 @@ const visibleProperties = computed(() =>
     (property) =>
       (property.key !== 'turns' || props.showTurns) &&
       (property.key !== 'offset' || props.showOffset) &&
-      (property.key !== 'scale' || props.context === 'builder') &&
-      (property.key !== 'third-order' || props.context !== 'eight-step'),
+      (property.key !== 'scale' || props.context === 'builder'),
   ),
 )
 const propertyLabel = (property: (typeof properties)[number]) => property.label

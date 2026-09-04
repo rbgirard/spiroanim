@@ -130,12 +130,16 @@
     <ConceptAnimationControls :animation="animation" role-prefix="eight-step">
       <template #before-customize>
         <PatternPropertyControls
-          v-if="!builderActive && animation && selectedCell"
+          v-if="animation && selectedCell"
           context="eight-step"
           :animation="animation"
           :offset-values="propRotationOffsets"
           :twist-mode="vtgTwistMode"
           :twist-values="vtgTwistValues"
+          :third-order-settings="vtgThirdOrderSettings"
+          :third-order-display-settings="vtgThirdOrderDisplaySettings"
+          :third-order-mirror="vtgThirdOrderMirror"
+          :third-order-opposed="vtgThirdOrderOpposed"
           :fold-values="vtgFoldValues"
           :fold-values-materialized="vtgFoldValuesMaterialized"
           :fold-mode="vtgFoldMode"
@@ -149,6 +153,11 @@
           :sliders="sliders"
           @offset-update="updatePropRotationOffset"
           @twist-update="updateTwistSetting"
+          @third-order-initial-update="updateThirdOrderInitial"
+          @third-order-strength-update="updateThirdOrderStrength"
+          @third-order-timing-update="updateThirdOrderTiming"
+          @update:third-order-mirror="updateThirdOrderMirror"
+          @update:third-order-opposed="updateThirdOrderOpposed"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
           @update:fold-mode="updateFoldMode"
@@ -388,6 +397,10 @@ const emitPropertyAnimation = (animation: RootDataFinal) => {
 const {
   vtgTwistMode,
   vtgTwistValues,
+  vtgThirdOrderSettings,
+  vtgThirdOrderDisplaySettings,
+  vtgThirdOrderMirror,
+  vtgThirdOrderOpposed,
   vtgFoldValues,
   vtgFoldValuesMaterialized,
   vtgFoldMode,
@@ -400,6 +413,11 @@ const {
   vtgActiveProperty,
   updateTwistSetting,
   updateTwistMode,
+  updateThirdOrderInitial,
+  updateThirdOrderStrength,
+  updateThirdOrderTiming,
+  updateThirdOrderMirror,
+  updateThirdOrderOpposed,
   updateFoldSetting,
   updateFoldMode,
   updateFoldBeat,

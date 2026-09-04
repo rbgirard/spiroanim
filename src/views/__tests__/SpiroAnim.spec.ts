@@ -826,7 +826,7 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
-  it('auto-opens Pattern Viewer with structure editing and external properties disabled', async () => {
+  it('auto-opens Pattern Viewer with structure editing disabled and 8-Step properties available', async () => {
     const { wrapper, paneStore } = await mountEightStepView()
 
     expect(
@@ -840,7 +840,7 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('[data-role="vtg-transition-preview-swap"]').exists()).toBe(false)
     expect(wrapper.find('button[aria-label^="Delete pattern"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
-    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
 
     await wrapper.get('[data-role="builder-exit"]').trigger('click')
     await flushPromises()

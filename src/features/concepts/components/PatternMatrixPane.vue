@@ -1720,7 +1720,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       (exactPatternMatch
         ? undefined
         : inferPatternRelationshipPropRotationOffsets(patternAnimation, relationshipSelection))
-    bpm.value = match.bpm
+    // Builder matching identifies one extracted portion. BPM belongs to the complete pattern, so
+    // selecting a portion must not replace the user's global VTG setting with that slice's BPM.
+    if (!props.builderActive) bpm.value = match.bpm
     scale.value = match.scale
     thick.value = animation.thick
     paths.value = animation.paths

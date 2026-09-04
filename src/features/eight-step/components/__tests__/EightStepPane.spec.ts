@@ -665,7 +665,7 @@ describe('EightStepPane', () => {
     expect(wrapper.emitted('builderOpen')).toHaveLength(1)
   })
 
-  it('applies whole-pattern Offset, Rotate, and Twist properties without losing the match', async () => {
+  it('applies whole-pattern Offset, Rotate, Twist, and Third Order properties', async () => {
     const animation = createDefaultEightStepAnimation({
       concept: '8stp',
       reference: '4-EI',
@@ -677,6 +677,19 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Offset')
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Rotate')
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Twist')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Third Order')
+
+    await wrapper.get('[data-role="eight-step-property-third-order-toggle"]').trigger('click')
+    await wrapper
+      .get<HTMLInputElement>('[data-role="eight-step-third-order-strength-0"]')
+      .setValue('60')
+    const thirdOrder = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
+      | RootDataFinal
+      | undefined
+    expect(thirdOrder?.props[0]?.anim[0]?.strength).toBe(600)
+
+    await wrapper.setProps({ animation: thirdOrder })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
 
     await wrapper.get('[data-role="eight-step-property-twist-toggle"]').trigger('click')
     await wrapper.get<HTMLInputElement>('input[data-role^="eight-step-twist-0-"]').setValue('10')
@@ -833,7 +846,7 @@ describe('EightStepPane', () => {
     expect(mirroredFold && findEightStepPatternMatch(mirroredFold)?.reference).toBe('4-EI')
   })
 
-  it('hides whole-pattern properties while Pattern Viewer is open', async () => {
+  it('keeps whole-pattern properties available while Pattern Viewer is open', async () => {
     const animation = createDefaultEightStepAnimation({
       concept: '8stp',
       reference: '4-EI',
@@ -842,7 +855,9 @@ describe('EightStepPane', () => {
     const wrapper = mount(EightStepPane, { props: { animation, builderActive: true } })
 
     await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
-    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Offset')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Rotate')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Twist')
 
     await wrapper.setProps({ builderActive: false })
     expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)

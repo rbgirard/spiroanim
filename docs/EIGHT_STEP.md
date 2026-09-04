@@ -233,6 +233,10 @@ Once a cell is active, changing any applicable control rebuilds that selection. 
 shared pattern and player defaults and restores Diamond, while retaining the selected cell. On the
 first empty animation, Eight Step resets its controls and chooses a random initial cell.
 
+The whole-pattern Properties controls remain available in the Eight Step pane while Pattern Viewer
+is open. They edit the complete Eight Step animation, while the Properties controls shown after
+selecting a Viewer portion edit only that portion.
+
 Pattern creation replaces the two pattern props, assigns the standard Green and Orange prop
 defaults, and preserves unrelated current root settings. Scale is written to both props' initial
 frames and the corresponding player distance is updated. BPM is clamped to the shared VTG range.

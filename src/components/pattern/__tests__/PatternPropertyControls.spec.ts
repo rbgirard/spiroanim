@@ -333,7 +333,7 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.get('[aria-label="Right Third Order"]').isVisible()).toBe(true)
   })
 
-  it('hides Initial for later Builder portions and omits Third Order from Eight Step properties', () => {
+  it('hides Initial for later Builder portions and includes Third Order in Eight Step properties', () => {
     const builder = mount(PatternPropertyControls, {
       props: { context: 'builder', activeProperty: 'third-order', firstEditableFrameIndex: 1 },
     })
@@ -343,7 +343,7 @@ describe('PatternPropertyControls', () => {
     expect(builder.find('[data-role="builder-third-order-strength-0"]').exists()).toBe(true)
     expect(builder.find('[data-role="builder-third-order-timing-0"]').exists()).toBe(true)
     expect(eightStep.find('[data-role="eight-step-property-third-order-toggle"]').exists()).toBe(
-      false,
+      true,
     )
   })
 

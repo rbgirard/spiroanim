@@ -3643,7 +3643,9 @@ describe('VtgPane', () => {
     const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     const second = createDefaultVtgAnimation({ reference: '3-3', speedRatio: '1:3' })
     if (!first || !second) throw new Error('Expected supported VTG animations')
-    useConceptsStore().elementalLayout = false
+    const conceptsStore = useConceptsStore()
+    conceptsStore.elementalLayout = false
+    conceptsStore.bpm = 20
 
     const matches = ['1-1', '3-3'] as const
     let matchIndex = 0
@@ -3681,6 +3683,7 @@ describe('VtgPane', () => {
     await vi.waitFor(() => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
+    expect(conceptsStore.bpm).toBe(20)
     expect(wrapper.emitted('patternPreview')).toBeUndefined()
     expect(matchVtg.mock.calls[0]?.[0].lastSelection).toBeUndefined()
 
@@ -3690,6 +3693,7 @@ describe('VtgPane', () => {
         describeVtgBuilderMotion(second),
       )
     })
+    expect(conceptsStore.bpm).toBe(20)
     expect(wrapper.emitted('patternPreview')).toBeUndefined()
 
     await wrapper.setProps({ builderMatchAnimation: undefined })

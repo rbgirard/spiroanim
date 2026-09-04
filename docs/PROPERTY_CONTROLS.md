@@ -106,11 +106,11 @@ Motion, Camera Orbit, and Camera Center expose the shared inheritable Precision 
 to Disabled and renders authored Move and Distance at one tenth scale without changing their raw
 editor or query values.
 
-### VTG and Builder/Viewer Third Order controls
+### VTG, Eight Step, and Builder/Viewer Third Order controls
 
-The shared pattern Properties panel ends with a `Third Order` tab in VTG and in the selected
-Builder/Viewer portion controls. It has independent Left and Right columns and the description
-`Hand path manipulations`. It does not use Simple and Advanced modes.
+The shared pattern Properties panel ends with a `Third Order` tab in VTG, Eight Step, and the
+selected Builder/Viewer portion controls. It has independent Left and Right columns and the
+description `Hand path manipulations`. It does not use Simple and Advanced modes.
 
 Each Initial and Timing dropdown offers `Undefined`, followed by Anti and Pro choices for `1:1`,
 `2:1`, `1:2`, `1:3`, `2:3`, `1:4`, `1:5`, and `2:5`. Pro is the in-spin relationship. These
