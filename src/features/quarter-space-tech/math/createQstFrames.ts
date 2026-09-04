@@ -57,7 +57,7 @@ export const createQstFrames = (positions: readonly QstPosition[]): AnimReadable
     return {
       arc: ((normalizeAngle(MathUtils.radToDeg(arc)) % 360) + 360) % 360,
       plane: normalizeAngle(MathUtils.radToDeg(plane)),
-      ...(index === 0 ? { scale: 8, turns: 0 } : { turns: -360 }),
+      ...(index === 0 ? { scale: 80, turns: 0 } : { turns: -360 }),
     }
   })
 }

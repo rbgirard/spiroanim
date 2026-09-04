@@ -109,7 +109,8 @@ features, replaces pattern props, and then assigns `ROOT.value`. The normal rout
 subsequently serializes it.
 
 VTG matching identifies patterns from their normalized authored `turns`, `arc`, `plane`, and `axis`
-frame values, and identifies Scale from the first frame's internal scale. Matching authored frames
+frame values. Scale is recovered separately from the first frame's internal hundredths, while Warp
+and Strength are deliberately excluded from the structural signature. Matching authored frames
 is important because two closed cycles can compile to the same geometry while retaining different
 first-frame instructions that identify their selected starting beat. The authored rotation axis is
 also pattern-defining and distinguishes cells whose hand paths coincide but whose prop rotations do
@@ -168,7 +169,7 @@ quarter-orientation radios.
 The reciprocal transition internally subdivides every authored frame interval in two and doubles
 the stored animation BPM before adding its relationship changes. The added frame is the midpoint of
 the interval: incremental turns and arcs are
-halved, while scale, depth, and adjustment values are interpolated. The BPM control continues to
+halved, while scale, strength, depth, and adjustment values are interpolated. The BPM control continues to
 show the user's original value, and matching maps the stored BPM back to that displayed value.
 Because both rate and frame count change by the same multiplier, total duration, interval endpoints,
 and visible motion remain unchanged. Subdivision derives its output from the animation's actual

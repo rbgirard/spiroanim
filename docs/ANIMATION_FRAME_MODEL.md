@@ -45,18 +45,20 @@ Operations that change the first frame must reconstruct it.
 `AnimData` is sparse. A missing property either inherits from the preceding frame or uses a
 per-frame default. These are different behaviors.
 
-| Property |     First-frame default | Later frame when undefined | Role                                                      |
-| -------- | ----------------------: | -------------------------- | --------------------------------------------------------- |
-| `turns`  |                     `0` | Inherit                    | Incoming rotation amount                                  |
-| `twist`  |                     `0` | Inherit                    | Incoming local-axis roll amount                           |
-| `beats`  |                     `1` | Inherit                    | Duration of the outgoing segment                          |
-| `scale`  |                    `10` | Inherit                    | State at this frame                                       |
-| `depth`  |                     `0` | Inherit                    | State at this frame                                       |
-| `type`   |               Spherical | Inherit                    | Incoming transition type                                  |
-| `adjust` |                     `0` | Inherit                    | Adjusted rotation state                                   |
-| `arc`    |                     `0` | Inherit                    | Incoming position arc and spherical rotation contribution |
-| `plane`  |                     `0` | Always default to `0`      | Incoming position plane                                   |
-| `axis`   | Current frame's `plane` | Current frame's `plane`    | Incoming rotation axis                                    |
+| Property   |     First-frame default | Later frame when undefined | Role                                                      |
+| ---------- | ----------------------: | -------------------------- | --------------------------------------------------------- |
+| `turns`    |                     `0` | Inherit                    | Incoming rotation amount                                  |
+| `twist`    |                     `0` | Inherit                    | Incoming local-axis roll amount                           |
+| `beats`    |                     `1` | Inherit                    | Duration of the outgoing segment                          |
+| `scale`    |           `100` (`1.0`) | Inherit                    | Radius state in internal hundredths                       |
+| `warp`     |                     `0` | Inherit                    | Incoming auxiliary hand-path rotation in degrees          |
+| `strength` |         `1000` (`100%`) | Inherit                    | Warp contribution in internal tenths of a percent         |
+| `depth`    |                     `0` | Inherit                    | State at this frame                                       |
+| `type`     |               Spherical | Inherit                    | Incoming transition type                                  |
+| `adjust`   |                     `0` | Inherit                    | Adjusted rotation state                                   |
+| `arc`      |                     `0` | Inherit                    | Incoming position arc and spherical rotation contribution |
+| `plane`    |                     `0` | Always default to `0`      | Incoming position plane                                   |
+| `axis`     | Current frame's `plane` | Current frame's `plane`    | Incoming rotation axis                                    |
 
 `plane` and `axis` do not inherit from the preceding frame. A repeated nonzero `plane` therefore
 cannot be deleted merely because the previous frame used the same value. `axis` can be deleted
@@ -110,6 +112,11 @@ adju = rot rotated around rotx by adjust
 
 `adju` is the adjusted orientation used by smooth rotation blending.
 
+Warp compiles a second position chain, `warpPos` and `warpx`, from the same Plane as the canonical
+position but with `Arc + Warp` angular movement. This mirrors the relationship between Arc and
+Turns without using or changing the prop's rotation chain. Canonical `pos` and `posx` remain
+unchanged, so structural pattern matching can deliberately ignore Warp.
+
 Twist is a signed local-axis roll added during each incoming frame interval. Compilation performs
 a prefix sum and stores both the inherited interval `twist` and absolute `twistRoll` at every
 frame. Setting Twist to zero stops adding roll without undoing the accumulated orientation. The
@@ -119,19 +126,21 @@ worker can therefore seek directly to any frame without replaying earlier interv
 
 A displayed segment combines values from both endpoint frames.
 
-| Behavior                       | Source                                              |
-| ------------------------------ | --------------------------------------------------- |
-| Segment duration               | `p1.beats`                                          |
-| Starting position and rotation | `p1.pos`, `p1.rot`                                  |
-| Starting adjusted rotation     | `p1.adju`                                           |
-| Starting scale and depth       | `p1.scale`, `p1.depth`                              |
-| Transition type                | `p2.type`                                           |
-| Spherical position path        | Rotate `p1.pos` around `p2.posx` by `p2.arc`        |
-| Linear position path           | Interpolate the scaled Cartesian endpoints          |
-| Rotation path                  | Rotate `p1.rot` around `p2.rotx`                    |
-| Rotation amount                | `p2.turns + p2.adjust`, plus `p2.arc` for Spherical |
-| Local prop roll                | `p1.twistRoll + p2.twist * segment progress`        |
-| Ending scale and depth         | `p2.scale`, `p2.depth`                              |
+| Behavior                       | Source                                                            |
+| ------------------------------ | ----------------------------------------------------------------- |
+| Segment duration               | `p1.beats`                                                        |
+| Starting position and rotation | `p1.pos`, `p1.rot`                                                |
+| Starting adjusted rotation     | `p1.adju`                                                         |
+| Starting hand state            | `p1.pos`, `p1.scale`, `p1.strength`, `p1.depth`                   |
+| Transition type                | `p2.type`                                                         |
+| Spherical hand path            | Strength blend of canonical Arc and Warp vectors, scaled together |
+| Linear hand path               | Interpolate the scaled canonical `pos` endpoints                  |
+| Rotation path                  | Rotate `p1.rot` around `p2.rotx`                                  |
+| Rotation amount                | `p2.turns`, plus `p2.arc` for Spherical                           |
+| Rotation adjustment            | `p2.adjust`, with optional smooth blending from `p1.adjust`       |
+| Local prop roll                | `p1.twistRoll + p2.twist * segment progress`                      |
+| Ending hand state              | `p2.pos`, `p2.scale`, `p2.strength`, `p2.depth`                   |
+| Warp rotation for the segment  | `p2.arc + p2.warp`                                                |
 
 The same setup routine is used for playback and for constructing visible path/hand lines. A
 management operation must therefore preserve the incoming axes on the new `p2`, not just its final
@@ -146,6 +155,31 @@ movement.
 For a Linear transition, the worker applies each frame's Scale to its endpoint before
 interpolating. Interpolating position and Scale separately and then multiplying them would produce
 a quadratic curve when both values change.
+
+For a Spherical transition, the worker samples the canonical Arc vector `C` and the independently
+compiled Warp vector `W`, then calculates the rendered hand position as:
+
+```text
+weight = Strength / 2
+hand = Scale * ((1 - weight) * C + weight * W)
+```
+
+Strength is normalized from 0% to 100%. At 0%, the formula is exactly the established `C * Scale`
+behavior. Increasing Strength deepens the lobes without changing their outer boundary: when the
+vectors align, the hand remains at `Scale`. When the vectors oppose, its inner radius is
+`Scale * (1 - Strength)`. Strength 100% can therefore reach the center, while lower values retain a
+rounded inner radius. Scale controls the size of the complete result independently. When Warp is
+zero from the start, `C` and `W` remain aligned, so changing Strength does not alter the ordinary
+scaled path. After Warp has accumulated a phase difference, setting Warp to zero stops additional
+relative rotation; setting Strength to zero suppresses the deformation immediately.
+
+Assigning Warp the same interval values as Turns reproduces VTG timing geometry without coupling
+the hand path to the prop. For timing `p:q`, anti-spin produces `p + q` petals and in-spin produces
+`abs(q - p)` petals over the complete timing cycle. With 45-degree intervals, `2:3` uses Warp
+`-112.5` for five anti-spin petals or `22.5` for one in-spin petal across its sixteen-interval
+cycle. Linear transitions remain straight and ignore Warp. Paths, Hands, Nodes, Anchors, and Arms
+use the same rendered position as live playback.
+Motion and Depth are applied independently afterward.
 
 ## Independent Motion frames
 
@@ -170,9 +204,11 @@ Camera Orbit, and Camera Center. Callers can independently include or exclude in
 Animation, Motion, and Camera tracks.
 
 Animation Manage also exposes Double Frames and Halve Frames across every prop. Double Frames
-inserts the exact intermediate frame in each authored interval and doubles BPM. Turns, Twist, and Arc are
-split between the two intervals; Scale, Depth, and Adjust are interpolated; and Plane and Axis are
-transported through the continuation frame. Because Prop Motion and Camera are independent
+inserts the intermediate frame in each authored interval and doubles BPM. Turns, Twist, Warp, and Arc are
+split between the two intervals; Scale, Strength, Depth, and Adjust are interpolated; and Plane and Axis are
+transported through the continuation frame. Because Warp is an accumulated angular channel, the
+subdivided auxiliary-vector path remains exactly representable and does not disable Double or Halve.
+Because Prop Motion and Camera are independent
 timelines, effective Beats values on multi-frame tracks are multiplied by two so doubling BPM does
 not change their absolute playback timing. A single-frame Motion or Camera track has no interval, so
 its Beats value remains unchanged. Camera Orbit owns Camera Beats; Camera Center remains beatless.
@@ -274,6 +310,11 @@ Camera Orbit and removes Distance from finalized root settings.
 
 QS version 6 adds Precision to Motion and both Camera paths. Older versions compile its missing
 value as `false`.
+
+QS version 12 adds Warp and Strength and changes Scale's internal storage from tenths to hundredths.
+Strength is stored as integer tenths of a percent from `0` through `1000`. When a Version 1-11 URL
+is opened by the current decoder, authored Scale values are multiplied by ten exactly once. Display
+values remain unchanged: raw `100`, `110`, and `111` render as `1.0`, `1.1`, and `1.11`.
 
 ## Sparse frame compaction
 

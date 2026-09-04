@@ -1,5 +1,6 @@
 import type { VtgBuilderScaleMode, VtgBuilderScaleValues } from '@/features/builder/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { toInternalScale } from '@/domain/animation/scale'
 
 export interface ApplyVtgBuilderScaleSettingsOptions {
   firstEditableFrameIndex?: number
@@ -31,7 +32,7 @@ export const applyVtgBuilderScaleSettings = (
           (mode === 'advanced' || frameIndex === firstEditableFrameIndex) &&
           value !== undefined
         ) {
-          nextFrame.scale = Math.round(value * 10)
+          nextFrame.scale = toInternalScale(value)
         }
         beat += frame.beats ?? 0.5
         return nextFrame

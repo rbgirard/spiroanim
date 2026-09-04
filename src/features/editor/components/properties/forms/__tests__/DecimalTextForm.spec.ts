@@ -46,4 +46,29 @@ describe('DecimalTextForm', () => {
     await wrapper.get('input').setValue('-1.26')
     expect(setter).toHaveBeenLastCalledWith('turns', -1.3)
   })
+
+  it('edits hundredth Scale storage in display units with at least one decimal place', async () => {
+    const setter = vi.fn<SetterFunc>()
+    const wrapper = mount(DecimalTextForm, {
+      props: {
+        data: [111, true, '1.11', false],
+        vals: {
+          name: 'scale',
+          neg: true,
+          displayDivisor: 100,
+          displayMinimumFractionDigits: 1,
+          displayMaximumFractionDigits: 2,
+        },
+        setter,
+      },
+      global: { provide: { store: ref('scale-text-form') } },
+    })
+    const input = wrapper.get<HTMLInputElement>('input')
+
+    expect(input.attributes('inputmode')).toBe('decimal')
+    expect(input.element.value).toBe('1.11')
+
+    await input.setValue('-1.25')
+    expect(setter).toHaveBeenLastCalledWith('scale', -125)
+  })
 })

@@ -23,8 +23,26 @@ const createRoot = () =>
     props: [
       {
         anim: [
-          { beats: 1, turns: 0, scale: 10, depth: 0, adjust: 0, arc: 0 },
-          { turns: 90, scale: 20, depth: 10, adjust: 20, arc: 90, plane: 45 },
+          {
+            beats: 1,
+            turns: 0,
+            scale: 100,
+            warp: 0,
+            strength: 200,
+            depth: 0,
+            adjust: 0,
+            arc: 0,
+          },
+          {
+            turns: 90,
+            scale: 200,
+            warp: 0,
+            strength: 600,
+            depth: 10,
+            adjust: 20,
+            arc: 90,
+            plane: 45,
+          },
         ],
       },
     ],
@@ -61,7 +79,9 @@ describe('ResampleAnimationFrames', () => {
     expect(ROOT.value.props[0]!.anim).toHaveLength(3)
     expect(ROOT.value.props[0]!.anim[1]).toMatchObject({
       turns: 45,
-      scale: 15,
+      scale: 212,
+      warp: 0,
+      strength: 400,
       depth: 5,
       adjust: 10,
       arc: 45,
@@ -91,8 +111,14 @@ describe('ResampleAnimationFrames', () => {
     expect(double.attributes('aria-disabled')).toBe('true')
 
     ROOT.value = createRoot()
+    ROOT.value.props[0]!.anim[1]!.warp = 5
+    triggerRef(ROOT)
+    await nextTick()
+    expect(double.attributes('aria-disabled')).toBe('false')
+
+    ROOT.value = createRoot()
     await double.trigger('click')
-    ROOT.value.props[0]!.anim[1]!.scale = 16
+    ROOT.value.props[0]!.anim[1]!.scale = 160
     triggerRef(ROOT)
     await nextTick()
     expect(halve.attributes('aria-disabled')).toBe('true')

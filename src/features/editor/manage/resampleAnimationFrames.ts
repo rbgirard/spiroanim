@@ -17,6 +17,8 @@ const animationValueKeys = [
   'rotate',
   'beats',
   'scale',
+  'warp',
+  'strength',
   'depth',
   'type',
   'adjust',
@@ -86,8 +88,10 @@ const compiledFramesEqual = (
       frame.rebasePrimaryOrientation === comparison.rebasePrimaryOrientation &&
       nearlyEqual(frame.twistRoll, comparison.twistRoll) &&
       vectorsNearlyEqual(frame.pos, comparison.pos) &&
+      vectorsNearlyEqual(frame.warpPos, comparison.warpPos) &&
       vectorsNearlyEqual(frame.rot, comparison.rot) &&
       vectorsNearlyEqual(frame.posx, comparison.posx) &&
+      vectorsNearlyEqual(frame.warpx, comparison.warpx) &&
       vectorsNearlyEqual(frame.rotx, comparison.rotx) &&
       vectorsNearlyEqual(frame.yawx, comparison.yawx) &&
       vectorsNearlyEqual(frame.adjustx, comparison.adjustx) &&

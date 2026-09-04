@@ -20,7 +20,9 @@ describe('compiler frame semantics', () => {
         yaw: 90,
         rotate: 0,
         beats: 2,
-        scale: 10,
+        scale: 100,
+        warp: 0,
+        strength: 1000,
         depth: 0,
         type: TTYPE.SPHE,
         adjust: 0,
@@ -34,7 +36,9 @@ describe('compiler frame semantics', () => {
         yaw: 90,
         rotate: 0,
         beats: 2,
-        scale: 10,
+        scale: 100,
+        warp: 0,
+        strength: 1000,
         depth: 0,
         type: TTYPE.SPHE,
         adjust: 0,
@@ -48,7 +52,9 @@ describe('compiler frame semantics', () => {
         yaw: 90,
         rotate: 0,
         beats: 2,
-        scale: 10,
+        scale: 100,
+        warp: 0,
+        strength: 1000,
         depth: 0,
         type: TTYPE.SPHE,
         adjust: 0,
@@ -64,6 +70,24 @@ describe('compiler frame semantics', () => {
       { yaw: -90, rotate: 180 },
       { yaw: -90, rotate: 0 },
       { yaw: -90, rotate: -90 },
+    ])
+  })
+
+  it('inherits Warp timing until an explicit zero stops additional relative rotation', () => {
+    expect(resolveAnimationFrames([{ warp: 90 }, {}, { warp: 0 }, {}])).toMatchObject([
+      { warp: 90 },
+      { warp: 90 },
+      { warp: 0 },
+      { warp: 0 },
+    ])
+  })
+
+  it('inherits Strength until an explicit zero restores the ordinary hand path', () => {
+    expect(resolveAnimationFrames([{ strength: 500 }, {}, { strength: 0 }, {}])).toMatchObject([
+      { strength: 500 },
+      { strength: 500 },
+      { strength: 0 },
+      { strength: 0 },
     ])
   })
 

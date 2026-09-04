@@ -7,6 +7,7 @@ import type {
 } from '@/features/quarter-space-tech/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import { toDisplayScale } from '@/domain/animation/scale'
 
 const booleanOptions = [false, true] as const
 
@@ -38,7 +39,7 @@ const compileMatchData = (
     const compiled = rootCompile(animation)
     const scale = compiled.props[0]?.anim[0]?.scale
     if (scale === undefined) return undefined
-    return { signature: rootSignature(compiled), scale: scale / 10 }
+    return { signature: rootSignature(compiled), scale: toDisplayScale(scale) }
   } catch {
     return undefined
   }

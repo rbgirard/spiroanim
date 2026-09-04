@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest'
 import { COLSET, MOTION_SHAPE, RADIUS, TTYPE } from '@/domain/animation/AnimStruct'
 import { doubleAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
 import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { createSpiroAnimator, type LineMaterial2 } from '@/workers/animation/createSpiroAnimator'
@@ -83,8 +84,8 @@ const createRoot = (arms: boolean, hands = false): RootData => ({
     {
       motion: angularMotion([{ beats: 1, move: [2, 0, 0] }, {}]),
       anim: [
-        { beats: 1, scale: 10 },
-        { scale: 20, arc: 90 },
+        { beats: 1, scale: 100 },
+        { scale: 200, arc: 90 },
       ],
     },
   ],
@@ -468,7 +469,7 @@ describe('createSpiroAnimator prop orientation', () => {
     root.prop = 3
     root.props[0]!.motion = []
     root.props[0]!.anim = [
-      { arc: 180, scale: 7 },
+      { arc: 180, scale: 70 },
       { arc: 90, turns: -360 },
       { plane: 90 },
       {},
@@ -544,13 +545,138 @@ describe('createSpiroAnimator linear scaling', () => {
 
     const start = new Vector3()
       .fromArray(prop.anim[0]!.pos)
-      .multiplyScalar((RADIUS * prop.anim[0]!.scale) / 10)
+      .multiplyScalar((RADIUS * prop.anim[0]!.scale) / 100)
     const end = new Vector3()
       .fromArray(prop.anim[1]!.pos)
-      .multiplyScalar((RADIUS * prop.anim[1]!.scale) / 10)
+      .multiplyScalar((RADIUS * prop.anim[1]!.scale) / 100)
     const expectedMidpoint = start.lerp(end, 0.5)
 
     expect(modelGroup.position.distanceTo(expectedMidpoint)).toBeCloseTo(0)
+  })
+
+  it('keeps Linear endpoints canonical and connects them with a straight line', () => {
+    const root = createRoot(false)
+    root.props[0]!.motion = []
+    root.props[0]!.anim[0]!.warp = -45
+    root.props[0]!.anim[1]!.warp = 90
+    root.props[0]!.anim[1]!.type = TTYPE.LINE
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    animator.seek(500)
+
+    const expected = new Vector3()
+      .fromArray(prop.anim[0]!.pos)
+      .multiplyScalar(RADIUS * (prop.anim[0]!.scale / 100))
+      .lerp(
+        new Vector3()
+          .fromArray(prop.anim[1]!.pos)
+          .multiplyScalar(RADIUS * (prop.anim[1]!.scale / 100)),
+        0.5,
+      )
+    expect(getAnimatedModelGroup(scene).position.distanceTo(expected)).toBeCloseTo(0)
+  })
+
+  it('traces an auxiliary spherical rotation without changing prop orientation', () => {
+    const warpedRoot = createRoot(false)
+    warpedRoot.props[0]!.motion = []
+    warpedRoot.props[0]!.anim[1]!.warp = 90
+    warpedRoot.props[0]!.anim[1]!.strength = 1000
+    const canonicalRoot = structuredClone(warpedRoot)
+    delete canonicalRoot.props[0]!.anim[1]!.warp
+
+    const create = (root: RootData) => {
+      const scene = new Scene()
+      const compiled = rootCompile(rootFinal(root))
+      const animator = createSpiroAnimator({
+        scene,
+        speed: 1,
+        girth: 2,
+        bpm: compiled.bpm,
+        smooth: compiled.smooth,
+        prop: compiled.props[0]!,
+        completed: () => undefined,
+        width: 800,
+        height: 600,
+        distance: 22,
+        fov: 45,
+        timeline: false,
+      })
+      animator.seek(500)
+      return getAnimatedModelGroup(scene)
+    }
+
+    const warped = create(warpedRoot)
+    const canonical = create(canonicalRoot)
+
+    expect(warped.position.distanceTo(canonical.position)).toBeGreaterThan(0.1)
+    expect(Math.abs(warped.quaternion.dot(canonical.quaternion))).toBeCloseTo(1)
+  })
+
+  it('uses Strength for the Warp deformation independently from Scale', () => {
+    const root = createRoot(false, true)
+    root.paths = true
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [
+      { beats: 1, arc: 0, warp: 0, strength: 500, scale: 80 },
+      { arc: 90, warp: 90, strength: 500, scale: 80 },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    animator.seek(500)
+
+    const canonical = new Vector3()
+      .fromArray(prop.anim[0]!.pos)
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.posx), Math.PI / 4)
+    const auxiliary = new Vector3()
+      .fromArray(prop.anim[0]!.warpPos)
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.warpx), Math.PI / 2)
+    const expected = applyWarpPath(canonical, auxiliary, 0.8, 0.5, new Vector3()).multiplyScalar(
+      RADIUS,
+    )
+    const position = getAnimatedModelGroup(scene).position
+    const pathLine = getLineByColor(scene, COLSET[2]![2])
+    if (!pathLine) throw new Error('Expected the Warp-adjusted hand line')
+    const nearestPathPoint = Math.min(
+      ...getLinePoints(pathLine).map((point) => point.distanceTo(expected)),
+    )
+
+    expect(position.distanceTo(expected)).toBeCloseTo(0)
+    expect(position.length()).toBeGreaterThan(0)
+    expect(nearestPathPoint).toBeLessThan(0.1)
   })
 
   it('interpolates Motion independently from the animation frames', () => {
@@ -630,9 +756,9 @@ describe('createSpiroAnimator linear scaling', () => {
     root.paths = true
     root.nodes = true
     root.props[0]!.anim = [
-      { beats: 1, scale: 10, arc: 0, turns: 0 },
-      { scale: 10, arc: 0, turns: 0 },
-      { scale: 10, arc: 0, turns: 0 },
+      { beats: 1, scale: 100, arc: 0, turns: 0 },
+      { scale: 100, arc: 0, turns: 0 },
+      { scale: 100, arc: 0, turns: 0 },
     ]
     root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
@@ -710,7 +836,7 @@ describe('createSpiroAnimator linear scaling', () => {
   it('continues baked Paths and Hands when Motion outlasts Animation', () => {
     const root = createRoot(false, true)
     root.paths = true
-    root.props[0]!.anim = [{ beats: 1, scale: 10, arc: 0, turns: 0 }]
+    root.props[0]!.anim = [{ beats: 1, scale: 100, arc: 0, turns: 0 }]
     root.props[0]!.motion = angularMotion([{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }])
 
     const scene = new Scene()
@@ -744,8 +870,8 @@ describe('createSpiroAnimator linear scaling', () => {
     const root = createRoot(false)
     root.paths = true
     root.props[0]!.anim = [
-      { beats: 4, scale: 10, arc: 0, turns: 0 },
-      { scale: 10, arc: 0, turns: 0 },
+      { beats: 4, scale: 100, arc: 0, turns: 0 },
+      { scale: 100, arc: 0, turns: 0 },
     ]
     root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
@@ -784,8 +910,8 @@ describe('createSpiroAnimator linear scaling', () => {
   it('holds the final animated pose while longer Motion continues', () => {
     const root = createRoot(false)
     root.props[0]!.anim = [
-      { beats: 1, scale: 10, arc: 0 },
-      { scale: 10, arc: 90 },
+      { beats: 1, scale: 100, arc: 0 },
+      { scale: 100, arc: 90 },
     ]
     root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
@@ -830,9 +956,9 @@ describe('createSpiroAnimator linear scaling', () => {
     const root = createRoot(false)
     root.paths = true
     root.props[0]!.anim = [
-      { beats: 1, scale: 10 },
-      { type: TTYPE.LINE, scale: 20, arc: 90 },
-      { type: TTYPE.LINE, scale: 15, arc: 90 },
+      { beats: 1, scale: 100 },
+      { type: TTYPE.LINE, scale: 200, arc: 90 },
+      { type: TTYPE.LINE, scale: 150, arc: 90 },
     ]
 
     const scene = new Scene()

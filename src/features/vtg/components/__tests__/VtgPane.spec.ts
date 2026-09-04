@@ -28,7 +28,7 @@ import {
 } from '@/features/vtg/qtr/matchQtrAnimation'
 import type { QtrPatternSelection, VtgPatternSelection, VtgSpeedRatio } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import type { RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 import type {
@@ -1042,13 +1042,13 @@ describe('VtgPane', () => {
   })
 
   it('keeps a matched prop offset across cells while every cell follows Start', async () => {
-    const version = await loadSpiroAnimQSVersion(11)
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
     const codec = await useSpiroAnimQS(
       version.VDEF,
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      11,
+      CURRENT_SPIRO_ANIM_QS_VERSION,
     )
-    const animation = codec.decodeQS(
+    const animation = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.myQR3s.5JEQpg.......&x0=_r_&m0=_1_mxqv__&p1=N__.biQ.5L_Qpg.......&x1=_r_&c=_g_bhq&v=11',
@@ -1091,13 +1091,13 @@ describe('VtgPane', () => {
   })
 
   it('keeps a supplied match prop rotation offset across ratios and clears it when resetting', async () => {
-    const version = await loadSpiroAnimQSVersion(11)
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
     const codec = await useSpiroAnimQS(
       version.VDEF,
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      11,
+      CURRENT_SPIRO_ANIM_QS_VERSION,
     )
-    const animation = codec.decodeQS(
+    const animation = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
@@ -1183,13 +1183,13 @@ describe('VtgPane', () => {
   })
 
   it('does not accumulate a 180-degree prop phase when Start wraps from 4.5 to 1', async () => {
-    const version = await loadSpiroAnimQSVersion(11)
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
     const codec = await useSpiroAnimQS(
       version.VDEF,
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      11,
+      CURRENT_SPIRO_ANIM_QS_VERSION,
     )
-    const animation = codec.decodeQS(
+    const animation = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.g__QDk.5L_R3s.......&x0=_s_&m0=_1_mxqv__&p1=N__.5E0R3s_WQ.___Qpg_U0.......&x1=_s_&c=_i_bhq&v=11',

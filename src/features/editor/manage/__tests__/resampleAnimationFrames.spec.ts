@@ -26,18 +26,39 @@ const createAnimation = (): RootDataFinal =>
     props: [
       {
         anim: [
-          { beats: 1, turns: 0, scale: 10, depth: 0, adjust: 0, arc: 0 },
+          {
+            beats: 1,
+            turns: 0,
+            scale: 100,
+            warp: 0,
+            strength: 200,
+            depth: 0,
+            adjust: 0,
+            arc: 0,
+          },
           {
             turns: 90,
             twist: 90,
-            scale: 20,
+            scale: 200,
+            warp: 0,
+            strength: 600,
             depth: 10,
             adjust: 20,
             arc: 90,
             plane: 45,
             axis: -45,
           },
-          { turns: -180, twist: -180, scale: 10, depth: 0, adjust: 0, arc: 180, plane: -90 },
+          {
+            turns: -180,
+            twist: -180,
+            scale: 100,
+            warp: 0,
+            strength: 200,
+            depth: 0,
+            adjust: 0,
+            arc: 180,
+            plane: -90,
+          },
         ],
       },
     ],
@@ -50,12 +71,28 @@ const createAnimation = (): RootDataFinal =>
 const compiledFrameValues = (animation: RootDataFinal) =>
   rootCompile(animation).props.map((prop) =>
     prop.anim.map(
-      ({ turns, twist, twistRoll, beats, scale, depth, type, adjust, arc, plane, axis }) => ({
+      ({
         turns,
         twist,
         twistRoll,
         beats,
         scale,
+        warp,
+        strength,
+        depth,
+        type,
+        adjust,
+        arc,
+        plane,
+        axis,
+      }) => ({
+        turns,
+        twist,
+        twistRoll,
+        beats,
+        scale,
+        warp,
+        strength,
         depth,
         type,
         adjust,
@@ -80,7 +117,9 @@ describe('resampleAnimationFrames', () => {
       turns: 45,
       twist: 45,
       beats: 1,
-      scale: 15,
+      scale: 212,
+      warp: 0,
+      strength: 400,
       depth: 5,
       adjust: 10,
       arc: 45,
@@ -100,6 +139,10 @@ describe('resampleAnimationFrames', () => {
   })
 
   it('rejects doubled values outside property precision or BPM limits', () => {
+    const warped = createAnimation()
+    warped.props[0]!.anim[1]!.warp = 5
+    expect(doubleAnimationFrames(warped)).toBeDefined()
+
     const tenthsTurns = createAnimation()
     tenthsTurns.props[0]!.anim[1]!.turns = 0.2
     expect(rootCompile(doubleAnimationFrames(tenthsTurns)!).props[0]?.anim[1]?.turns).toBe(0.1)
@@ -109,7 +152,7 @@ describe('resampleAnimationFrames', () => {
     expect(doubleAnimationFrames(fractionalTurns)).toBeUndefined()
 
     const fractionalScale = createAnimation()
-    fractionalScale.props[0]!.anim[1]!.scale = 11
+    fractionalScale.props[0]!.anim[1]!.scale = 111
     expect(doubleAnimationFrames(fractionalScale)).toBeUndefined()
 
     const fractionalArc = createAnimation()
@@ -228,7 +271,7 @@ describe('resampleAnimationFrames', () => {
     expect(halveAnimationFrames(doubled)).toBeUndefined()
 
     const changedScale = doubleAnimationFrames(createAnimation())!
-    changedScale.props[0]!.anim[1]!.scale = 16
+    changedScale.props[0]!.anim[1]!.scale = 160
     expect(halveAnimationFrames(changedScale)).toBeUndefined()
 
     const changedContinuation = doubleAnimationFrames(createAnimation())!

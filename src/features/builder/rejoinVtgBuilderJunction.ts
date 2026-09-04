@@ -32,6 +32,8 @@ export const rejoinVtgBuilderJunction = (
       turns: compiledRelationship.turns,
       beats: compiledRelationship.beats,
       scale: compiledRelationship.scale,
+      warp: compiledRelationship.warp,
+      strength: compiledRelationship.strength,
       depth: compiledRelationship.depth,
       type: compiledRelationship.type,
       adjust: compiledRelationship.adjust,

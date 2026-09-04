@@ -39,6 +39,29 @@
       <br /><i>When undefined, this property inherits from the previous frame.</i>
     </template>
 
+    <template #warp>
+      <strong>Warp</strong><br />
+      Adds a second rotating vector to the hand path in the current <strong>Plane</strong>. Its
+      degrees act like <strong>Turns</strong>, but only for the hand path. The signed directions of
+      <strong>Arc</strong> and Arc + Warp determine in-spin or anti-spin timing without changing the
+      prop or Arc itself.<br />
+      <br /><i
+        >When undefined, this property inherits from the previous frame. Set it to zero to stop
+        adding relative hand-path rotation.</i
+      >
+    </template>
+
+    <template #strength>
+      <strong>Strength</strong><br />
+      Controls how strongly <strong>Warp</strong> reshapes the hand path without changing its outer
+      size. At 0%, the hand follows the ordinary scaled path. Increasing Strength deepens the
+      rounded lobes; 100% allows them to reach the center.<br />
+      <br /><i
+        >When undefined, this property inherits from the previous frame and initially defaults to
+        100%.</i
+      >
+    </template>
+
     <template #scale>
       <strong>Scale</strong><br />
       Controls the size or center of the movement or shape.<br />
@@ -112,6 +135,18 @@ const axis = reactive({
   neg: true,
 })
 
+const warp = reactive({
+  name: 'warp',
+  text: 'Warp',
+  component: 'Decimal',
+  undef: true,
+  mult: 5,
+  min: -18,
+  max: 18,
+  neg: true,
+  float: 10,
+})
+
 const vals = [
   arc,
   turns,
@@ -127,8 +162,30 @@ const vals = [
     max: 18,
     neg: true,
   },
-  { name: 'scale', text: 'Scale', component: 'Decimal', undef: true, mult: 1 },
+  {
+    name: 'scale',
+    text: 'Scale',
+    component: 'Decimal',
+    undef: true,
+    mult: 10,
+    neg: true,
+    displayDivisor: 100,
+    displayMinimumFractionDigits: 1,
+    displayMaximumFractionDigits: 2,
+  },
   { name: 'depth', text: 'Depth', component: 'Decimal', undef: true, mult: 1 },
+  warp,
+  {
+    name: 'strength',
+    text: 'Strength',
+    component: 'Decimal',
+    undef: true,
+    mult: 10,
+    min: -10,
+    max: 10,
+    displayDivisor: 10,
+    displayMaximumFractionDigits: 1,
+  },
 ]
 
 watchEffect(() => {

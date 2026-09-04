@@ -93,7 +93,7 @@ const exportPage = String.raw`<!doctype html>
           ...(isAnti === undefined ? {} : { isAnti }),
         })
         if (!animation) throw new Error('No VTG animation exists for ' + speedRatio + '/' + reference)
-        const adjustedScale = (animation.props[0]?.anim[0]?.scale ?? 0) / 10
+        const adjustedScale = (animation.props[0]?.anim[0]?.scale ?? 0) / 100
         const cameraDistance = animation.camera[0]?.orbit?.distance
 
         channel.send('resize', { width: size, height: size, ratio: 1 })

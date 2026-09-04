@@ -42,13 +42,16 @@ const compiledBoundaryStateMatches = (
 ): boolean =>
   expected.beats === actual.beats &&
   expected.scale === actual.scale &&
+  expected.strength === actual.strength &&
   expected.depth === actual.depth &&
   expected.type === actual.type &&
   expected.adjust === actual.adjust &&
   nearlyEqual(expected.twistRoll, actual.twistRoll) &&
   vectorsNearlyEqual(expected.pos, actual.pos) &&
+  vectorsNearlyEqual(expected.warpPos, actual.warpPos) &&
   vectorsNearlyEqual(expected.rot, actual.rot) &&
   vectorsNearlyEqual(expected.posx, actual.posx) &&
+  vectorsNearlyEqual(expected.warpx, actual.warpx) &&
   vectorsNearlyEqual(expected.rotx, actual.rotx) &&
   vectorsNearlyEqual(expected.yawx, actual.yawx) &&
   quaternionsNearlyEqual(expected.primaryOrient, actual.primaryOrient) &&
@@ -113,13 +116,17 @@ const subdivideFrame = (
   subdivisionCount: number,
 ): AnimData => {
   const progress = step / subdivisionCount
+  const scale = interpolate(start.scale, target.scale, progress)
+  const strength = interpolate(start.strength, target.strength, progress)
   return {
     turns: target.turns / subdivisionCount,
     twist: target.twist / subdivisionCount,
     yaw: target.yaw,
     rotate: target.rotate / subdivisionCount,
     beats: step === subdivisionCount ? target.beats : start.beats,
-    scale: interpolate(start.scale, target.scale, progress),
+    scale,
+    warp: target.warp / subdivisionCount,
+    strength,
     depth: interpolate(start.depth, target.depth, progress),
     type: target.type,
     adjust: interpolate(start.adjust, target.adjust, progress),
@@ -255,6 +262,11 @@ export const consolidateAnimationPlayback = (
         ).reduce<number>((sum, rotate) => sum + (rotate ?? 0), 0),
         beats: last.beats,
         scale: last.scale,
+        warp: Array.from(
+          { length: consolidationCount },
+          (_, offset) => compiledProp.anim[startIndex + offset]?.warp,
+        ).reduce<number>((sum, warp) => sum + (warp ?? 0), 0),
+        strength: last.strength,
         depth: last.depth,
         type: last.type,
         adjust: last.adjust,

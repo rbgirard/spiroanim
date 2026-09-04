@@ -32,6 +32,9 @@ import {
 
 import { InitialPoint, InitialOrtho } from '@/math/animation/OrthogonalFunc'
 import { motionPathOffset, sampleCompiledMotion } from '@/math/animation/MotionFunc'
+import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
+import { toScaleMultiplier } from '@/domain/animation/scale'
+import { toStrengthRatio } from '@/domain/animation/strength'
 
 import { Line2 } from 'three/examples/jsm/lines/Line2.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
@@ -146,6 +149,9 @@ export const createSpiroAnimator = (vars: {
     Pos2 = new Vector3(), // Second point used for linear animations
     scaledPos2 = new Vector3(), // Scaled endpoint used for linear animations
     PosX = new Vector3(), // Direction we're animating for spherical animations
+    WarpPos = new Vector3(), // Independent auxiliary hand-path vector
+    WarpX = new Vector3(), // Plane-defined direction of the auxiliary vector
+    WarpSample = new Vector3(),
     modelStartPrimaryOrientation = new Quaternion(),
     modelStartSecondaryOrientation = new Quaternion(),
     modelPrimaryOrientation = new Quaternion(),
@@ -185,7 +191,9 @@ export const createSpiroAnimator = (vars: {
     AnimStart = 0,
     AnimDuration = 0,
     PathType = 0,
-    angleApply = 0,
+    PositionPerform = 0,
+    WarpPerform = 0,
+    RotationArcPerform = 0,
     RotationPerform = 0,
     RotatePerform = 0,
     AdjustPerform = 0,
@@ -193,11 +201,15 @@ export const createSpiroAnimator = (vars: {
     TwistPerform = 0,
     scale1 = 0,
     scale2 = 0,
+    strength1 = 0,
+    strength2 = 0,
     depth1 = 0,
     depth2 = 0,
     psize: PPropKeys = 'size',
     scaleDiff = 0,
     scalePerc = 0,
+    strengthDiff = 0,
+    strengthPerc = 0,
     depthDiff = 0,
     depthPerc = 0,
     pathsIndex = -1,
@@ -236,16 +248,19 @@ export const createSpiroAnimator = (vars: {
 
       PathType = p2.type
 
-      Pos.fromArray(p1.pos) // Initial position
-      Pos2.fromArray(p2.pos) // Final position - for linear animations
+      Pos.fromArray(p1.pos) // Initial canonical hand position
+      Pos2.fromArray(p2.pos) // Final canonical hand position
+      WarpPos.fromArray(p1.warpPos) // Initial auxiliary hand-path vector
 
       RotX.fromArray(p2.rotx) // Primary rotation direction
       YawX.fromArray(p2.yawx) // Secondary rotation direction
       AdjustX.fromArray(p2.adjustx) // Primary adjustment direction
-      PosX.fromArray(p2.posx) // Position direction for Spherical Animations
+      PosX.fromArray(p2.posx) // Canonical Plane direction for spherical animations
+      WarpX.fromArray(p2.warpx) // Same authored Plane, independently accumulated timing
 
-      // For spherical animations, we add the Arc to Rotation
-      angleApply = PathType == TTYPE.LINE ? 0 : MathUtils.degToRad(p2.arc)
+      PositionPerform = PathType == TTYPE.LINE ? 0 : MathUtils.degToRad(p2.arc)
+      WarpPerform = PathType == TTYPE.LINE ? 0 : MathUtils.degToRad(p2.arc + p2.warp)
+      RotationArcPerform = PathType == TTYPE.LINE ? 0 : MathUtils.degToRad(p2.arc)
 
       RotationPerform = MathUtils.degToRad(p2.turns)
       RotatePerform = MathUtils.degToRad(p2.rotate)
@@ -253,9 +268,12 @@ export const createSpiroAnimator = (vars: {
       TwistStart = MathUtils.degToRad(p1.twistRoll)
       TwistPerform = MathUtils.degToRad(p2.twist)
 
-      scale1 = p1.scale / 10
-      scale2 = p2.scale / 10
+      scale1 = toScaleMultiplier(p1.scale)
+      scale2 = toScaleMultiplier(p2.scale)
       scaleDiff = scale2 - scale1
+      strength1 = toStrengthRatio(p1.strength)
+      strength2 = toStrengthRatio(p2.strength)
+      strengthDiff = strength2 - strength1
       depth1 = p1.depth / 10
       depth2 = p2.depth / 10
       depthDiff = depth2 - depth1
@@ -286,6 +304,7 @@ export const createSpiroAnimator = (vars: {
     // Values for transforming positions
     trans = (perc: number) => {
       scalePerc = scale1 + scaleDiff * perc
+      strengthPerc = strength1 + strengthDiff * perc
       depthPerc = depth1 + depthDiff * perc
     },
     // Calculates positions / rotations in an animation
@@ -326,10 +345,9 @@ export const createSpiroAnimator = (vars: {
       if (PathType == TTYPE.SPHE) {
         // Spherical
 
-        modelGroup.position
-          .copy(Pos)
-          .applyAxisAngle(PosX, perc * angleApply)
-          .multiplyScalar(scalePerc)
+        modelGroup.position.copy(Pos).applyAxisAngle(PosX, perc * PositionPerform)
+        WarpSample.copy(WarpPos).applyAxisAngle(WarpX, perc * WarpPerform)
+        applyWarpPath(modelGroup.position, WarpSample, scalePerc, strengthPerc, modelGroup.position)
       } else if (PathType == TTYPE.LINE) {
         // Linear
 
@@ -356,7 +374,7 @@ export const createSpiroAnimator = (vars: {
 
       // Primary Axis/Turns and secondary Yaw/Rotate are sampled independently, then composed.
       // Keeping the channels separate makes subdividing an interval exactly path-preserving.
-      modelSegmentRotation.setFromAxisAngle(RotX, (angleApply + RotationPerform) * perc)
+      modelSegmentRotation.setFromAxisAngle(RotX, (RotationArcPerform + RotationPerform) * perc)
       modelPrimaryOrientation.copy(modelSegmentRotation).multiply(modelStartPrimaryOrientation)
       modelSecondaryOrientation
         .copy(modelYawRotation.setFromAxisAngle(YawX, RotatePerform * perc))
@@ -647,13 +665,20 @@ export const createSpiroAnimator = (vars: {
       // Build Nodes
       if (nodes) {
         ppos.fromArray(anim[i]!.pos)
+        applyWarpPath(
+          ppos,
+          WarpSample.fromArray(anim[i]!.warpPos),
+          toScaleMultiplier(anim[i]!.scale),
+          toStrengthRatio(anim[i]!.strength),
+          ppos,
+        )
 
         const p = POINTS[closestPoint(ppos)]![0],
           sphere = new Mesh(PointMat[p]![geoType], PointMat[p]!.matnode)
 
         sphere.position
           .copy(ppos)
-          .multiplyScalar(RADIUS * scalePerc)
+          .multiplyScalar(RADIUS)
           .add(motionOffsetAt(animationTimes[i] ?? 0, pathMotionOffset))
 
         nodesGroup.add(sphere)
@@ -692,7 +717,7 @@ export const createSpiroAnimator = (vars: {
 
         // Spherical Path
         if (PathType == TTYPE.SPHE)
-          posPoints = rotationPointsAt(angleApply, stepPos, PosX, uniqueSamplePercentages)
+          posPoints = rotationPointsAt(PositionPerform, stepPos, PosX, uniqueSamplePercentages)
         // Linear Path
         else {
           stepPos.multiplyScalar(scale1)
@@ -705,7 +730,17 @@ export const createSpiroAnimator = (vars: {
 
         const cRot = new Vector3()
 
-        // Update positions to include scale, depth, and adjustment
+        const warpPoints =
+          PathType == TTYPE.SPHE
+            ? rotationPointsAt(
+                WarpPerform,
+                WarpPos.clone().multiplyScalar(RADIUS),
+                WarpX,
+                uniqueSamplePercentages,
+              )
+            : []
+
+        // Update positions to include Warp, Strength, Scale, Depth, and Adjust.
         for (let j = 0; j < posPoints.length; j++) {
           // Include both endpoints so consecutive path segments share the same seam position.
           const perc = uniqueSamplePercentages[j]!,
@@ -713,7 +748,7 @@ export const createSpiroAnimator = (vars: {
             pos = posPoints[j]!,
             rot = rotPoints[j]!
 
-          pathSegmentRotation.setFromAxisAngle(RotX, (angleApply + RotationPerform) * perc)
+          pathSegmentRotation.setFromAxisAngle(RotX, (RotationArcPerform + RotationPerform) * perc)
           pathPrimaryOrientation.copy(pathSegmentRotation).multiply(modelStartPrimaryOrientation)
           pathSecondaryOrientation
             .copy(pathYawRotation.setFromAxisAngle(YawX, RotatePerform * perc))
@@ -736,7 +771,10 @@ export const createSpiroAnimator = (vars: {
           cRot.copy(rot)
           // Position Transformations
           trans(perc)
-          if (PathType == TTYPE.SPHE) pos.multiplyScalar(scalePerc)
+          if (PathType == TTYPE.SPHE) {
+            const warpPoint = warpPoints[j]
+            if (warpPoint) applyWarpPath(pos, warpPoint, scalePerc, strengthPerc, pos)
+          }
           rot.multiplyScalar(1 + depthPerc)
 
           // Add posPoints to rotPoints (creating a "helix" around the path)
@@ -804,9 +842,13 @@ export const createSpiroAnimator = (vars: {
     const motionEnd = motionTimes.at(-1) ?? 0
     const lastAnimation = anim.at(-1)
     if (lastAnimation && motionEnd > animationEnd && (paths || hands)) {
-      const finalPosition = new Vector3()
-        .fromArray(lastAnimation.pos)
-        .multiplyScalar((RADIUS * lastAnimation.scale) / 10)
+      const finalPosition = applyWarpPath(
+        new Vector3().fromArray(lastAnimation.pos),
+        new Vector3().fromArray(lastAnimation.warpPos),
+        toScaleMultiplier(lastAnimation.scale),
+        toStrengthRatio(lastAnimation.strength),
+        new Vector3(),
+      ).multiplyScalar(RADIUS)
       const finalOrientation = pathOrientation.fromArray(lastAnimation.orient)
       finalOrientation.premultiply(
         pathBlendedAdjustment.setFromAxisAngle(

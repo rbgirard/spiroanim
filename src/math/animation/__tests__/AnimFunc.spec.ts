@@ -53,7 +53,7 @@ describe('AnimFunc', () => {
       arms: false,
       thick: 4,
     })
-    expect(compiled.props[0]!.anim[0]).toMatchObject({ beats: 2, turns: 90, scale: 10 })
+    expect(compiled.props[0]!.anim[0]).toMatchObject({ beats: 2, turns: 90, scale: 100 })
     expect(compiled.props[0]!.anim[1]).toMatchObject({ beats: 2, turns: 90 })
     expect(final.props[0]!.anim[1]).toEqual({})
     expect(final.travel).toBe(false)
@@ -81,6 +81,36 @@ describe('AnimFunc', () => {
 
     expect(frames.map(({ twist }) => twist)).toEqual([0, 90, 90, 0, 0])
     expect(frames.map(({ twistRoll }) => twistRoll)).toEqual([0, 90, 180, 180, 180])
+  })
+
+  it('compiles Warp independently from canonical and prop rotation state', () => {
+    const createRoot = (warp?: number): RootData => ({
+      bpm: 60,
+      prop: 0,
+      color: 2,
+      smooth: true,
+      guides: false,
+      paths: true,
+      arms: true,
+      nodes: true,
+      anchors: false,
+      props: [{ anim: [{ arc: 45, plane: 30, ...(warp === undefined ? {} : { warp }) }, {}] }],
+      aspectx: 16,
+      aspecty: 9,
+      distance: 22,
+      thick: 4,
+    })
+    const baseline = rootCompile(rootFinal(createRoot())).props[0]!.anim
+    const warped = rootCompile(rootFinal(createRoot(90))).props[0]!.anim
+
+    for (const [index, frame] of warped.entries()) {
+      expect(frame.pos).toEqual(baseline[index]!.pos)
+      expect(frame.posx).toEqual(baseline[index]!.posx)
+      expect(frame.rot).toEqual(baseline[index]!.rot)
+      expect(frame.orient).toEqual(baseline[index]!.orient)
+    }
+    expect(warped[0]!.warp).toBe(90)
+    expect(warped[1]!.warp).toBe(90)
   })
 
   it('compiles frame-local Yaw/Rotate into persistent orientation state', () => {

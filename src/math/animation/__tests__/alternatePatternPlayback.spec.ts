@@ -152,7 +152,17 @@ describe('alternatePatternPlayback', () => {
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
       6,
     )
-    expect(codec.encodeQS(animation, false)).toEqual({
+    const legacyScaleAnimation = {
+      ...animation,
+      props: animation.props.map((prop) => ({
+        ...prop,
+        anim: prop.anim.map((frame) => ({
+          ...frame,
+          ...(frame.scale === undefined ? undefined : { scale: frame.scale / 10 }),
+        })),
+      })),
+    }
+    expect(codec.encodeQS(legacyScaleAnimation, false)).toEqual({
       r: 'Ew08Yk11Y',
       p0: 'Q__.mBE_____q.5JEvF......_ZEsR............_ZEvF.....',
       m0: '_1_mxqv__',

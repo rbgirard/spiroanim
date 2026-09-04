@@ -1,6 +1,7 @@
 import { getVtgPropSpeedRatios, parseVtgIndividualSpeedRatio } from '@/features/vtg/types'
 import type { VtgReadableAnimation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
+import { toDisplayScale, toInternalScale } from '@/domain/animation/scale'
 
 export const vtgBpmControl = {
   min: 40,
@@ -20,7 +21,7 @@ export const vtgScaleControl = {
   distanceMax: 25,
 } as const
 
-/** Added to the Scale control value before converting it to VTG's internal x10 scale. */
+/** Added to the Scale control value before converting it to the Animation Scale unit. */
 export const vtgScaleAdjustmentByDenominator: Readonly<Record<number, number>> = {
   1: 0.1,
   2: -0.2,
@@ -57,14 +58,14 @@ export const vtgSpacingControl = {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value))
 
-const toVtgRawScale = (scale: number) => Math.round(scale * 10)
+const toVtgRawScale = toInternalScale
 
 export const getAdjustedVtgScale = (scale: number, speedRatio: VtgSpeedRatio): number => {
   const adjustedRawScale = toVtgRawScale(scale) + toVtgRawScale(getVtgScaleAdjustment(speedRatio))
   const minRawScale = toVtgRawScale(vtgScaleControl.min)
   const maxRawScale = toVtgRawScale(vtgScaleControl.max)
 
-  return clamp(adjustedRawScale, minRawScale, maxRawScale) / 10
+  return toDisplayScale(clamp(adjustedRawScale, minRawScale, maxRawScale))
 }
 
 export const getVtgScaleControlValue = (
@@ -75,12 +76,12 @@ export const getVtgScaleControlValue = (
     return adjustedScale
   }
 
-  return (
+  return toDisplayScale(
     clamp(
       toVtgRawScale(adjustedScale) - toVtgRawScale(getVtgScaleAdjustment(speedRatio)),
       toVtgRawScale(vtgScaleControl.min),
       toVtgRawScale(vtgScaleControl.max),
-    ) / 10
+    ),
   )
 }
 

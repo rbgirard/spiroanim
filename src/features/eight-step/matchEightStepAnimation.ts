@@ -9,6 +9,7 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
 import type { AnimDataCompiled, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
+import { toDisplayScale } from '@/domain/animation/scale'
 
 const booleanOptions = [false, true] as const
 
@@ -66,7 +67,7 @@ const createSignature = (animation: RootDataFinal): string | undefined => {
 
 const getScale = (animation: RootDataFinal): number | undefined => {
   const firstScale = animation.props[0]?.anim[0]?.scale
-  return firstScale === undefined ? undefined : firstScale / 10
+  return firstScale === undefined ? undefined : toDisplayScale(firstScale)
 }
 
 interface PreparedEightStepMatchAnimation {

@@ -26,6 +26,8 @@ import {
   motionAnglesToCartesian,
 } from '@/math/animation/MotionFunc'
 import { MathUtils, Vector3 } from 'three'
+import { formatScale } from '@/domain/animation/scale'
+import { formatStrength } from '@/domain/animation/strength'
 
 import type {
   VarTypes,
@@ -103,7 +105,9 @@ function stringGet(key: string, val?: VarTypes) {
         case 'path':
           return INDPNT[val] ?? String(val)
         case 'scale':
-          return String((val / 10).toFixed(1))
+          return formatScale(val)
+        case 'strength':
+          return formatStrength(val)
         case 'depth':
           return String((val / 10).toFixed(1))
         case 'turns':
@@ -114,6 +118,7 @@ function stringGet(key: string, val?: VarTypes) {
         case 'yaw':
         case 'rotate':
         case 'adjust':
+        case 'warp':
         case 'twist':
           return val + '°'
       }

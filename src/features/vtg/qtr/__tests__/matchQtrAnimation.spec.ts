@@ -10,7 +10,7 @@ import {
 import type { QtrPatternSelection } from '@/features/vtg/types'
 import { getVtgPatternOrientations, vtgTransitionBeats } from '@/features/vtg/types'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv12'
 
 const booleanOptions = [false, true] as const
 
@@ -183,7 +183,7 @@ describe('Qtr animation matching', () => {
       bpm: 101,
       scale: 1.2,
     } as const satisfies QtrPatternSelection
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
     const query = codec.encodeQS(createQtrAnimation(selection), false)
     const decoded = await codec.decodeVer(query)
 

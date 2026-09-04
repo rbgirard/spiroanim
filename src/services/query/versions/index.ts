@@ -2,7 +2,7 @@ import type { AllVars, MotionData } from '@/types/AnimTypes'
 import type { VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData } from '@/services/query/types/SpiroAnimQSTypes'
 
-export const CURRENT_SPIRO_ANIM_QS_VERSION = 11
+export const CURRENT_SPIRO_ANIM_QS_VERSION = 12
 
 export interface SpiroAnimQSVersion {
   CHARSET: string
@@ -57,6 +57,8 @@ export async function loadSpiroAnimQSVersion(version: number): Promise<SpiroAnim
       return import('@/services/query/versions/SpiroAnimQSv10')
     case 11:
       return import('@/services/query/versions/SpiroAnimQSv11')
+    case 12:
+      return import('@/services/query/versions/SpiroAnimQSv12')
     default:
       throw new UnsupportedSpiroAnimQSVersionError(version)
   }

@@ -41,6 +41,7 @@ const expectOnlyNecessaryFrameValues = (animation: RootDataFinal, frameIndex: nu
     'rotate',
     'beats',
     'scale',
+    'warp',
     'depth',
     'type',
     'adjust',
@@ -395,6 +396,12 @@ describe('appendVtgBuilderPattern', () => {
         ...findExplicitPlaneOrTurnsFrameIndices(current, 2).map((frameIndex) => frameIndex - 1),
       ]
       const insertionIndex = starts[targetIndex]! + 1
+      current.props.forEach((prop, propIndex) => {
+        prop.anim[insertionIndex] = {
+          ...prop.anim[insertionIndex],
+          warp: propIndex === 0 ? 45 : -45,
+        }
+      })
 
       const result = insertVtgBuilderPattern(
         current,
@@ -420,9 +427,11 @@ describe('appendVtgBuilderPattern', () => {
         const afterRelationship = compiledAfter.props[propIndex]!.anim[insertionIndex + 8]!
         expect({
           arc: afterRelationship.arc,
+          warp: afterRelationship.warp,
           turns: afterRelationship.turns,
         }).toEqual({
           arc: beforeRelationship.arc,
+          warp: beforeRelationship.warp,
           turns: beforeRelationship.turns,
         })
         expect(prop.anim[insertionIndex + 8]?.axis).toBe(

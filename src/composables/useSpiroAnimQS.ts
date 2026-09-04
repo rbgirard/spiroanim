@@ -4,6 +4,7 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { migrateLegacyMotion } from '@/services/query/migrateLegacyMotion'
+import { migrateLegacyScale } from '@/services/query/migrateLegacyScale'
 
 import type { BaseQS, VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types/SpiroAnimQSTypes'
@@ -46,8 +47,10 @@ export async function useSpiroAnimQS(
       // the service-worker update flow to reload it with the matching decoder.
       const { CHARSET: charset, VDEF: VDEF2 } = await loadSpiroAnimQSVersion(v)
       const PAQS = await useSpiroAnimQS(VDEF2, useBaseQS(VDEF2, { charset }), v)
-      const decoded = PAQS.decodeQS(route)
-      return VER >= 4 && v < 4 ? migrateLegacyMotion(decoded) : decoded
+      let decoded = PAQS.decodeQS(route)
+      if (VER >= 4 && v < 4) decoded = migrateLegacyMotion(decoded)
+      if (VER >= 12 && v < 12) decoded = migrateLegacyScale(decoded)
+      return decoded
     } else {
       return decodeQS(route)
     }

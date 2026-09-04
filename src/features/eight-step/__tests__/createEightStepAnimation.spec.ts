@@ -12,7 +12,7 @@ import { rootFinal } from '@/math/animation/PlayerFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv6'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv12'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 const current = rootFinal(
@@ -101,7 +101,7 @@ describe('createEightStepAnimation', () => {
       arms: false,
     })
     expect(transformed?.props.map(({ color }) => color)).toEqual([4, 1])
-    expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 120)).toBe(true)
     expect(rootCompile(transformed!).camera[0]!.orbit.offset).toEqual([0, 0, -23])
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
   })
@@ -167,8 +167,8 @@ describe('createEightStepAnimation', () => {
     })
     const second = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
 
-    expect(first?.props[0]?.anim[0]?.scale).toBe(14)
-    expect(second?.props[0]?.anim[0]?.scale).toBe(8)
+    expect(first?.props[0]?.anim[0]?.scale).toBe(140)
+    expect(second?.props[0]?.anim[0]?.scale).toBe(80)
   })
 
   it('adds 45 degrees only to both initial arcs in Box mode', () => {
@@ -253,11 +253,11 @@ describe('createEightStepAnimation', () => {
     expect(animation).toBeDefined()
     if (!animation) return
 
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
     const query = codec.encodeQS(animation, false)
     const decoded = await codec.decodeVer(query)
 
-    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(220)
+    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(225)
     expect(decoded).toMatchObject({
       bpm: animation.bpm,
       thick: animation.thick,
@@ -275,7 +275,7 @@ describe('createEightStepAnimation', () => {
   })
 
   it('round-trips every Eight Step cell and transform without changing playback', async () => {
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
 
     for (const definition of eightStepPatternDefinitions) {
       for (const swapProps of [false, true]) {

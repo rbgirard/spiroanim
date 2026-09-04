@@ -155,7 +155,7 @@ describe('eightStepPatternDefinitions', () => {
   it('stores sparse frames without changing each cell compiled geometry', () => {
     for (const definition of eightStepPatternDefinitions) {
       for (const prop of definition.props) {
-        expect(prop.anim[0]?.scale).toBe(8)
+        expect(prop.anim[0]?.scale).toBe(80)
         expect(prop.anim.every((frame) => frame.plane !== 0)).toBe(true)
         expect(
           prop.anim.every(

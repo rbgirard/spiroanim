@@ -75,9 +75,18 @@ const sampleOrientation = (
 }
 
 const closedFrames: AnimData[] = [
-  { arc: 0, twist: 0, beats: 2, scale: 8, depth: 1, move: [1, 0, 0] },
-  { arc: 90, twist: 90, beats: 3, scale: 9, depth: 2, move: [2, 0, 0] },
-  { arc: 90, twist: -90, plane: 180, beats: 4, scale: 10, depth: 3, move: [3, 0, 0] },
+  { arc: 0, twist: 0, beats: 2, scale: 80, warp: 0, depth: 1, move: [1, 0, 0] },
+  { arc: 90, twist: 90, beats: 3, scale: 90, warp: -45, depth: 2, move: [2, 0, 0] },
+  {
+    arc: 90,
+    twist: -90,
+    plane: 180,
+    beats: 4,
+    scale: 100,
+    warp: 45,
+    depth: 3,
+    move: [3, 0, 0],
+  },
 ]
 
 describe('shared shiftAnimationFrames', () => {
@@ -109,6 +118,7 @@ describe('shared shiftAnimationFrames', () => {
       expectVectorClose(frame.pos, expected.pos)
       expectVectorClose(frame.rot, expected.rot)
       expect(frame.scale).toBe(expected.scale)
+      expect(frame.warp).toBe(expected.warp)
       expect(frame.depth).toBe(expected.depth)
       expect(frame.twistRoll).toBe(expected.twistRoll)
     }
@@ -131,7 +141,8 @@ describe('shared shiftAnimationFrames', () => {
       arc: 0,
       twist: 0,
       beats: 2,
-      scale: 8,
+      scale: 80,
+      warp: 0,
       depth: 1,
       move: [1, 0, 0],
     })
@@ -167,11 +178,11 @@ describe('shared shiftAnimationFrames', () => {
 
   it('produces the same compiled result for a direct offset as repeated single shifts', () => {
     const frames: AnimData[] = [
-      { arc: 0, beats: 1, scale: 8, depth: 1 },
-      { arc: 90, beats: 2, scale: 9, depth: 2 },
-      { arc: 90, beats: 3, scale: 10, depth: 3 },
-      { arc: 90, beats: 4, scale: 11, depth: 4 },
-      { arc: 90, beats: 5, scale: 12, depth: 5 },
+      { arc: 0, beats: 1, scale: 80, depth: 1 },
+      { arc: 90, beats: 2, scale: 90, depth: 2 },
+      { arc: 90, beats: 3, scale: 100, depth: 3 },
+      { arc: 90, beats: 4, scale: 110, depth: 4 },
+      { arc: 90, beats: 5, scale: 120, depth: 5 },
     ]
 
     for (let shiftCount = 1; shiftCount <= 7; shiftCount += 1) {
@@ -502,9 +513,9 @@ describe('shared shiftAnimationFrames', () => {
 
   it('can shift unmatched endpoints when explicitly allowed', () => {
     const frames: AnimData[] = [
-      { arc: 0, beats: 2, scale: 8 },
-      { arc: 45, beats: 3, scale: 9 },
-      { arc: 45, beats: 4, scale: 10 },
+      { arc: 0, beats: 2, scale: 80 },
+      { arc: 45, beats: 3, scale: 90 },
+      { arc: 45, beats: 4, scale: 100 },
     ]
     const compiled = compileFrames(frames)
 

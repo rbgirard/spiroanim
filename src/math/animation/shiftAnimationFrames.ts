@@ -60,6 +60,7 @@ export const animationRangeEndpointsAlign = (
     first !== undefined &&
     last !== undefined &&
     vectorsAlign(first.pos, last.pos) &&
+    vectorsAlign(first.warpPos, last.warpPos) &&
     // Rotation direction plus primary/secondary orientation are an internal decomposition and can
     // use a different gauge for the same rendered pose after Shift reconstruction. Closure depends
     // on the composed orientation, position, and visible twist instead.
@@ -588,6 +589,8 @@ export const shiftAnimationFrameRange = (
 
   const position = InitialPoint.clone()
   const positionReference = InitialOrtho.clone()
+  const warpPosition = InitialPoint.clone()
+  const warpReference = InitialOrtho.clone()
   const rotation = InitialPoint.clone()
   const rotationReference = InitialOrtho.clone()
 
@@ -614,16 +617,22 @@ export const shiftAnimationFrameRange = (
     )
 
   const targetPosition = new Vector3()
+  const targetWarpPosition = new Vector3()
   const targetRotation = new Vector3()
   const targetAdjustment = new Vector3()
   const targetOrientation = new Quaternion()
   const unadjustedOrientation = new Vector3()
   const targetPositionAxis = new Vector3()
+  const positionAxis = new Vector3()
+  const warpProjected = new Vector3()
+  const warpAxis = new Vector3()
+  const warpCross = new Vector3()
   const targetRotationAxis = new Vector3()
   const orthogonal = new Vector3()
   const rotationAxis = new Vector3()
   const rotationCross = new Vector3()
   const shiftedFirstPosition = new Vector3()
+  const shiftedFirstWarpPosition = new Vector3()
   const shiftedFirstRotation = new Vector3()
   const wrappedRotationStart = new Vector3()
   const wrappedRotationReference = new Vector3()
@@ -642,6 +651,10 @@ export const shiftAnimationFrameRange = (
     positionReference
       .copy(position)
       .applyAxisAngle(targetPositionAxis.fromArray(preceding.posx), Math.PI / 2)
+    warpPosition.fromArray(preceding.warpPos)
+    warpReference
+      .copy(warpPosition)
+      .applyAxisAngle(targetPositionAxis.fromArray(preceding.warpx), Math.PI / 2)
     rotation.fromArray(preceding.rot)
     rotationReference
       .copy(rotation)
@@ -668,6 +681,7 @@ export const shiftAnimationFrameRange = (
       targetIndex === startIndex + 1 &&
       targetIndices[outputIndex - 1] === endIndex
     targetPosition.fromArray(target.pos)
+    targetWarpPosition.fromArray(target.warpPos)
     targetRotation.fromArray(target.rot)
 
     const arcRadians = rebuildStart
@@ -681,9 +695,22 @@ export const shiftAnimationFrameRange = (
           positionReference,
           orthogonal,
         )
-    orthoNext(planeRadians, arcRadians, position, positionReference)
+    orthoNext(planeRadians, arcRadians, position, positionReference, positionAxis)
 
     if (outputIndex === 0) shiftedFirstPosition.copy(position)
+
+    orthoPoint(planeRadians, warpPosition, warpReference, warpProjected)
+    warpAxis.crossVectors(warpPosition, warpProjected).normalize()
+    const warpRadians = rebuildStart
+      ? signedRotationAround(warpPosition, targetWarpPosition, warpAxis, warpCross)
+      : MathUtils.degToRad(target.arc + target.warp)
+    orthoNext(planeRadians, warpRadians, warpPosition, warpReference, warpAxis)
+    if (rebuildStart) {
+      shiftedFirstWarpPosition.copy(warpPosition)
+      if (!vectorsAlign(warpPosition.toArray(), targetWarpPosition.toArray())) {
+        reconstructionFailed = true
+      }
+    }
 
     const targetRotationRadians =
       MathUtils.degToRad(target.turns) +
@@ -849,6 +876,14 @@ export const shiftAnimationFrameRange = (
                 : targetIndex
           ]!.beats,
       scale: preserveOutgoing ? originalEnd.scale : target.scale,
+      warp: snapNumber(
+        preserveOutgoing
+          ? originalEnd.warp
+          : rebuildStart
+            ? MathUtils.radToDeg(warpRadians - arcRadians)
+            : target.warp,
+      ),
+      strength: preserveOutgoing ? originalEnd.strength : target.strength,
       depth: preserveOutgoing ? originalEnd.depth : target.depth,
       type: target.type,
       adjust: snapNumber(preserveOutgoing ? originalEnd.adjust : adjust),
@@ -862,6 +897,7 @@ export const shiftAnimationFrameRange = (
     reconstructionFailed ||
     (!options.allowEndpointMismatch &&
       (!vectorsAlign(position.toArray(), shiftedFirstPosition.toArray()) ||
+        !vectorsAlign(warpPosition.toArray(), shiftedFirstWarpPosition.toArray()) ||
         !vectorsAlign(rotation.toArray(), shiftedFirstRotation.toArray())))
   ) {
     return undefined

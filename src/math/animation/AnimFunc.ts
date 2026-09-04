@@ -129,6 +129,7 @@ const compileCameraTrack = (frames: RootDataFinal['camera']): RootDataCompiled['
 const withoutBeats = ({ beats: _beats, ...frame }: MotionDataCompiled) => frame
 
 const posx = new Vector3(),
+  warpx = new Vector3(),
   rotx = new Vector3(),
   yawx = new Vector3(),
   yawProjected = new Vector3(),
@@ -141,8 +142,10 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
     motions: MotionDataCompiled[] = [],
     // Initial points to begin calculations from
     pos = InitialPoint.clone(),
+    warpPos = InitialPoint.clone(),
     rot = InitialPoint.clone(),
     plane = InitialOrtho.clone(),
+    warpPlane = InitialOrtho.clone(),
     axis = InitialOrtho.clone(),
     primaryOrientation = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), InitialPoint),
     secondaryOrientation = new Quaternion(),
@@ -158,6 +161,7 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
       radAxis = MathUtils.degToRad(vars.axis),
       // Angle to the next point
       radArc = MathUtils.degToRad(vars.arc),
+      radWarp = radArc + MathUtils.degToRad(vars.warp),
       radRot = MathUtils.degToRad(vars.turns) + (vars.type == TTYPE.LINE ? 0 : radArc),
       radRotate = MathUtils.degToRad(vars.rotate)
 
@@ -174,6 +178,9 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
 
     // Updates pos/rot, plane/axis, and directions for this loop
     orthoNext(radPlane, radArc, pos, plane, posx)
+    // Warp is a Turns-like relative rotation applied only to an auxiliary hand-path vector.
+    // Keeping it independent from both POS and ROT preserves VTG recognition and prop motion.
+    orthoNext(radPlane, radWarp, warpPos, warpPlane, warpx)
     orthoNext(radAxis, radRot, rot, axis, rotx)
 
     // Primary and secondary rotations accumulate independently. Yaw is measured against the
@@ -202,11 +209,13 @@ const propCompile = (prop: PropDataFinal): PropDataCompiled => {
 
       // Position, Rotation, and Rotation to blend from
       pos: pos.toArray(),
+      warpPos: warpPos.toArray(),
       rot: rot.toArray(),
       adju: adju.toArray(),
 
       // Directions for computing from applyAxisAngle during animation
       posx: posx.toArray(),
+      warpx: warpx.toArray(),
       rotx: rotx.toArray(),
       yawx: yawx.toArray(),
       adjustx: adjustx.toArray(),

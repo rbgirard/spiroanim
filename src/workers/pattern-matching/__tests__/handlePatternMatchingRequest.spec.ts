@@ -6,7 +6,7 @@ import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQ
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
   matchEightStepPatternRequest,
   matchQstPatternRequest,
@@ -65,13 +65,13 @@ describe('handlePatternMatchingRequest', () => {
   })
 
   it('canonicalizes the supplied 1:3 QTR geometry across equivalent orientations', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
     const codec = await useSpiroAnimQS(
       version.VDEF,
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
+      CURRENT_SPIRO_ANIM_QS_VERSION,
     )
-    const animation = codec.decodeQS(
+    const animation = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.gU0_____s.5E0wm.......&m0=_1_mxqv__&p1=N__.g__tyw3_s.5L_s8w3.......&c=_i_bhq&v=6',

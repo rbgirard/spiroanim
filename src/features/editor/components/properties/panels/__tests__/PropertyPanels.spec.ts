@@ -36,6 +36,8 @@ describe('editor property panel organization', () => {
       'adjust',
       'scale',
       'depth',
+      'warp',
+      'strength',
     ])
   })
 

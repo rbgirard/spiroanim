@@ -18,6 +18,11 @@ import {
   createExtendedAnimationConfig as createExtendedAnimationConfigV11,
   createRotationAnimationConfig as createRotationAnimationConfigV11,
 } from '@/services/query/versions/SpiroAnimQSv11'
+import {
+  CHARSET as CHARSET_V12,
+  VDEF as VDEF_V12,
+  createExtendedAnimationConfig as createExtendedAnimationConfigV12,
+} from '@/services/query/versions/SpiroAnimQSv12'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { doubleAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -449,6 +454,52 @@ describe('useSpiroAnimQS', () => {
     expect(createRotationAnimationConfigV11()).toEqual([
       ['anim', 5, [['bits', 5, ['twist', 'rotate', 'yaw']]]],
     ])
+  })
+
+  it('packs v12 Scale, Beats/Depth, Strength, and Warp groups and round-trips sparse frames', async () => {
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [
+      { scale: -200, warp: -1980, strength: 0, beats: 1, depth: -30 },
+      { scale: 111, warp: 90.5, strength: 555 },
+      { beats: 63, depth: 30 },
+      { scale: 400, warp: 1980, strength: 1000 },
+    ]
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded.v).toBe('12')
+    expect(encoded.x0!.split('.').map((frame) => frame.length)).toEqual([9, 9, 4, 9])
+    expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+  })
+
+  it('defines the reordered v12 xN groups', () => {
+    expect(createExtendedAnimationConfigV12()).toEqual([
+      [
+        'anim',
+        9,
+        [
+          ['bits', 2, ['scale']],
+          ['bits', 2, ['beats', 'depth']],
+          ['bits', 2, ['strength']],
+          ['bits', 3, ['warp']],
+        ],
+      ],
+    ])
+  })
+
+  it('migrates historical Scale values into the v12 hundredths unit', async () => {
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const decoded = await query.decodeVer({
+      r: 'Ew68kk11Y',
+      p0: 'N__.xT_.bn_..',
+      x0: '_s_',
+      c: '_j_bhq',
+      v: '11',
+    })
+
+    expect(decoded.props[0]!.anim[0]!.scale).toBe(80)
   })
 
   it('omits unused v11 rN tracks without affecting xN tracks', async () => {

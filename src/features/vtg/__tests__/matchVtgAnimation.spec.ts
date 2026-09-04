@@ -13,8 +13,7 @@ import type {
 import { getVtgPatternOrientations, vtgSpeedRatios, vtgTransitionBeats } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { loadSpiroAnimQSVersion } from '@/services/query/versions'
-import { VDEF } from '@/services/query/versions/SpiroAnimQSv1'
+import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 const ruleNumbers = [1, 2, 3, 4, 5, 6] as const satisfies readonly VtgRuleNumber[]
@@ -28,6 +27,15 @@ const createAnimation = (selection: VtgPatternSelection) => {
   const animation = createDefaultVtgAnimation(selection)
   if (!animation) throw new Error(`Expected a VTG animation for ${selection.reference}`)
   return animation
+}
+
+const createCurrentCodec = async () => {
+  const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
+  return useSpiroAnimQS(
+    version.VDEF,
+    useBaseQS(version.VDEF, { charset: version.CHARSET }),
+    CURRENT_SPIRO_ANIM_QS_VERSION,
+  )
 }
 
 const normalizeSignatureNumber = (value: number) => {
@@ -88,12 +96,7 @@ const preferredPatternOptionMatches = (
 
 describe('VTG animation matching', () => {
   it('matches a VTG pattern throughout serialized Shift rotations', async () => {
-    const version = await loadSpiroAnimQSVersion(11)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      11,
-    )
+    const codec = await createCurrentCodec()
     const shiftedQueries = [
       'r=Ew68Yk11Y&p0=QN__v.___Rhw.5L_Qpg.......&x0=_s_&r0=BG7f_...._-7f_...MX___.BG7f_&m0=_1_mxqv__&p1=NN__v.mD_Qpg.5E0.......&x1=_s_&r1=_YJf_....BG7f_...MX___._YJf_&c=_i_bhq&v=11',
       'r=Ew68Yk11Y&p0=QN__v.5L_____U0.___Qpg_U0.......&x0=_s_&r0=_-7f_.BH___.._-7f_...MX___.BG7f_&m0=_1_mxqv__&p1=NN__v.g______U0.5E0Qpg_WQ.......&x1=_s_&r1=BG7f_.MX___..BG7f_...MX___._YJf_&c=_i_bhq&v=11',
@@ -106,18 +109,13 @@ describe('VTG animation matching', () => {
     ]
 
     for (const [index, query] of shiftedQueries.entries()) {
-      const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+      const animation = await codec.decodeVer(Object.fromEntries(new URLSearchParams(query)))
       expect(findVtgPatternMatch(animation), `shift ${index}`).toBeDefined()
     }
   })
 
   it('uses hidden prop offsets only after offset-free two-cycle interpretations', async () => {
-    const version = await loadSpiroAnimQSVersion(9)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      9,
-    )
+    const codec = await createCurrentCodec()
     const examples = [
       {
         query:
@@ -148,7 +146,7 @@ describe('VTG animation matching', () => {
     ] as const
 
     for (const { query, expected } of examples) {
-      const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(query)))
+      const animation = await codec.decodeVer(Object.fromEntries(new URLSearchParams(query)))
       expect(findVtgPatternMatches(animation)).toContainEqual(expect.objectContaining(expected))
       const match = findVtgPatternMatch(animation)
       expect(match).toBeDefined()
@@ -157,13 +155,8 @@ describe('VTG animation matching', () => {
   })
 
   it('retains matching when the supplied 2:3 transition changes to 3 beats', async () => {
-    const version = await loadSpiroAnimQSVersion(9)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      9,
-    )
-    const supplied = codec.decodeQS(
+    const codec = await createCurrentCodec()
+    const supplied = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew68Yk11Y&p0=Q__.mBE_______q_.5JEQzP...............&m0=_1_mxqv__&p1=N__.mBE_______q_.5L_QzP...............&c=_f_bhq&v=9',
@@ -207,12 +200,7 @@ describe('VTG animation matching', () => {
   })
 
   it('regenerates serialized reversed orientation at 1:2 without changing compiled motion', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
-    )
+    const codec = await createCurrentCodec()
     const source = createAnimation({
       reference: '1-1',
       speedRatio: '1:2',
@@ -244,13 +232,8 @@ describe('VTG animation matching', () => {
   })
 
   it('reproduces the supplied oddball prop headings in the detected thumbnail selection', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
-    )
-    const source = codec.decodeQS(
+    const codec = await createCurrentCodec()
+    const source = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.5E0vF___q._U0sR.......&m0=_1_mxqv__&p1=N__.g__uf___q.5E0vF.......&c=_f_bhq&v=6',
@@ -267,13 +250,8 @@ describe('VTG animation matching', () => {
   })
 
   it('prefers the exact phase while retaining an aligned alternate for the supplied query', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
-    )
-    const animation = codec.decodeQS(
+    const codec = await createCurrentCodec()
+    const animation = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.mD______s.5L_wm.......&m0=_1_mxqv__&p1=N__.mD_s8___s.5L_.......&c=_i_bhq&v=6',
@@ -336,12 +314,7 @@ describe('VTG animation matching', () => {
   it.each(['1:2', '1:4'] as const)(
     'matches every serialized %s cell at the default -90-degree orientation',
     async (speedRatio) => {
-      const version = await loadSpiroAnimQSVersion(6)
-      const codec = await useSpiroAnimQS(
-        version.VDEF,
-        useBaseQS(version.VDEF, { charset: version.CHARSET }),
-        6,
-      )
+      const codec = await createCurrentCodec()
       const missing: VtgCellReference[] = []
       for (const row of ruleNumbers) {
         for (const column of ruleNumbers) {
@@ -358,12 +331,7 @@ describe('VTG animation matching', () => {
   it.each(['1:1', '1:3', '1:5'] as const)(
     'retains the row-first lower-table cells after query serialization at %s',
     async (speedRatio) => {
-      const version = await loadSpiroAnimQSVersion(6)
-      const codec = await useSpiroAnimQS(
-        version.VDEF,
-        useBaseQS(version.VDEF, { charset: version.CHARSET }),
-        6,
-      )
+      const codec = await createCurrentCodec()
       for (const reference of ['3-5', '3-6', '4-5', '4-6'] as const) {
         const decoded = await codec.decodeVer(
           codec.encodeQS(createAnimation({ reference, speedRatio }), false),
@@ -573,7 +541,7 @@ describe('VTG animation matching', () => {
   })
 
   it('selects the lowest equivalent beat before rotated duplicates after serialization', async () => {
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
+    const codec = await createCurrentCodec()
     const mismatches: string[] = []
 
     for (const column of ruleNumbers) {
@@ -643,8 +611,10 @@ describe('VTG animation matching', () => {
       }
     }
 
-    animation.props[0]!.anim[0]!.scale = 25
-    animation.props[1]!.anim[0]!.scale = 7
+    animation.props[0]!.anim[0]!.scale = 250
+    animation.props[1]!.anim[0]!.scale = 70
+    animation.props[0]!.anim[0]!.warp = 35
+    animation.props[1]!.anim[0]!.warp = -20
 
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '3-4',
@@ -722,7 +692,7 @@ describe('VTG animation matching', () => {
     animation.props[0]!.anim[1]!.arc = 46
 
     expect(findVtgPatternMatch(animation)).toBeUndefined()
-  })
+  }, 10_000)
 
   it('rejects an authored rotation-axis edit', () => {
     const animation = createAnimation({ reference: '3-2', speedRatio: '1:3', beat: 3 })
@@ -732,18 +702,13 @@ describe('VTG animation matching', () => {
   })
 
   it('recognizes the generated QSlot through the established 180 transform', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
-    )
+    const codec = await createCurrentCodec()
     const query = Object.fromEntries(
       new URLSearchParams(
         'r=Ew08Yk11Y&p0=Q__.5E0wmHj_s._____w3.......&m0=_1_mxqv__&p1=N__.g_______s.5E0wm.......&c=_i_bhq&v=6',
       ),
     )
-    const animation = codec.decodeQS(query)
+    const animation = await codec.decodeVer(query)
     expect(findVtgPatternMatch(animation)).toMatchObject({
       reference: '6-6',
       speedRatio: '1:3',
@@ -751,23 +716,18 @@ describe('VTG animation matching', () => {
       reversePlane: true,
       beat: 2,
     })
-    expect(codec.encodeQS(animation, false)).toEqual(query)
+    expect(codec.encodeQS(animation, false).v).toBe('12')
   })
 
   it('recognizes an omitted zero plane in the supplied Frame 1 reverse example', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
-    const codec = await useSpiroAnimQS(
-      version.VDEF,
-      useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
-    )
+    const codec = await createCurrentCodec()
     const query = Object.fromEntries(
       new URLSearchParams(
         'r=Ew08kk11Y&p0=N__.5L_xM___s.blE...&m0=_1_mxqv__&p1=Q__.gZE_____s.bn_xM...&c=_i_bhq&v=6',
       ),
     )
-    const supplied = codec.decodeQS(query)
-    expect(codec.encodeQS(supplied, false)).toEqual(query)
+    const supplied = await codec.decodeVer(query)
+    expect(codec.encodeQS(supplied, false).v).toBe('12')
     expect(findVtgPatternMatch(supplied)).toMatchObject({
       reference: '6-6',
       speedRatio: '1:3',

@@ -40,6 +40,9 @@ export const VDEF = {
   smooth: [0, 1, 2, Boolean], // 1
   type: [0, TTEXT.length - 1, 2], // 2
   scale: [-20, 40, 6], // 62
+  // Reserved for QS v12's extended Animation track.
+  warp: [-180, 180, 9],
+  strength: [0, 1000, 10],
   depth: [-30, 30, 6], // 62
   turns: [-1980, 1980, 12], // 4094
   // Reserved for QS v10's extended Animation track.

@@ -143,7 +143,7 @@ All three normal property setters call `constraints(key, value)` before writing:
 - `animSet` writes or deletes the field on every selected frame, except for calculated geometry
   controls.
 
-`constraints()` reads the current version 1 `VDEF` entry and clamps numeric values to its declared
+`constraints()` reads the active query version's `VDEF` entry and clamps numeric values to its declared
 minimum and maximum. For `move`, it clamps each coordinate and mutates the passed array. Booleans
 are not numerically clamped. Keys absent from `VDEF` pass through unchanged.
 
@@ -165,8 +165,10 @@ Before changing a slider, answer these questions in order:
 1. **What value is the user controlling?** Is it the stored property itself, a relative delta, or
    a feature-level input that derives several stored properties?
 2. **Which UI owns it?** Editor property controls and concept controls use different pipelines.
-3. **What are the stored units?** Scale and Depth are displayed as tenths but stored as integers;
-   angles are stored in degrees. Twist is restricted to 45-degree increments.
+3. **What are the stored units?** Scale is displayed in ordinary units but stored as integer
+   hundredths; Strength and Depth support one displayed decimal place but are stored as integers.
+   Strength stores tenths of a percent, Depth stores tenths of a distance unit, and angles are
+   stored in degrees.
 4. **Should the control round, floor, or preserve fractions?** Make this explicit before the query
    boundary.
 5. **Does the active query version encode the field and scope?** A root field and a same-named prop

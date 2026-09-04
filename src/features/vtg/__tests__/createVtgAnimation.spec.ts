@@ -86,11 +86,11 @@ describe('createVtgAnimation', () => {
   })
 
   it.each([
-    ['1:1', 0.1, 9, 19],
-    ['1:2', -0.2, 6, 15],
-    ['1:3', 0, 8, 18],
-    ['1:4', 0.1, 9, 19],
-    ['1:5', 0.2, 10, 20],
+    ['1:1', 0.1, 90, 19],
+    ['1:2', -0.2, 60, 15],
+    ['1:3', 0, 80, 18],
+    ['1:4', 0.1, 90, 19],
+    ['1:5', 0.2, 100, 20],
   ] as const)(
     'adds the %s Scale adjustment before converting to raw scale',
     (speedRatio, adjustment, rawScale, distance) => {
@@ -499,11 +499,11 @@ describe('createVtgAnimation', () => {
     if (animation === undefined) throw new Error('Expected the VTG pattern to be defined')
 
     expect(animation.props.map((prop) => prop.anim.map((frame) => frame.scale))).toEqual([
-      [9, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
-      [9, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
+      [90, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
+      [90, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined],
     ])
     expect(
-      rootCompile(animation).props.every((prop) => prop.anim.every((frame) => frame.scale === 9)),
+      rootCompile(animation).props.every((prop) => prop.anim.every((frame) => frame.scale === 90)),
     ).toBe(true)
   })
 
@@ -514,11 +514,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 90, scale: 9 },
+      { plane: 180, arc: 90, scale: 90 },
       { plane: 180, arc: 45 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, scale: 9 },
+      { arc: 90, scale: 90 },
       { arc: 45, turns: -90 },
     ])
   })
@@ -530,11 +530,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 90, turns: -180, scale: 9 },
+      { plane: 180, arc: 90, turns: -180, scale: 90 },
       { plane: 180, arc: 45, turns: 0 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, turns: 180, scale: 9 },
+      { arc: 90, turns: 180, scale: 90 },
       { arc: 45, turns: -90 },
     ])
   })
@@ -547,9 +547,9 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props.map((prop) => prop.color)).toEqual([4, 1])
-    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 9 }, { arc: 45 }])
+    expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([{ arc: 90, scale: 90 }, { arc: 45 }])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { plane: 180, arc: 90, turns: 180, scale: 9 },
+      { plane: 180, arc: 90, turns: 180, scale: 90 },
       { plane: 180, arc: 45, turns: 0 },
     ])
   })
@@ -621,10 +621,10 @@ describe('createVtgAnimation', () => {
     })
 
     expect(minimum).toMatchObject({ bpm: 80, distance: 14 })
-    expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([5, 5])
+    expect(minimum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([50, 50])
     expect(pivot).toMatchObject({ distance: 15 })
     expect(maximum).toMatchObject({ bpm: 280, distance: 25 })
-    expect(maximum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([14, 14])
+    expect(maximum?.props.map((prop) => prop.anim[0]?.scale)).toEqual([140, 140])
   })
 
   it('builds a restored 1:5 pattern', () => {
@@ -634,11 +634,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, scale: 10 },
+      { arc: 90, scale: 100 },
       { arc: 45, turns: 180 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, turns: 180, scale: 10 },
+      { arc: 90, turns: 180, scale: 100 },
       { plane: 180, arc: 45, turns: -270 },
     ])
   })
@@ -651,11 +651,11 @@ describe('createVtgAnimation', () => {
     })
 
     expect(animation?.props[0]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, scale: 8 },
+      { arc: 90, scale: 80 },
       { plane: 180, arc: 45, turns: -180 },
     ])
     expect(animation?.props[1]?.anim.slice(0, 2)).toEqual([
-      { arc: 90, turns: 180, scale: 8 },
+      { arc: 90, turns: 180, scale: 80 },
       { plane: 180, arc: 45, turns: -180 },
     ])
   })
