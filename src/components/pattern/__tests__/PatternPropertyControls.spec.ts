@@ -230,11 +230,14 @@ describe('PatternPropertyControls', () => {
         context: 'vtg',
         activeProperty: 'third-order',
         thirdOrderMirror: false,
-        thirdOrderSettings: [{ initial: '1:3-anti', strength: 55 }, { timing: '2:3-pro' }],
+        thirdOrderSettings: [
+          { initial: 45, strength: 55, timing: '1:1-pro' },
+          { initial: '1:3-anti' },
+        ],
         thirdOrderDisplaySettings: {
-          initial: ['1:3-anti', 90],
+          initial: [45, '1:3-anti'],
           strength: [55, 80],
-          timing: ['1:1-pro', '2:3-pro'],
+          timing: ['1:1-pro', '1:3-anti'],
         },
       },
     })
@@ -247,9 +250,15 @@ describe('PatternPropertyControls', () => {
         .findAll('.pattern-property-controls__third-order-column > h3')
         .map((heading) => heading.text()),
     ).toEqual(['Left', 'Right'])
+    expect(
+      wrapper
+        .get('[aria-label="Left Third Order"]')
+        .findAll('.pattern-property-controls__third-order-row > span')
+        .map((label) => label.text()),
+    ).toEqual(['Ratio', 'Strength', 'Adjust'])
 
-    const leftInitial = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-initial-0"]')
-    expect(leftInitial.findAll('option').map((option) => option.text())).toEqual([
+    const leftTiming = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-timing-0"]')
+    expect(leftTiming.findAll('option').map((option) => option.text())).toEqual([
       'Undefined',
       '1:1 Anti',
       '1:1 Pro',
@@ -268,9 +277,9 @@ describe('PatternPropertyControls', () => {
       '2:5 Anti',
       '2:5 Pro',
     ])
-    expect(leftInitial.element.value).toBe('1:3-anti')
-    await leftInitial.setValue('1:2-pro')
-    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([0, '1:2-pro'])
+    expect(leftTiming.element.value).toBe('1:1-pro')
+    await leftTiming.setValue('1:2-pro')
+    expect(wrapper.emitted('thirdOrderTimingUpdate')?.at(-1)).toEqual([0, '1:2-pro'])
 
     const leftStrength = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-strength-0"]')
     expect(leftStrength.attributes()).toMatchObject({ min: '0', max: '100', step: '5' })
@@ -279,33 +288,39 @@ describe('PatternPropertyControls', () => {
     await leftStrength.trigger('input')
     expect(wrapper.emitted('thirdOrderStrengthUpdate')?.at(-1)).toEqual([0, 0])
 
-    const rightInitial = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-1"]')
-    expect(rightInitial.attributes()).toMatchObject({
+    const leftAdjust = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-0"]')
+    expect(leftAdjust.attributes()).toMatchObject({
       type: 'range',
       min: '0',
       max: '360',
       step: '5',
     })
-    expect(rightInitial.attributes('aria-valuetext')).toBe('90°')
-    rightInitial.element.value = '0'
-    await rightInitial.trigger('input')
-    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([1, 0])
+    expect(leftAdjust.element.disabled).toBe(false)
+    expect(leftAdjust.attributes('aria-valuetext')).toBe('45°')
+    leftAdjust.element.value = '90'
+    await leftAdjust.trigger('input')
+    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([0, 90])
 
-    const rightTiming = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-timing-1"]')
-    expect(rightTiming.element.value).toBe('2:3-pro')
-    await rightTiming.setValue('')
-    expect(wrapper.emitted('thirdOrderTimingUpdate')?.at(-1)).toEqual([1, undefined])
+    const rightAdjust = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-1"]')
+    expect(rightAdjust.element.disabled).toBe(true)
+    expect(rightAdjust.attributes('aria-valuetext')).toBe('0°')
 
-    const leftInitialClear = wrapper.get<HTMLButtonElement>(
-      'button[aria-label="Clear Left Third Order Initial"]',
+    const leftTimingClear = wrapper.get<HTMLButtonElement>(
+      'button[aria-label="Clear Left Third Order Ratio"]',
+    )
+    const rightAdjustClear = wrapper.get<HTMLButtonElement>(
+      'button[aria-label="Clear Right Third Order Adjust"]',
     )
     const rightStrengthClear = wrapper.get<HTMLButtonElement>(
       'button[aria-label="Clear Right Third Order Strength"]',
     )
-    expect(leftInitialClear.element.disabled).toBe(false)
+    expect(leftTimingClear.element.disabled).toBe(false)
+    expect(rightAdjustClear.element.disabled).toBe(false)
     expect(rightStrengthClear.element.disabled).toBe(true)
-    await leftInitialClear.trigger('click')
-    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([0, undefined])
+    await leftTimingClear.trigger('click')
+    expect(wrapper.emitted('thirdOrderTimingUpdate')?.at(-1)).toEqual([0, undefined])
+    await rightAdjustClear.trigger('click')
+    expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([1, undefined])
   })
 
   it('defaults Third Order to mirrored and gates the Opposed option', async () => {
@@ -333,7 +348,7 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.get('[aria-label="Right Third Order"]').isVisible()).toBe(true)
   })
 
-  it('hides Initial for later Builder portions and includes Third Order in Eight Step properties', () => {
+  it('hides Adjust for later Builder portions and includes Third Order in Eight Step properties', () => {
     const builder = mount(PatternPropertyControls, {
       props: { context: 'builder', activeProperty: 'third-order', firstEditableFrameIndex: 1 },
     })
@@ -654,8 +669,11 @@ describe('PatternPropertyControls', () => {
       global: { plugins: [pinia] },
     })
 
-    expect(wrapper.findAll('input[type="range"]')).toHaveLength(1)
+    expect(wrapper.findAll('input[type="range"]')).toHaveLength(2)
     wrapper.get('[data-role="vtg-third-order-strength-0"]')
+    expect(
+      wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-0"]').element.disabled,
+    ).toBe(true)
     wrapper.get('[data-role="vtg-offset-0-stepper"]')
     wrapper.get('[data-role="vtg-offset-1-stepper"]')
     wrapper.get('[data-role="vtg-yaw-0-0-stepper"]')

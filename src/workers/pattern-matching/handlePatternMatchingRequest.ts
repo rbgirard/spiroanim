@@ -54,7 +54,7 @@ const matchedQtr = (
   exact: boolean,
 ): VtgPatternMatchResult => ({ status: 'matched', source: 'qtr', match, exact })
 
-export const matchVtgPatternRequest = async ({
+const matchVtgPatternRequestAtCurrentDuration = async ({
   animation,
   preferences,
   source,
@@ -200,6 +200,26 @@ export const matchVtgPatternRequest = async ({
   }
   if (resolvedVtgMatch) return matchedVtg(resolvedVtgMatch, false)
   return resolvedQtrMatch ? matchedQtr(resolvedQtrMatch, false) : { status: 'unmatched' }
+}
+
+export const matchVtgPatternRequest = async (
+  request: VtgPatternMatchRequest,
+): Promise<VtgPatternMatchResult> => {
+  const result = await matchVtgPatternRequestAtCurrentDuration(request)
+  if (result.status !== 'unmatched') return result
+
+  const { normalizeVtgPatternMatchCycle } =
+    await import('@/features/vtg/math/normalizeVtgPatternMatchCycle')
+  const normalized = normalizeVtgPatternMatchCycle(request.animation)
+  if (!normalized) return result
+
+  const normalizedResult = await matchVtgPatternRequestAtCurrentDuration({
+    ...request,
+    animation: normalized,
+  })
+  return normalizedResult.status === 'matched'
+    ? { ...normalizedResult, exact: false }
+    : normalizedResult
 }
 
 export const matchEightStepPatternRequest = async ({

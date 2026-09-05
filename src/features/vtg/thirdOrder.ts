@@ -329,29 +329,28 @@ export const updateVtgThirdOrderSettings = (
   return next
 }
 
-/** Preserves the effective initial warp while a continuation timing is added or removed. */
+/** Preserves the effective initial warp when timing is added and clears all Third Order values with it. */
 export const updateVtgThirdOrderTimingSetting = (
   animation: RootDataFinal,
   settings: VtgThirdOrderSettings,
   propIndex: 0 | 1,
   value?: VtgThirdOrderTiming,
 ): VtgThirdOrderSettings => {
+  if (value === undefined) {
+    return updateVtgThirdOrderSettings(settings, propIndex, {
+      initial: undefined,
+      strength: undefined,
+      timing: undefined,
+    })
+  }
+
   let next = settings
   const initial = settings[propIndex].initial
-  if (
-    value !== undefined &&
-    settings[propIndex].timing === undefined &&
-    typeof initial === 'string'
-  ) {
+  if (settings[propIndex].timing === undefined && typeof initial === 'string') {
     const frames = animation.props[propIndex]?.anim ?? []
     const initialWarp = resolveAnimationFrames(frames)[0]?.warp
     if (initialWarp !== undefined) {
       next = updateVtgThirdOrderSettings(next, propIndex, { initial: initialWarp })
-    }
-  } else if (value === undefined && typeof initial === 'number') {
-    const inheritedTiming = detectVtgThirdOrderInitialTiming(initial)
-    if (inheritedTiming !== undefined) {
-      next = updateVtgThirdOrderSettings(next, propIndex, { initial: inheritedTiming })
     }
   }
   return updateVtgThirdOrderSettings(next, propIndex, { timing: value })

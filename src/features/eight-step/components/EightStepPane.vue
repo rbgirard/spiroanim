@@ -13,7 +13,12 @@
     <div class="eight-step-top-options">
       <PatternTransformControls role-prefix="eight-step" @reset="resetPatternControls">
         <template #before-reset>
-          <PatternShapeControls v-model:shape="shape" role-prefix="eight-step" />
+          <PatternShapeControls
+            v-model:shape="shape"
+            v-model:halve="halve"
+            role-prefix="eight-step"
+            show-halve
+          />
         </template>
       </PatternTransformControls>
     </div>
@@ -380,6 +385,7 @@ const {
 } = storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
+const halve = ref(false)
 const propRotationOffsets = ref<EightStepPatternSelection['propRotationOffsets']>()
 
 let suppressPatternEmit = false
@@ -468,6 +474,7 @@ const { previewUrls, requestPreviews } = useEightStepPreviews({
   scale,
   spacing,
   shape,
+  halve,
   leftPropColor,
   rightPropColor,
   prop,
@@ -500,6 +507,7 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
   if (swapProps.value) selection.swapProps = true
   if (reversePlane.value) selection.reversePlane = true
   if (shape.value !== 'diamond') selection.shape = shape.value
+  if (halve.value) selection.halve = true
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (propRotationOffsets.value !== undefined)
@@ -583,13 +591,14 @@ const resetPatternControls = async () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   shape.value = 'diamond'
+  halve.value = false
   propRotationOffsets.value = undefined
   await nextTick()
   suppressPatternEmit = false
   if (selectedCell.value) emitPatternSelection(selectedCell.value)
 }
 
-watch([swapProps, reversePlane, shape], () => {
+watch([swapProps, reversePlane, shape, halve], () => {
   if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
 })
 
@@ -658,6 +667,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     swapProps.value = match.swapProps
     reversePlane.value = match.reversePlane
     shape.value = match.shape
+    halve.value = match.halve ?? false
     bpm.value = match.bpm
     scale.value = match.scale
     propRotationOffsets.value = match.propRotationOffsets
@@ -691,6 +701,7 @@ const selectInitialRandomPattern = () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   shape.value = 'diamond'
+  halve.value = false
   propRotationOffsets.value = undefined
   selectRandomCell()
 
@@ -755,6 +766,7 @@ defineExpose({
   swapProps,
   reversePlane,
   shape,
+  halve,
   bpm,
   scale,
   thick,

@@ -8,6 +8,7 @@ import {
   findEightStepPatternMatch,
   matchesEightStepSelection,
 } from '@/features/eight-step/matchEightStepAnimation'
+import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
 import { applyVtgBuilderScaleSettings } from '@/features/builder/applyVtgBuilderScaleSettings'
 import { applyVtgTwistSettings } from '@/features/vtg/applyVtgTwistSettings'
@@ -19,6 +20,27 @@ import { consolidateAnimationPlayback } from '@/math/animation/subdivideAnimatio
 import { rootCompile } from '@/math/animation/AnimFunc'
 
 describe('matchEightStepAnimation', () => {
+  it.each([false, true])('recovers every Eight Step cell with Halve %s', (halve) => {
+    for (const definition of eightStepPatternDefinitions) {
+      const selection = {
+        concept: '8stp',
+        reference: definition.reference,
+        ...(halve ? { halve: true } : undefined),
+      } as const
+      const animation = createDefaultEightStepAnimation(selection)
+      const match = animation ? findEightStepPatternMatch(animation) : undefined
+
+      expect({ reference: definition.reference, match }).toMatchObject({
+        reference: definition.reference,
+        match: {
+          reference: definition.reference,
+          ...(halve ? { halve: true } : undefined),
+        },
+      })
+      expect(animation && matchesEightStepSelection(animation, selection)).toBe(true)
+    }
+  })
+
   it('recovers the cell and transforms from compiled geometry', () => {
     const selection = {
       concept: '8stp',
@@ -65,6 +87,31 @@ describe('matchEightStepAnimation', () => {
       swapProps: true,
       reversePlane: true,
       shape: 'box',
+      bpm: 87,
+      scale: 1.3,
+    })
+    expect(matchesEightStepSelection(animation, selection)).toBe(true)
+  })
+
+  it('recovers the Halve option', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '6-AI',
+      halve: true,
+      bpm: 87,
+      scale: 1.3,
+    } as const
+    const animation = createDefaultEightStepAnimation(selection)
+
+    expect(animation).toBeDefined()
+    if (!animation) return
+
+    expect(findEightStepPatternMatch(animation)).toEqual({
+      reference: '6-AI',
+      swapProps: false,
+      reversePlane: false,
+      shape: 'diamond',
+      halve: true,
       bpm: 87,
       scale: 1.3,
     })

@@ -5,7 +5,9 @@ import { createDefaultEightStepAnimation } from '@/features/eight-step/createEig
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { resizeVtgTransitionPatternPreview } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { createDefaultVtgPropertySettings } from '@/features/vtg/propertySettings'
+import { applyVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
@@ -73,6 +75,71 @@ describe('handlePatternMatchingRequest', () => {
       }),
     ).resolves.toEqual({ status: 'unchanged' })
   })
+
+  it.each([3.5, 4.5])(
+    'matches a single VTG portion normalized from %s beats',
+    async (beatCount) => {
+      const animation = createDefaultVtgAnimation({ reference: '2-2', speedRatio: '1:3' })
+      if (!animation) throw new Error('Expected a supported VTG animation')
+      const resized = resizeVtgTransitionPatternPreview(animation, 0, beatCount)
+      if (!resized) throw new Error('Expected the VTG animation to resize')
+
+      await expect(
+        matchVtgPatternRequest({
+          animation: resized,
+          preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+        }),
+      ).resolves.toMatchObject({
+        status: 'matched',
+        source: 'vtg',
+        exact: false,
+        match: { reference: '2-2', speedRatio: '1:3' },
+      })
+    },
+  )
+
+  it('matches a repeated base cycle required by Third Order', async () => {
+    const base = createDefaultVtgAnimation(
+      { reference: '2-2', speedRatio: '1:3' },
+      { minimumCycleCount: 2 },
+    )
+    if (!base) throw new Error('Expected a supported VTG animation')
+    const animation = applyVtgThirdOrderSettings(base, [
+      { initial: 0, strength: 50, timing: '2:3-pro' },
+      {},
+    ])
+
+    await expect(
+      matchVtgPatternRequest({
+        animation,
+        preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+      }),
+    ).resolves.toMatchObject({
+      status: 'matched',
+      source: 'vtg',
+      exact: false,
+      match: { reference: '2-2', speedRatio: '1:3' },
+    })
+  })
+
+  it.each(['turns', 'plane'] as const)(
+    'does not normalize a different-length pattern with authored %s beyond frame 2',
+    async (field) => {
+      const animation = createDefaultVtgAnimation({ reference: '2-2', speedRatio: '1:3' })
+      if (!animation) throw new Error('Expected a supported VTG animation')
+      const resized = resizeVtgTransitionPatternPreview(animation, 0, 3.5)
+      const frame = resized?.props[0]?.anim[2]
+      if (!resized || !frame) throw new Error('Expected the VTG animation to resize')
+      frame[field] = 0
+
+      await expect(
+        matchVtgPatternRequest({
+          animation: resized,
+          preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+        }),
+      ).resolves.toEqual({ status: 'unmatched' })
+    },
+  )
 
   it('falls back from VTG to merged QTR matching', async () => {
     const animation = createDefaultQtrAnimation({

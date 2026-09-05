@@ -162,7 +162,7 @@
         </div>
       </div>
       <div
-        v-if="propertiesAfterPreviewIndex === index"
+        v-if="structureEditingEnabled && propertiesAfterPreviewIndex === index"
         class="vtg-transition-previews__properties"
         data-role="vtg-transition-preview-properties"
       >

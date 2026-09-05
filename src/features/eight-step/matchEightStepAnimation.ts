@@ -114,28 +114,32 @@ const buildCandidateCache = () => {
     for (const shape of eightStepShapes) {
       for (const swapProps of booleanOptions) {
         for (const reversePlane of booleanOptions) {
-          const selection: EightStepPatternSelection = {
-            concept: '8stp',
-            reference: definition.reference,
-            swapProps,
-            reversePlane,
-            shape,
+          for (const halve of booleanOptions) {
+            const selection: EightStepPatternSelection = {
+              concept: '8stp',
+              reference: definition.reference,
+              swapProps,
+              reversePlane,
+              shape,
+              ...(halve ? { halve: true } : undefined),
+            }
+            const animation = createDefaultEightStepAnimation(selection)
+            if (!animation) continue
+
+            const signature = createSignature(animation)
+            if (!signature) continue
+
+            const matches = candidates.get(signature) ?? []
+            matches.push({
+              reference: definition.reference,
+              swapProps,
+              reversePlane,
+              shape,
+              ...(halve ? { halve: true } : undefined),
+              animation,
+            })
+            candidates.set(signature, matches)
           }
-          const animation = createDefaultEightStepAnimation(selection)
-          if (!animation) continue
-
-          const signature = createSignature(animation)
-          if (!signature) continue
-
-          const matches = candidates.get(signature) ?? []
-          matches.push({
-            reference: definition.reference,
-            swapProps,
-            reversePlane,
-            shape,
-            animation,
-          })
-          candidates.set(signature, matches)
         }
       }
     }

@@ -580,40 +580,20 @@
               <h3>{{ label }}</h3>
 
               <div
-                v-if="firstEditableFrameIndex === 0"
                 class="pattern-property-controls__third-order-row"
                 :class="{
                   'pattern-property-controls__twist-frame--inherited':
-                    thirdOrderSettings[propIndex]?.initial === undefined,
+                    thirdOrderSettings[propIndex]?.timing === undefined,
                   'pattern-property-controls__value-set':
-                    thirdOrderSettings[propIndex]?.initial !== undefined,
+                    thirdOrderSettings[propIndex]?.timing !== undefined,
                 }"
               >
-                <span>Initial</span>
-                <input
-                  v-if="thirdOrderSettings[propIndex]?.timing !== undefined"
-                  type="range"
-                  min="0"
-                  max="360"
-                  step="5"
-                  :value="thirdOrderInitialAngle(propIndex)"
-                  :aria-valuetext="`${thirdOrderInitialAngle(propIndex)}°`"
-                  :aria-label="`${label} Third Order Initial`"
-                  :data-role="`${context}-third-order-initial-${propIndex}`"
-                  @input="setThirdOrderInitialAngle(propIndex, $event)"
-                  @pointerdown="emit('sliderStart')"
-                  @pointerup="emit('sliderEnd')"
-                  @pointercancel="emit('sliderEnd')"
-                  @keydown="emit('sliderStart')"
-                  @keyup="emit('sliderEnd')"
-                  @blur="emit('sliderEnd')"
-                />
+                <span>Ratio</span>
                 <select
-                  v-else
-                  :value="thirdOrderInitialTiming(propIndex)"
-                  :aria-label="`${label} Third Order Initial`"
-                  :data-role="`${context}-third-order-initial-${propIndex}`"
-                  @change="setThirdOrderInitialTiming(propIndex, $event)"
+                  :value="thirdOrderDisplaySettings.timing[propIndex] ?? ''"
+                  :aria-label="`${label} Third Order Ratio`"
+                  :data-role="`${context}-third-order-timing-${propIndex}`"
+                  @change="setThirdOrderTiming(propIndex, $event)"
                 >
                   <option value="">Undefined</option>
                   <option
@@ -624,15 +604,12 @@
                     {{ option.label }}
                   </option>
                 </select>
-                <output v-if="thirdOrderSettings[propIndex]?.timing !== undefined">
-                  {{ thirdOrderInitialAngle(propIndex) }}°
-                </output>
                 <button
                   type="button"
                   class="pattern-property-controls__delete"
-                  :disabled="thirdOrderSettings[propIndex]?.initial === undefined"
-                  :aria-label="`Clear ${label} Third Order Initial`"
-                  @click="emitThirdOrderInitial(propIndex)"
+                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
+                  :aria-label="`Clear ${label} Third Order Ratio`"
+                  @click="emitThirdOrderTiming(propIndex)"
                 >
                   <BaseIcon :path="mdiTrashCanOutline" :size="18" />
                 </button>
@@ -678,36 +655,41 @@
               </div>
 
               <div
+                v-if="firstEditableFrameIndex === 0"
                 class="pattern-property-controls__third-order-row"
                 :class="{
                   'pattern-property-controls__twist-frame--inherited':
-                    thirdOrderSettings[propIndex]?.timing === undefined,
+                    thirdOrderSettings[propIndex]?.initial === undefined,
                   'pattern-property-controls__value-set':
-                    thirdOrderSettings[propIndex]?.timing !== undefined,
+                    thirdOrderSettings[propIndex]?.initial !== undefined,
                 }"
               >
-                <span>Timing</span>
-                <select
-                  :value="thirdOrderDisplaySettings.timing[propIndex] ?? ''"
-                  :aria-label="`${label} Third Order Timing`"
-                  :data-role="`${context}-third-order-timing-${propIndex}`"
-                  @change="setThirdOrderTiming(propIndex, $event)"
-                >
-                  <option value="">Undefined</option>
-                  <option
-                    v-for="option in vtgThirdOrderTimingOptions"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
+                <span>Adjust</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  step="5"
+                  :value="thirdOrderInitialAngle(propIndex)"
+                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
+                  :aria-valuetext="`${thirdOrderInitialAngle(propIndex)}°`"
+                  :aria-label="`${label} Third Order Adjust`"
+                  :data-role="`${context}-third-order-initial-${propIndex}`"
+                  @input="setThirdOrderInitialAngle(propIndex, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <output>{{ thirdOrderInitialAngle(propIndex) }}°</output>
                 <button
                   type="button"
                   class="pattern-property-controls__delete"
-                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
-                  :aria-label="`Clear ${label} Third Order Timing`"
-                  @click="emitThirdOrderTiming(propIndex)"
+                  :disabled="thirdOrderSettings[propIndex]?.initial === undefined"
+                  :aria-label="`Clear ${label} Third Order Adjust`"
+                  @click="emitThirdOrderInitial(propIndex)"
                 >
                   <BaseIcon :path="mdiTrashCanOutline" :size="18" />
                 </button>
@@ -926,10 +908,6 @@ const clearOffset = (propIndex: number) => {
   emit('offsetUpdate', propIndex)
 }
 
-const thirdOrderInitialTiming = (propIndex: number) => {
-  const value = props.thirdOrderDisplaySettings.initial[propIndex]
-  return typeof value === 'string' ? value : ''
-}
 const thirdOrderInitialAngle = (propIndex: number) => {
   const value = props.thirdOrderDisplaySettings.initial[propIndex]
   return typeof value === 'number' ? value : 0
@@ -937,10 +915,6 @@ const thirdOrderInitialAngle = (propIndex: number) => {
 const emitThirdOrderInitial = (propIndex: number, value?: VtgThirdOrderInitial) => {
   if (!isPropIndex(propIndex)) return
   emit('thirdOrderInitialUpdate', propIndex, value)
-}
-const setThirdOrderInitialTiming = (propIndex: number, event: Event) => {
-  const value = (event.target as HTMLSelectElement).value
-  emitThirdOrderInitial(propIndex, value === '' ? undefined : (value as VtgThirdOrderTiming))
 }
 const setThirdOrderInitialAngle = (propIndex: number, event: Event) => {
   emitThirdOrderInitial(propIndex, Number((event.target as HTMLInputElement).value))

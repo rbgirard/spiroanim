@@ -11,6 +11,7 @@ import type {
   PatternMatchingClient,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import AppTooltip from '@/components/AppTooltip.vue'
 
 const createDeferred = <Value>() => {
   let resolve!: (value: Value) => void
@@ -333,13 +334,32 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
   })
 
-  it('places Tilted after 180 and before Reset and warns about tilted patterns', async () => {
+  it('places Tilted and Halve after 180 and before Reset', async () => {
     const wrapper = mount(EightStepPane)
     const tilted = wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]')
+    const halve = wrapper.get<HTMLInputElement>('[data-role="eight-step-halve"]')
 
     expect(tilted.element.type).toBe('checkbox')
     expect(tilted.element.checked).toBe(false)
-    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
+    expect(halve.element.type).toBe('checkbox')
+    expect(halve.element.checked).toBe(false)
+    expect(halve.attributes('aria-label')).toBe(
+      'Halve Turns for double-ended props like Staff and Triads',
+    )
+    expect(
+      wrapper
+        .findAllComponents(AppTooltip)
+        .some(
+          (tooltip) =>
+            tooltip.props('text') === 'Intended for double-ended props like Staff and Triads.',
+        ),
+    ).toBe(true)
+    expect(
+      wrapper
+        .get('[data-role="eight-step-shape-controls"]')
+        .findAll('label > span')
+        .map((label) => label.text()),
+    ).toEqual(['Tilted', 'Halve'])
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
       'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',
@@ -358,8 +378,8 @@ describe('EightStepPane', () => {
 
     await wrapper.get('[data-cell-reference="1-AI"]').trigger('click')
     await tilted.setValue(true)
+    await halve.setValue(true)
 
-    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
     expect(wrapper.findAll('.eight-step-cell--marked')).toHaveLength(0)
     expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
       'Tilted / Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
@@ -371,11 +391,13 @@ describe('EightStepPane', () => {
         reference: '1-AI',
         prop: 2,
         shape: 'box',
+        halve: true,
       },
     ])
 
     await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
     expect(tilted.element.checked).toBe(false)
+    expect(halve.element.checked).toBe(false)
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -683,9 +705,7 @@ describe('EightStepPane', () => {
     await wrapper
       .get<HTMLInputElement>('[data-role="eight-step-third-order-strength-0"]')
       .setValue('60')
-    const thirdOrder = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as
-      | RootDataFinal
-      | undefined
+    const thirdOrder = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
     expect(thirdOrder?.props[0]?.anim[0]?.strength).toBe(600)
 
     await wrapper.setProps({ animation: thirdOrder })

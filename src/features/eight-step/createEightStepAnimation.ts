@@ -14,6 +14,7 @@ import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import { halveEightStepTurns } from '@/features/eight-step/halveEightStepTurns'
 import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
@@ -92,9 +93,10 @@ export const createEightStepAnimation = (
     ...selection,
     swapProps: !selection.swapProps,
   })
+  const turnsAdjusted = selection.halve ? halveEightStepTurns(transformed) : transformed
 
   return applyPatternPropColors(
-    applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets),
+    applyVtgPropRotationOffsets(turnsAdjusted, selection.propRotationOffsets),
     selection,
   )
 }

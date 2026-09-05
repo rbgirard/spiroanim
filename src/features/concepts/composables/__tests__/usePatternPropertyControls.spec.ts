@@ -30,7 +30,7 @@ describe('usePatternPropertyControls', () => {
     expect(updates.at(-1)?.props[1]?.anim.some((frame) => frame.rotate !== undefined)).toBe(false)
   })
 
-  it('preserves frame zero Warp when Timing changes Initial into a slider value', () => {
+  it('preserves frame zero Warp when Timing is added and clears Adjust and Strength with Timing', () => {
     const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     const animation = shallowRef<RootDataFinal | undefined>(source)
     const controls = usePatternPropertyControls({
@@ -51,23 +51,26 @@ describe('usePatternPropertyControls', () => {
       animation.value?.props[0]?.anim.slice(1).every((frame) => frame.warp === undefined),
     ).toBe(true)
 
+    controls.updateThirdOrderStrength(0, 50)
     controls.updateThirdOrderTiming(0, '2:3-anti')
 
     expect(controls.vtgThirdOrderSettings.value[0]).toEqual({
       initial: initialWarp,
+      strength: 50,
       timing: '2:3-anti',
     })
     expect(animation.value?.props[0]?.anim[0]?.warp).toBe(initialWarp)
+    expect(animation.value?.props[0]?.anim[0]?.strength).toBe(500)
     expect(animation.value?.props[0]?.anim[1]?.warp).toBeTypeOf('number')
     expect(animation.value?.props[0]?.anim).toHaveLength(17)
 
     controls.updateThirdOrderTiming(0)
-    expect(controls.vtgThirdOrderSettings.value[0]).toEqual({ initial: '1:3-pro' })
-    expect(controls.vtgThirdOrderDisplaySettings.value.timing[0]).toBe('1:3-pro')
+    expect(controls.vtgThirdOrderSettings.value[0]).toEqual({})
+    expect(animation.value?.props[0]?.anim[0]?.warp).toBeUndefined()
+    expect(animation.value?.props[0]?.anim[0]?.strength).toBeUndefined()
     expect(animation.value?.props[0]?.anim[1]?.warp).toBeUndefined()
     expect(animation.value?.props[0]?.anim).toHaveLength(9)
 
-    controls.updateThirdOrderInitial(0)
     controls.updateThirdOrderTiming(0, '1:1-pro')
     expect(controls.vtgThirdOrderSettings.value[0]).toEqual({ timing: '1:1-pro' })
     expect(animation.value?.props[0]?.anim[0]?.warp).toBeUndefined()

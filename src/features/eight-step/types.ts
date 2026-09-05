@@ -31,6 +31,7 @@ export interface EightStepPatternSelection
   swapProps?: boolean
   reversePlane?: boolean
   shape?: EightStepShape
+  halve?: boolean
   bpm?: number
   scale?: number
   propRotationOffsets?: readonly [number, number]
@@ -46,6 +47,7 @@ export interface EightStepPatternMatch {
   swapProps: boolean
   reversePlane: boolean
   shape: EightStepShape
+  halve?: boolean
   bpm: number
   scale: number
   propRotationOffsets?: readonly [number, number]

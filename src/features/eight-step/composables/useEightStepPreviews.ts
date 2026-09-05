@@ -16,6 +16,7 @@ interface UseEightStepPreviewsOptions {
   scale: Ref<number>
   spacing: Ref<number>
   shape: Ref<EightStepShape>
+  halve: Ref<boolean>
   leftPropColor: Ref<PatternPropColor>
   rightPropColor: Ref<PatternPropColor>
   prop: Ref<PropInd>
@@ -40,6 +41,7 @@ export const useEightStepPreviews = ({
   scale,
   spacing,
   shape,
+  halve,
   leftPropColor,
   rightPropColor,
   prop,
@@ -55,6 +57,7 @@ export const useEightStepPreviews = ({
         scale: scale.value,
         spacing: spacing.value,
         shape: shape.value,
+        ...(halve.value ? { halve: true } : undefined),
         propColors: [leftPropColor.value, rightPropColor.value],
         prop: prop.value,
       }
@@ -67,7 +70,7 @@ export const useEightStepPreviews = ({
 
   // BPM affects timing only; visual controls use the same fixed preview presentation as VTG/QTR.
   watch(
-    [swapProps, reversePlane, scale, spacing, shape, leftPropColor, rightPropColor, prop],
+    [swapProps, reversePlane, scale, spacing, shape, halve, leftPropColor, rightPropColor, prop],
     renderer.requestPreviews,
   )
 

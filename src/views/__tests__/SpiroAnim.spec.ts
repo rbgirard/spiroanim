@@ -867,7 +867,8 @@ describe('SpiroAnim view', () => {
 
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-role="builder-properties"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="builder-properties"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
     expect(usePlayerStore('main').PLAYBACK_OVERRIDE_ACTIVE).toBe(true)
 
     const playerStore = usePlayerStore('main')

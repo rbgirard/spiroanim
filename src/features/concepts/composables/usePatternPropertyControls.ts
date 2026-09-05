@@ -121,6 +121,10 @@ export const usePatternPropertyControls = ({
         value,
       )
     } else {
+      if (value === undefined) {
+        conceptsStore.setVtgThirdOrderInitial(propIndex)
+        conceptsStore.setVtgThirdOrderStrength(propIndex)
+      }
       conceptsStore.setVtgThirdOrderTiming(propIndex, value)
     }
     emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())

@@ -76,6 +76,38 @@ describe('createEightStepAnimation', () => {
     ).toBe(true)
   })
 
+  it('halves every compiled pattern Turn while preserving zero and Viewer Offset', () => {
+    const normal = createDefaultEightStepAnimation({ concept: '8stp', reference: '7-IE' })
+    const halved = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '7-IE',
+      halve: true,
+    })
+    const offset = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '7-IE',
+      halve: true,
+      propRotationOffsets: [90, -90],
+    })
+    if (!normal || !halved || !offset) throw new Error('Expected supported Eight Step animations')
+
+    const normalCompiled = rootCompile(normal)
+    const halvedCompiled = rootCompile(halved)
+    for (const [propIndex, prop] of normalCompiled.props.entries()) {
+      for (const [frameIndex, frame] of prop.anim.entries()) {
+        const halvedFrame = halvedCompiled.props[propIndex]?.anim[frameIndex]
+        expect(halvedFrame?.turns).toBe(frame.turns === 0 ? 0 : frame.turns / 2)
+      }
+    }
+    expect(
+      halved.props.flatMap((prop) => prop.anim).every((frame) => !Object.is(frame.turns, -0)),
+    ).toBe(true)
+    expect((offset.props[0]?.anim[0]?.turns ?? 0) - (halved.props[0]?.anim[0]?.turns ?? 0)).toBe(90)
+    expect((offset.props[1]?.anim[0]?.turns ?? 0) - (halved.props[1]?.anim[0]?.turns ?? 0)).toBe(
+      -90,
+    )
+  })
+
   it('applies shared player controls and swaps complete tracks', () => {
     const base = createDefaultEightStepAnimation({ concept: '8stp', reference: '5-II' })
     const transformed = createEightStepAnimation(current, {

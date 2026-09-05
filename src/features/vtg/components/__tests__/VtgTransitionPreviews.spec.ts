@@ -135,6 +135,24 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.get('[data-test="selected-properties"]').text()).toBe('Properties')
   })
 
+  it('hides selected portion properties when structure editing is disabled', () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'read-only-properties',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        selectedIndex: 0,
+        structureEditingEnabled: false,
+      },
+      slots: { 'selected-properties': '<div data-test="selected-properties">Properties</div>' },
+    })
+
+    expect(wrapper.find('[data-role="vtg-transition-preview-properties"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="selected-properties"]').exists()).toBe(false)
+  })
+
   it('places selected properties after the final preview while hiding the placeholder', () => {
     const animations = Array.from({ length: 5 }, () => animation)
     const wrapper = mount(VtgTransitionPreviews, {

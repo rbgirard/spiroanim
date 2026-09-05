@@ -13,6 +13,19 @@
         </label>
       </template>
     </AppTooltip>
+    <AppTooltip v-if="showHalve" text="Intended for double-ended props like Staff and Triads.">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="halve"
+            type="checkbox"
+            aria-label="Halve Turns for double-ended props like Staff and Triads"
+            :data-role="`${rolePrefix}-halve`"
+          />
+          <span>Halve</span>
+        </label>
+      </template>
+    </AppTooltip>
   </section>
 </template>
 
@@ -20,9 +33,13 @@
 import AppTooltip from '@/components/AppTooltip.vue'
 import type { PatternShape } from '@/types/PatternTypes'
 
-withDefaults(defineProps<{ rolePrefix?: string }>(), { rolePrefix: 'vtg' })
+withDefaults(defineProps<{ rolePrefix?: string; showHalve?: boolean }>(), {
+  rolePrefix: 'vtg',
+  showHalve: false,
+})
 
 const shape = defineModel<PatternShape>('shape', { required: true })
+const halve = defineModel<boolean>('halve', { default: false })
 const tilted = computed({
   get: () => shape.value === 'box',
   set: (value: boolean) => {
