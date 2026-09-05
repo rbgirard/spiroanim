@@ -185,9 +185,13 @@
       @toggle="emit('builderOpen', 'manual')"
     />
 
-    <p v-if="shape === 'box'" class="eight-step-development-note" data-role="eight-step-box-note">
-      Tilted / Box mode is experimental, and its patterns have not been validated. Difficult /
-      Impossible highlighting for patterns performed in Wall-Plane is disabled.
+    <p
+      v-if="shape !== 'diamond'"
+      class="eight-step-development-note"
+      data-role="eight-step-box-note"
+    >
+      Tilted / Turned modes are experimental, and their patterns have not been validated. Difficult
+      / Impossible highlighting for patterns performed in Wall-Plane is disabled.
     </p>
     <p
       v-else

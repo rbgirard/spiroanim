@@ -1,15 +1,37 @@
 <template>
-  <section class="pattern-shape-controls" :data-role="`${rolePrefix}-shape-controls`">
+  <section
+    class="pattern-shape-controls"
+    role="radiogroup"
+    aria-label="Pattern orientation"
+    :data-role="`${rolePrefix}-shape-controls`"
+  >
     <AppTooltip text="Use the tilted pattern orientation">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
           <input
-            v-model="tilted"
-            type="checkbox"
+            type="radio"
+            :name="`${rolePrefix}-orientation`"
+            :checked="shape === 'box'"
             aria-label="Use the tilted pattern orientation"
             :data-role="`${rolePrefix}-tilted`"
+            @click="toggleShape('box')"
           />
           <span>Tilted</span>
+        </label>
+      </template>
+    </AppTooltip>
+    <AppTooltip text="Rotate the pattern orientation by 90 degrees">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            type="radio"
+            :name="`${rolePrefix}-orientation`"
+            :checked="shape === 'turned'"
+            aria-label="Rotate the pattern orientation by 90 degrees"
+            :data-role="`${rolePrefix}-turned`"
+            @click="toggleShape('turned')"
+          />
+          <span>Turned</span>
         </label>
       </template>
     </AppTooltip>
@@ -31,21 +53,18 @@
 
 <script setup lang="ts">
 import AppTooltip from '@/components/AppTooltip.vue'
-import type { PatternShape } from '@/types/PatternTypes'
+import type { EightStepShape } from '@/features/eight-step/types'
 
 withDefaults(defineProps<{ rolePrefix?: string; showHalve?: boolean }>(), {
   rolePrefix: 'vtg',
   showHalve: false,
 })
 
-const shape = defineModel<PatternShape>('shape', { required: true })
+const shape = defineModel<EightStepShape>('shape', { required: true })
 const halve = defineModel<boolean>('halve', { default: false })
-const tilted = computed({
-  get: () => shape.value === 'box',
-  set: (value: boolean) => {
-    shape.value = value ? 'box' : 'diamond'
-  },
-})
+const toggleShape = (value: Exclude<EightStepShape, 'diamond'>) => {
+  shape.value = shape.value === value ? 'diamond' : value
+}
 </script>
 
 <style scoped>

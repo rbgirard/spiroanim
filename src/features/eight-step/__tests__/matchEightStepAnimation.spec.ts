@@ -93,6 +93,30 @@ describe('matchEightStepAnimation', () => {
     expect(matchesEightStepSelection(animation, selection)).toBe(true)
   })
 
+  it('recovers the Turned shape mode', () => {
+    const selection = {
+      concept: '8stp',
+      reference: '6-AI',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'turned',
+      bpm: 87,
+      scale: 1.3,
+    } as const
+    const animation = createDefaultEightStepAnimation(selection)
+    if (!animation) throw new Error('Expected a supported Eight Step animation')
+
+    expect(findEightStepPatternMatch(animation)).toEqual({
+      reference: '6-AI',
+      swapProps: true,
+      reversePlane: true,
+      shape: 'turned',
+      bpm: 87,
+      scale: 1.3,
+    })
+    expect(matchesEightStepSelection(animation, selection)).toBe(true)
+  })
+
   it('recovers the Halve option', () => {
     const selection = {
       concept: '8stp',

@@ -7,6 +7,7 @@ import {
   eightStepPlaybackMultiplier,
 } from '@/features/eight-step/createEightStepAnimation'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
+import { eightStepShapes } from '@/features/eight-step/types'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
@@ -258,6 +259,29 @@ describe('createEightStepAnimation', () => {
     )
   })
 
+  it('adds 90 degrees only to both initial arcs in Turned mode', () => {
+    const diamond = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
+    const turned = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AI',
+      shape: 'turned',
+    })
+    if (!diamond || !turned) throw new Error('Expected supported Eight Step animations')
+
+    const diamondCompiled = rootCompile(diamond)
+    const turnedCompiled = rootCompile(turned)
+    expect(turnedCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+      diamondCompiled.props.map((prop) => {
+        const initial = prop.anim[0]!
+        const delta = Math.abs(initial.plane) === 180 ? -90 : 90
+        return (initial.arc + delta + 360) % 360
+      }),
+    )
+    expect(turnedCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
+      diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
+    )
+  })
+
   it('keeps quarter-column hand positions one quarter apart in Box mode', () => {
     for (const column of [5, 6, 7, 8] as const) {
       for (const reversePlane of [false, true]) {
@@ -332,7 +356,7 @@ describe('createEightStepAnimation', () => {
     for (const definition of eightStepPatternDefinitions) {
       for (const swapProps of [false, true]) {
         for (const reversePlane of [false, true]) {
-          for (const shape of ['diamond', 'box'] as const) {
+          for (const shape of eightStepShapes) {
             const label = `${definition.reference}, Swap ${swapProps}, 180° ${reversePlane}, ${shape}`
             const animation = createDefaultEightStepAnimation({
               concept: '8stp',

@@ -355,7 +355,7 @@ describe('EightStepPane', () => {
       wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').setValue(1.1),
     )
     await expectNineMorePreviews(() =>
-      wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]').setValue(true),
+      wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]').trigger('click'),
     )
 
     const beforeRenderingControls = countWorkerMessages('data')
@@ -368,13 +368,16 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
   })
 
-  it('places Tilted and Halve after 180 and before Reset', async () => {
+  it('places deselectable Tilted and Turned radios with Halve after 180 and before Reset', async () => {
     const wrapper = mount(EightStepPane)
     const tilted = wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]')
+    const turned = wrapper.get<HTMLInputElement>('[data-role="eight-step-turned"]')
     const halve = wrapper.get<HTMLInputElement>('[data-role="eight-step-halve"]')
 
-    expect(tilted.element.type).toBe('checkbox')
+    expect(tilted.element.type).toBe('radio')
     expect(tilted.element.checked).toBe(false)
+    expect(turned.element.type).toBe('radio')
+    expect(turned.element.checked).toBe(false)
     expect(halve.element.type).toBe('checkbox')
     expect(halve.element.checked).toBe(false)
     expect(halve.attributes('aria-label')).toBe(
@@ -393,7 +396,7 @@ describe('EightStepPane', () => {
         .get('[data-role="eight-step-shape-controls"]')
         .findAll('label > span')
         .map((label) => label.text()),
-    ).toEqual(['Tilted', 'Halve'])
+    ).toEqual(['Tilted', 'Turned', 'Halve'])
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
       'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',
@@ -411,12 +414,12 @@ describe('EightStepPane', () => {
     ).toBeTruthy()
 
     await wrapper.get('[data-cell-reference="1-AI"]').trigger('click')
-    await tilted.setValue(true)
+    await tilted.trigger('click')
     await halve.setValue(true)
 
     expect(wrapper.findAll('.eight-step-cell--marked')).toHaveLength(0)
     expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
-      'Tilted / Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
+      'Tilted / Turned modes are experimental, and their patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
     )
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -429,8 +432,26 @@ describe('EightStepPane', () => {
       },
     ])
 
+    await tilted.trigger('click')
+    expect(tilted.element.checked).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
+
+    await turned.trigger('click')
+    expect(turned.element.checked).toBe(true)
+    expect(tilted.element.checked).toBe(false)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      {
+        concept: '8stp',
+        reference: '1-AI',
+        prop: 2,
+        shape: 'turned',
+        halve: true,
+      },
+    ])
+
     await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
     expect(tilted.element.checked).toBe(false)
+    expect(turned.element.checked).toBe(false)
     expect(halve.element.checked).toBe(false)
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
