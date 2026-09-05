@@ -660,4 +660,62 @@ describe('ConceptsPane', () => {
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').element.checked).toBe(true)
     expect(wrapper.findAll('.vtg-tile--selected')).toHaveLength(0)
   })
+
+  it('reports the matched VTG cell for the Composer bridge', async () => {
+    const wrapper = mount(ConceptsPane)
+
+    expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([null])
+
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+
+    expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([
+      {
+        concept: 'vtg',
+        reference: '1-1',
+        speedRatio: '1:3',
+        shape: 'diamond',
+        isAnti: false,
+        orientation: 0,
+      },
+    ])
+
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-qtr"]').setValue(true)
+
+    expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([
+      {
+        concept: 'qtr',
+        reference: '1-1',
+        speedRatio: '1:3',
+        shape: 'diamond',
+        isAnti: false,
+        orientation: 0,
+      },
+    ])
+  })
+
+  it('reports the matched Eight Step cell for the Composer bridge', async () => {
+    const wrapper = mount(ConceptsPane)
+
+    await wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]').setValue('8stp')
+    await wrapper.get('[data-cell-reference="4-II"]').trigger('click')
+
+    expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([
+      { concept: '8stp', reference: '4-II', shape: 'diamond' },
+    ])
+  })
+
+  it('clears the reported Composer cell when an unmatched animation loads', async () => {
+    const wrapper = mount(ConceptsPane)
+
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+    expect(wrapper.emitted('composerCellChange')?.at(-1)).not.toEqual([null])
+
+    const animation = createDefaultQstAnimation({ concept: 'qst', reference: 'beyond-100' })
+    if (!animation) throw new Error('Expected a supported QST animation')
+
+    await wrapper.setProps({ animation, animationRevision: 1, animationReady: true })
+    await flushPromises()
+
+    await vi.waitFor(() => expect(wrapper.emitted('composerCellChange')?.at(-1)).toEqual([null]))
+  })
 })

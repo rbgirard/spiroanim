@@ -73,6 +73,7 @@
       @quick-slots-create="emit('quickSlotsCreate', $event)"
       @animation-update="emit('animationUpdate', $event)"
       @builder-open="emit('builderOpen', $event)"
+      @composer-cell-change="updateComposerCell"
       @update:builder-full-grid="emit('update:builderFullGrid', $event)"
     />
     <EightStepPane
@@ -86,6 +87,7 @@
       @animation-update="emit('animationUpdate', $event)"
       @builder-open="emit('builderOpen', $event)"
       @pattern-matched="emit('eightStepPatternMatched')"
+      @composer-cell-change="updateComposerCell"
     />
     <QuarterSpaceTechPane
       v-else-if="selectedConcept === 'qst'"
@@ -110,6 +112,7 @@ import QuickSlotsControl from '@/features/concepts/components/QuickSlotsControl.
 import QuickSlotVisual from '@/features/concepts/components/QuickSlotVisual.vue'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import type { ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
 import KineticAlphabetPane from '@/features/kinetic-alphabet/components/KineticAlphabetPane.vue'
 import QuarterSpaceTechPane from '@/features/quarter-space-tech/components/QuarterSpaceTechPane.vue'
 import VtgPane from '@/features/vtg/components/VtgPane.vue'
@@ -140,11 +143,40 @@ const emit = defineEmits<{
   animationUpdate: [animation: RootDataFinal]
   builderOpen: [source: 'manual' | 'automatic']
   eightStepPatternMatched: []
+  composerCellChange: [cell: ComposerCell | null]
   'update:builderFullGrid': [enabled: boolean]
 }>()
 
 const conceptsStore = useConceptsStore()
 const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
+
+const composerCell = ref<ComposerCell | null>(null)
+const reportsComposerCell = computed(
+  () => selectedConcept.value === 'vtg' || selectedConcept.value === '8stp',
+)
+
+const updateComposerCell = (cell: ComposerCell | null) => {
+  composerCell.value = cell
+  emit('composerCellChange', cell)
+}
+
+/**
+ * Only the VTG and Eight Step matrices can recognize a catalog cell, so the last cell they
+ * reported stays valid while the same animation is loaded and the reader is on another concept.
+ * A different animation arriving while one of those concepts is open would otherwise leave a link
+ * pointing at the previous pattern.
+ */
+watch(
+  [
+    () => props.animationRevision,
+    // Standalone consumers that do not provide a revision retain the original prop-update API.
+    () => (props.animationRevision === undefined ? props.animation : undefined),
+  ],
+  () => {
+    if (!reportsComposerCell.value) updateComposerCell(null)
+  },
+)
+
 const usesPatternMatching = computed(
   () =>
     selectedConcept.value !== 'tka' &&

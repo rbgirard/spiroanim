@@ -16,6 +16,7 @@
     @quick-slots-create="emit('quickSlotsCreate', $event)"
     @animation-update="emit('animationUpdate', $event)"
     @builder-open="emit('builderOpen', $event)"
+    @composer-cell-change="emit('composerCellChange', $event)"
     @update:builder-full-grid="emit('update:builderFullGrid', $event)"
   />
 </template>
@@ -23,6 +24,7 @@
 <script setup lang="ts">
 import PatternMatrixPane from '@/features/concepts/components/PatternMatrixPane.vue'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
+import type { ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternMatchingClient } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
@@ -55,6 +57,7 @@ const emit = defineEmits<{
   quickSlotsCreate: [animations: readonly RootDataFinal[]]
   animationUpdate: [animation: RootDataFinal]
   builderOpen: [source: 'manual' | 'automatic']
+  composerCellChange: [cell: ComposerCell | null]
   'update:builderFullGrid': [enabled: boolean]
 }>()
 
