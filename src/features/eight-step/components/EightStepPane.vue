@@ -117,12 +117,12 @@
             @click="selectCell(cell)"
           >
             <img
-              v-if="previewUrls[cell.rowIndex]"
-              :src="previewUrls[cell.rowIndex]"
+              v-if="getPreviewUrl(cell.reference)"
+              :src="getPreviewUrl(cell.reference)"
               alt=""
               class="eight-step-cell__preview"
               data-role="eight-step-preview"
-              :data-preview-reference="eightStepPreviewReferences[cell.rowIndex]"
+              :data-preview-reference="getPreviewReference(cell.reference)"
             />
           </button>
         </template>
@@ -467,7 +467,7 @@ const headColorStyle = computed(() => ({
 
 const paneElement = ref<HTMLElement>()
 const previewDimensions = reactive(eightStepPreviewReferences.map(() => ({ width: 0, height: 0 })))
-const { previewUrls, requestPreviews } = useEightStepPreviews({
+const { previewUrls, requestPreviews, getPreviewUrl, getPreviewReference } = useEightStepPreviews({
   dimensions: previewDimensions,
   swapProps,
   reversePlane,
@@ -737,11 +737,13 @@ onMounted(() => {
       if (!(entry.target instanceof HTMLElement)) continue
 
       const rowIndex = Number(entry.target.dataset.previewRowIndex)
-      const dimensions = previewDimensions[rowIndex]
-      if (!dimensions) continue
-
-      dimensions.width = roundDimension(entry.contentRect.width * 0.78)
-      dimensions.height = roundDimension(entry.contentRect.height * 0.78)
+      const width = roundDimension(entry.contentRect.width * 0.78)
+      const height = roundDimension(entry.contentRect.height * 0.78)
+      previewDimensions.forEach((dimensions, index) => {
+        if (cells[index]?.rowIndex !== rowIndex) return
+        dimensions.width = width
+        dimensions.height = height
+      })
     }
     requestPreviews()
   })

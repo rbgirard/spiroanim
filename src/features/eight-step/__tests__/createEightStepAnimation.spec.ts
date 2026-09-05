@@ -14,6 +14,11 @@ import { decodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv12'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { halveEightStepTurns } from '@/features/eight-step/halveEightStepTurns'
+import {
+  consolidateAnimationPlayback,
+  doubleAnimationPlayback,
+} from '@/math/animation/subdivideAnimationPlayback'
 
 const current = rootFinal(
   decodeReadable({
@@ -106,6 +111,21 @@ describe('createEightStepAnimation', () => {
     expect((offset.props[1]?.anim[0]?.turns ?? 0) - (halved.props[1]?.anim[0]?.turns ?? 0)).toBe(
       -90,
     )
+  })
+
+  it('produces the same choreography whether Turns are halved before or after subdivision', () => {
+    for (const { reference } of eightStepPatternDefinitions) {
+      const normal = createDefaultEightStepAnimation({ concept: '8stp', reference })
+      const halved = createDefaultEightStepAnimation({ concept: '8stp', reference, halve: true })
+      if (!normal || !halved) throw new Error(`Expected supported Eight Step pattern ${reference}`)
+
+      const source = consolidateAnimationPlayback(normal, eightStepPlaybackMultiplier)
+      const halvedBeforeSubdivision = source
+        ? doubleAnimationPlayback(halveEightStepTurns(source))
+        : undefined
+
+      expect(halvedBeforeSubdivision).toEqual(halved)
+    }
   })
 
   it('applies shared player controls and swaps complete tracks', () => {

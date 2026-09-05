@@ -293,6 +293,40 @@ describe('EightStepPane', () => {
     ).toEqual({ girth: 2, timeline: false, thumbnail: true })
   })
 
+  it('renders and reuses the observed Halve thumbnail groups across the matrix', async () => {
+    const wrapper = mount(EightStepPane)
+    await settlePreviewRendering()
+    reportAllPreviewDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const before = countWorkerMessages('reqimgs')
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-halve"]').setValue(true)
+    await settlePreviewRendering()
+
+    const expectedSources = {
+      AA: [1, 1, 1, 1, 1, 1, 1, 1],
+      AE: [1, 1, 1, 1, 1, 1, 1, 1],
+      AI: [1, 2, 1, 2, 2, 2, 2, 2],
+      EA: [1, 1, 1, 1, 5, 5, 5, 5],
+      EE: [1, 1, 1, 1, 5, 5, 5, 5],
+      EI: [1, 2, 1, 2, 5, 5, 5, 5],
+      IA: [1, 2, 2, 1, 1, 1, 2, 2],
+      IE: [1, 2, 2, 1, 1, 1, 2, 2],
+      II: [1, 2, 3, 4, 5, 6, 7, 8],
+    } as const
+
+    for (const [row, sources] of Object.entries(expectedSources)) {
+      const rowPreviews = wrapper.findAll(
+        `[data-board-row="${row}"] [data-role="eight-step-preview"]`,
+      )
+      expect(rowPreviews.map((preview) => preview.attributes('data-preview-reference'))).toEqual(
+        sources.map((column) => `${column}-${row}`),
+      )
+    }
+
+    expect(countWorkerMessages('reqimgs')).toBe(before + 23)
+  })
+
   it('refreshes row previews for resize, Swap, 180°, and Scale only', async () => {
     const wrapper = mount(EightStepPane)
     await settlePreviewRendering()

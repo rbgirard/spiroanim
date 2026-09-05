@@ -8,6 +8,8 @@ import type {
 } from '@/features/eight-step/types'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
 import type { PropInd } from '@/types/AnimTypes'
+import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
+import { getEightStepThumbnailSourceReference } from '@/features/eight-step/getEightStepThumbnailSourceReference'
 
 interface UseEightStepPreviewsOptions {
   dimensions: readonly ConceptPreviewDimensions[]
@@ -22,17 +24,9 @@ interface UseEightStepPreviewsOptions {
   prop: Ref<PropInd>
 }
 
-export const eightStepPreviewReferences = [
-  '1-AA',
-  '1-AE',
-  '1-AI',
-  '1-EA',
-  '1-EE',
-  '1-EI',
-  '1-IA',
-  '1-IE',
-  '1-II',
-] as const satisfies readonly EightStepCellReference[]
+export const eightStepPreviewReferences = eightStepPatternDefinitions.map(
+  ({ reference }) => reference,
+)
 
 export const useEightStepPreviews = ({
   dimensions,
@@ -46,10 +40,26 @@ export const useEightStepPreviews = ({
   rightPropColor,
   prop,
 }: UseEightStepPreviewsOptions) => {
+  const referenceIndexes = new Map(
+    eightStepPreviewReferences.map((reference, index) => [reference, index]),
+  )
+  const activeIndexes = computed(() =>
+    Array.from(
+      new Set(
+        eightStepPreviewReferences.map((reference) =>
+          getEightStepThumbnailSourceReference(reference, halve.value),
+        ),
+      ),
+    ).flatMap((reference) => {
+      const index = referenceIndexes.get(reference)
+      return index === undefined ? [] : [index]
+    }),
+  )
   const renderer = useConceptPreviewRenderer({
     dimensions,
     references: eightStepPreviewReferences,
     label: 'Eight Step',
+    activeIndexes,
     createAnimation: (reference) => {
       const selection: EightStepPatternSelection = {
         concept: '8stp',
@@ -77,5 +87,12 @@ export const useEightStepPreviews = ({
   return {
     previewUrls: renderer.previewUrls,
     requestPreviews: renderer.requestPreviews,
+    getPreviewUrl: (reference: EightStepCellReference) => {
+      const source = getEightStepThumbnailSourceReference(reference, halve.value)
+      const index = referenceIndexes.get(source)
+      return index === undefined ? '' : (renderer.previewUrls.value[index] ?? '')
+    },
+    getPreviewReference: (reference: EightStepCellReference) =>
+      getEightStepThumbnailSourceReference(reference, halve.value),
   }
 }
