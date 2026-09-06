@@ -368,7 +368,7 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
   })
 
-  it('places deselectable Tilted and Turned radios with Halve after 180 and before Reset', async () => {
+  it('places Halve before the deselectable Tilted and Turned radios', async () => {
     const wrapper = mount(EightStepPane)
     const tilted = wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]')
     const turned = wrapper.get<HTMLInputElement>('[data-role="eight-step-turned"]')
@@ -396,7 +396,7 @@ describe('EightStepPane', () => {
         .get('[data-role="eight-step-shape-controls"]')
         .findAll('label > span')
         .map((label) => label.text()),
-    ).toEqual(['Tilted', 'Turned', 'Halve'])
+    ).toEqual(['Halve', 'Tilted', 'Turned'])
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
       'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',

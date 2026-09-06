@@ -5,6 +5,19 @@
     aria-label="Pattern orientation"
     :data-role="`${rolePrefix}-shape-controls`"
   >
+    <AppTooltip v-if="showHalve" text="Intended for double-ended props like Staff and Triads.">
+      <template #activator="{ props: activatorProps }">
+        <label v-bind="activatorProps">
+          <input
+            v-model="halve"
+            type="checkbox"
+            aria-label="Halve Turns for double-ended props like Staff and Triads"
+            :data-role="`${rolePrefix}-halve`"
+          />
+          <span>Halve</span>
+        </label>
+      </template>
+    </AppTooltip>
     <AppTooltip text="Use the tilted pattern orientation">
       <template #activator="{ props: activatorProps }">
         <label v-bind="activatorProps">
@@ -32,19 +45,6 @@
             @click="toggleShape('turned')"
           />
           <span>Turned</span>
-        </label>
-      </template>
-    </AppTooltip>
-    <AppTooltip v-if="showHalve" text="Intended for double-ended props like Staff and Triads.">
-      <template #activator="{ props: activatorProps }">
-        <label v-bind="activatorProps">
-          <input
-            v-model="halve"
-            type="checkbox"
-            aria-label="Halve Turns for double-ended props like Staff and Triads"
-            :data-role="`${rolePrefix}-halve`"
-          />
-          <span>Halve</span>
         </label>
       </template>
     </AppTooltip>
