@@ -46,6 +46,21 @@
         </div>
       </template>
     </AppTooltip>
+    <AppTooltip v-if="!minimal && composerUrl" class="tka-chip-tooltip" placement="bottom">
+      <template #activator="{ props: tooltipProps }">
+        <a
+          v-bind="tooltipProps"
+          class="tka-chip"
+          :href="composerUrl"
+          target="_blank"
+          rel="noopener"
+          aria-label="Open in Flow Arts Composer"
+          data-role="tka-chip"
+          >TKA</a
+        >
+      </template>
+      <template #html>Open in Flow Arts Composer</template>
+    </AppTooltip>
   </div>
 </template>
 
@@ -72,6 +87,7 @@ import { createMessageChannel } from '@/workers/createMessageChannel'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { PANE_CYCLE_CONTROL_START_CLEARANCE } from '@/components/layout/paneControlLayout'
+import { buildComposerUrl, type ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
 import { Color } from 'three'
 
 const props = withDefaults(
@@ -85,6 +101,8 @@ const props = withDefaults(
     controlsEndClearance?: string
     selectionEnabled?: boolean
     conceptsVisible?: boolean
+    /** The catalog cell the concept panes recognized, or null when the animation matches none. */
+    composerCell?: ComposerCell | null
   }>(),
   {
     store: 'main',
@@ -95,7 +113,12 @@ const props = withDefaults(
     controlsEndClearance: '0px',
     selectionEnabled: true,
     conceptsVisible: false,
+    composerCell: null,
   },
+)
+
+const composerUrl = computed(() =>
+  props.composerCell ? buildComposerUrl(props.composerCell) : undefined,
 )
 
 // Dimensions provided by parent component
@@ -518,7 +541,8 @@ const containerStyle = computed<CSSProperties>(() => ({
 
 <style scoped>
 .fps,
-.aspect-tooltip {
+.aspect-tooltip,
+.tka-chip-tooltip {
   /* Clear the 34px-wide side controls and their 2px right inset. */
   right: calc(34px + 2px);
 }
@@ -542,5 +566,36 @@ const containerStyle = computed<CSSProperties>(() => ({
 .aspect {
   color: var(--color-text-muted);
   font-size: 14px;
+}
+
+.tka-chip-tooltip {
+  position: absolute;
+  top: 46px;
+  z-index: 2;
+}
+
+/* Only rendered once a catalog cell is matched, so the chip has no unlit state. */
+.tka-chip {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--color-pattern-mode-active-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-pattern-mode-active);
+  color: var(--color-on-action-primary);
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  /* Lifts the chip off whatever the canvas is drawing behind it. */
+  box-shadow: 0 2px 6px rgb(0 0 0 / 35%);
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.tka-chip:hover,
+.tka-chip:focus-visible {
+  background: var(--color-action-primary);
+  border-color: var(--color-action-primary);
 }
 </style>

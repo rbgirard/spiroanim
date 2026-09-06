@@ -58,6 +58,7 @@
         @animation-update="applyPropertyAnimation"
         @builder-open="handleBuilderOpen"
         @eight-step-pattern-matched="handleEightStepPatternMatched"
+        @composer-cell-change="composerCell = $event"
         @customize="applyBuilderCustomization"
         @update:builder-full-grid="builderFullGrid = $event"
       />
@@ -90,6 +91,7 @@
         :selection-enabled="playerSelectionEnabled"
         :controls-start-clearance="playerControlsStartClearance"
         :controls-end-clearance="playerControlsEndClearance"
+        :composer-cell="composerCell"
       />
     </div>
     <div
@@ -172,6 +174,7 @@ import {
   PANE_CORNER_CONTROL_CLEARANCE,
   PANE_CYCLE_CONTROL_START_CLEARANCE,
 } from '@/components/layout/paneControlLayout'
+import type { ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 useScrollSelectScale()
@@ -209,6 +212,8 @@ const commitConceptAnimation = (animation: RootDataFinal) => {
   if (ROOT.value === animation) triggerRef(ROOT)
   else ROOT.value = animation
 }
+/** The catalog cell the concept panes recognized in the loaded animation, for the Composer link. */
+const composerCell = ref<ComposerCell | null>(null)
 const selectedBuilderPreviewIndex = ref<number>()
 const builderPatternMatchAnimation = shallowRef<RootDataFinal>()
 const builderFullGrid = ref(false)

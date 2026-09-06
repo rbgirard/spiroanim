@@ -25,6 +25,15 @@
     >
       VTG3 Reference
     </a>
+    <a
+      class="concept-docs-menu__link concept-docs-menu__link--tka"
+      href="https://tkaflowarts.com/guide"
+      target="_blank"
+      rel="noopener"
+      role="menuitem"
+    >
+      The Kinetic Alphabet
+    </a>
   </BasePopupMenu>
 </template>
 
@@ -113,6 +122,10 @@ const vtg3Href = computed(() => `/vtg3/?${returnQuery.value}`)
 
 .concept-docs-menu :deep(.base-popup-menu__panel) .concept-docs-menu__link--vtg3 {
   border-inline-start-color: var(--color-element-moon);
+}
+
+.concept-docs-menu :deep(.base-popup-menu__panel) .concept-docs-menu__link--tka {
+  border-inline-start-color: var(--color-element-water);
 }
 
 .concept-docs-menu :deep(.base-popup-menu__panel) .concept-docs-menu__link:hover,
