@@ -33,17 +33,26 @@ export const applyVtgTwistSettings = (
   }),
 })
 
-/** Captures every explicitly authored Twist value from an animation. */
-export const extractVtgTwistValues = (animation: RootDataFinal): VtgTwistValues => [
-  extractPropTwistValues(animation, 0),
-  extractPropTwistValues(animation, 1),
+/** Captures explicitly authored Twist values from the editable portion of an animation. */
+export const extractVtgTwistValues = (
+  animation: RootDataFinal,
+  firstEditableFrameIndex = 0,
+): VtgTwistValues => [
+  extractPropTwistValues(animation, 0, firstEditableFrameIndex),
+  extractPropTwistValues(animation, 1, firstEditableFrameIndex),
 ]
 
-const extractPropTwistValues = (animation: RootDataFinal, propIndex: 0 | 1) => {
+const extractPropTwistValues = (
+  animation: RootDataFinal,
+  propIndex: 0 | 1,
+  firstEditableFrameIndex: number,
+) => {
   const values: Record<string, number> = {}
   let beat = 0
-  for (const frame of animation.props[propIndex]?.anim ?? []) {
-    if (frame.twist !== undefined) values[String(beat)] = frame.twist
+  for (const [frameIndex, frame] of (animation.props[propIndex]?.anim ?? []).entries()) {
+    if (frameIndex >= firstEditableFrameIndex && frame.twist !== undefined) {
+      values[String(beat)] = frame.twist
+    }
     beat += frame.beats ?? 0.5
   }
   return values

@@ -25,12 +25,14 @@ interface PatternPropertyControlOptions {
   animation: Readonly<Ref<RootDataFinal | undefined>>
   onAnimationUpdate: (animation: RootDataFinal) => void
   rebuildAnimationForThirdOrderCycle?: (minimumCycleCount: 1 | 2) => RootDataFinal | undefined
+  firstEditableFrameIndex?: Readonly<Ref<number>>
 }
 
 export const usePatternPropertyControls = ({
   animation,
   onAnimationUpdate,
   rebuildAnimationForThirdOrderCycle,
+  firstEditableFrameIndex,
 }: PatternPropertyControlOptions) => {
   const conceptsStore = useConceptsStore()
   const {
@@ -53,8 +55,18 @@ export const usePatternPropertyControls = ({
 
   const vtgThirdOrderDisplaySettings = computed<VtgThirdOrderDisplaySettings>(() =>
     animation.value
-      ? getVtgThirdOrderDisplaySettings(animation.value, vtgThirdOrderSettings.value)
+      ? getVtgThirdOrderDisplaySettings(
+          animation.value,
+          vtgThirdOrderSettings.value,
+          firstEditableFrameIndex?.value,
+        )
       : { initial: [undefined, undefined], strength: [100, 100], timing: [undefined, undefined] },
+  )
+
+  const firstEditableBeat = computed(() =>
+    (animation.value?.props[0]?.anim ?? [])
+      .slice(0, firstEditableFrameIndex?.value ?? 0)
+      .reduce((total, frame) => total + (frame.beats ?? 0.5), 0),
   )
 
   const emitPropertyAnimation = (rebuildThirdOrderCycle = false) => {
@@ -63,7 +75,9 @@ export const usePatternPropertyControls = ({
       ? (rebuildAnimationForThirdOrderCycle?.(conceptsStore.getVtgPropertyCycleCount()) ??
         animation.value)
       : animation.value
-    onAnimationUpdate(conceptsStore.applyVtgPropertyControls(source))
+    onAnimationUpdate(
+      conceptsStore.applyVtgPropertyControls(source, firstEditableFrameIndex?.value),
+    )
   }
 
   const getSimpleFoldSources = () =>
@@ -72,6 +86,7 @@ export const usePatternPropertyControls = ({
       vtgFoldBeat.value,
       vtgFoldSpan.value,
       vtgFoldValuesMaterialized.value,
+      firstEditableBeat.value,
     )
 
   const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
@@ -85,7 +100,9 @@ export const usePatternPropertyControls = ({
         alternate: vtgFoldAlternate.value,
         span: vtgFoldSpan.value,
         mirror: vtgFoldMirror.value,
+        firstEditableFrameIndex: firstEditableFrameIndex?.value,
       }),
+      firstEditableFrameIndex?.value,
     )
     vtgFoldValuesMaterialized.value = true
   }
@@ -133,7 +150,10 @@ export const usePatternPropertyControls = ({
   const updateThirdOrderMirror = (mirror: boolean) => {
     const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
     if (!mirror && vtgThirdOrderMirror.value && animation.value) {
-      vtgThirdOrderSettings.value = extractVtgThirdOrderSettings(animation.value)
+      vtgThirdOrderSettings.value = extractVtgThirdOrderSettings(
+        animation.value,
+        firstEditableFrameIndex?.value,
+      )
     }
     vtgThirdOrderMirror.value = mirror
     if (!mirror) vtgThirdOrderOpposed.value = false

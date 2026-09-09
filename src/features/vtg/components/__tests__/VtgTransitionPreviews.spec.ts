@@ -174,7 +174,34 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
   })
 
-  it('selects the empty drop slot without previewing an animation or showing properties', async () => {
+  it('can keep the drop placeholder visible without allowing a drop while a portion is selected', async () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'persistent-drop-placeholder',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        selectedIndex: 0,
+        keepDropPlaceholderVisible: true,
+      },
+      slots: { 'selected-properties': '<div>Properties</div>' },
+    })
+    const dropTarget = wrapper.get('[data-role="vtg-transition-preview-drop-target"]')
+    const properties = wrapper.get('[data-role="vtg-transition-preview-properties"]')
+    const dataTransfer = {
+      dropEffect: 'copy',
+      getData: () => JSON.stringify({ reference: '1-1', speedRatio: '1:3' }),
+    }
+
+    await dropTarget.trigger('dragenter')
+    expect(properties.element.previousElementSibling).toBe(dropTarget.element)
+    expect(dropTarget.classes()).toContain('vtg-transition-previews__item--drop-blocked')
+    await dropTarget.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toBeUndefined()
+  })
+
+  it('selects the empty drop slot without previewing an animation and shows its properties', async () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation],
@@ -197,7 +224,7 @@ describe('VtgTransitionPreviews', () => {
     await wrapper.setProps({ selectedIndex: 1 })
     expect(emptySlot.classes()).toContain('vtg-transition-previews__item--selected')
     expect(emptySlot.attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('[data-role="vtg-transition-preview-properties"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="vtg-transition-preview-properties"]').text()).toBe('Properties')
 
     await emptySlot.trigger('click')
     expect(wrapper.emitted('selectionChange')).toEqual([[1], [undefined]])

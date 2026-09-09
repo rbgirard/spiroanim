@@ -415,9 +415,13 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
 }
 
 const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
-  if (selectedBuilderPreviewIndex.value !== undefined) return
+  const appliesToVtgPattern =
+    isVtgPatternSelection(selection) || isQtrPatternSelection(selection)
+  // Non-VTG customization rebuilds the selected concept. Never let that replacement path run
+  // against a selected Builder portion; VTG/QTR Customize fields instead edit the whole pattern.
+  if (selectedBuilderPreviewIndex.value !== undefined && !appliesToVtgPattern) return
   if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
-  const animation = isVtgPatternSelection(selection)
+  const animation = appliesToVtgPattern
     ? applyVtgCustomization(ROOT.value, selection)
     : (() => {
         const createdAnimation = createConceptPattern(ROOT.value, selection, {

@@ -733,7 +733,7 @@ import {
   type VtgThirdOrderTiming,
 } from '@/features/vtg/thirdOrder'
 
-type PatternPropertyContext = 'vtg' | 'builder' | 'eight-step'
+type PatternPropertyContext = 'vtg' | 'builder' | 'builder-drop' | 'eight-step'
 type PatternPropertyKey = VtgPropertyKey | 'scale'
 
 const props = withDefaults(
@@ -1062,7 +1062,7 @@ const availableFoldBeats = computed(() => {
     for (const frame of column.frames) {
       if (
         frame.index >= props.firstEditableFrameIndex &&
-        (props.context !== 'builder' || frame.beat > 0)
+          ((props.context !== 'builder' && props.context !== 'builder-drop') || frame.beat > 0)
       ) {
         beats.add(frame.beat)
       }

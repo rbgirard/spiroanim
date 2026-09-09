@@ -244,13 +244,18 @@ describe('SpiroAnim view', () => {
     expect(playerStore.PREVIEW_PLAYING).toBe(false)
     expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(true)
     expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
     await vi.waitFor(() => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
+    const builderPaths = wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]')
+    await builderPaths.setValue(false)
+    await flushPromises()
+    expect(playerRoot.value.paths).toBe(false)
+    expect(playerRoot.value.props.every((prop) => prop.paths === false)).toBe(true)
     wrapper.get('[data-role="builder-properties"]')
     wrapper.get('[data-role="builder-property-offset-toggle"]')
     await wrapper.get('[data-role="builder-property-twist-toggle"]').trigger('click')
@@ -290,6 +295,7 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-preview-index="1"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').element.checked).toBe(false)
     expect(wrapper.get('[data-preview-index="0"]').classes()).not.toContain(
       'vtg-transition-previews__item--selected',
     )
@@ -368,6 +374,20 @@ describe('SpiroAnim view', () => {
       expect(wrapper.find('.vtg-tile--selected').exists()).toBe(true)
     })
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    await wrapper.get('[data-role="builder-drop-property-third-order-toggle"]').trigger('click')
+    const dropMirror = wrapper.get<HTMLInputElement>('input[aria-label="Mirror Third Order"]')
+    await dropMirror.setValue(false)
+    await flushPromises()
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(true)
+    await dropMirror.setValue(true)
+    await flushPromises()
+    expect(dropMirror.element.checked).toBe(true)
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(false)
+    const secondPortionBeats = wrapper.get<HTMLInputElement>('input[aria-label="Pattern 2 beats"]')
+    await secondPortionBeats.setValue(Number(secondPortionBeats.element.value) + 0.5)
+    await flushPromises()
+    expect(dropMirror.element.checked).toBe(true)
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(false)
     await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
     await selectedTrailingSlot.trigger('drop', { dataTransfer })
     await flushPromises()
@@ -378,6 +398,9 @@ describe('SpiroAnim view', () => {
     expect(nextTrailingSlot.classes()).toContain('vtg-transition-previews__item--selected')
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
+    expect(
+      wrapper.get('[data-role="builder-property-third-order-toggle"]').attributes('aria-selected'),
+    ).toBe('true')
     await wrapper.get('button[aria-label="Delete pattern 2"]').trigger('click')
     await flushPromises()
     expect(playerStore.raw().CURRENT.value).toBe(preservedPortionStartMS)
@@ -479,7 +502,10 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(playerRoot.value.props).toHaveLength(0)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
+    await wrapper.get('[data-role="vtg-transition-preview-drop-target"]').trigger('click')
+    await flushPromises()
+    wrapper.get('[data-role="builder-drop-third-order-initial-0"]')
+    wrapper.get('[data-role="builder-drop-third-order-timing-0"]')
     wrapper.get('[data-role="vtg-qtr"]')
     wrapper.get('[data-role="vtg-orientation"]')
     wrapper.get('[data-role="vtg-beat"]')

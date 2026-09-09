@@ -474,12 +474,14 @@ import {
 } from '@/features/vtg/createVtgAnimation'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 import { createVtgPreviewCandidate } from '@/features/concepts/createVtgPreviewCandidate'
+import { resolveVtgCompactBuilderSelection } from '@/features/concepts/resolveVtgCompactBuilderSelection'
 import { describeVtgBuilderPreviewRelationship } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
+  builderPatternCellReferences,
   builderPatternPreviewReferences,
   pairedPatternPreviewReferences,
   patternPreviewReferences,
@@ -525,6 +527,7 @@ import {
 import {
   createVtgTransitionPreviewAnimations,
   createVtgTransitionQuickSlotAnimationCandidates,
+  getVtgTransitionPreviewCount,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
@@ -772,17 +775,24 @@ const appliesPropertiesToPreviews = computed(
 const previewPropertySettings = computed(() =>
   appliesPropertiesToPreviews.value ? conceptsStore.getVtgPropertySettings() : undefined,
 )
-const createPreviewCandidate = (
-  selection: VtgPatternSelection | QtrPatternSelection,
-  applyProperties = true,
-) =>
+const previewBuilderContext = computed(() => {
+  if (!props.builderActive || props.builderInsertionIndex === undefined) return undefined
+  if (compactBuilder.value && props.animation !== undefined) {
+    return { source: props.animation, builderInsertionIndex: props.builderInsertionIndex }
+  }
+  if (props.builderMatchAnimation === undefined) return undefined
+
+  // The selected portion is already rebased to its effective starting state. Appending to that
+  // short cycle produces the same prospective piece without rebuilding the complete pattern.
+  return {
+    source: props.builderMatchAnimation,
+    builderInsertionIndex: props.builderInsertionIndex === 0 ? 0 : 1,
+  }
+})
+const createPreviewCandidate = (selection: VtgPatternSelection | QtrPatternSelection) =>
   createVtgPreviewCandidate(selection, {
-    ...(props.animation && props.builderInsertionIndex !== undefined
-      ? { source: props.animation, builderInsertionIndex: props.builderInsertionIndex }
-      : undefined),
-    ...(applyProperties && previewPropertySettings.value
-      ? { properties: previewPropertySettings.value }
-      : undefined),
+    ...previewBuilderContext.value,
+    ...(previewPropertySettings.value ? { properties: previewPropertySettings.value } : undefined),
   })
 const contextualPropertyPairing = ref<boolean>()
 const layoutComparisonKey = computed(() =>
@@ -816,13 +826,7 @@ const compareCandidateLayout = async (
   return compareVtgCandidateLayoutRequest(request)
 }
 watch(
-  [
-    layoutComparisonKey,
-    isQtr,
-    () => props.animation,
-    () => props.animationRevision,
-    () => props.builderInsertionIndex,
-  ],
+  [layoutComparisonKey, isQtr],
   () => {
     const revision = ++layoutComparisonRevision
     if (layoutComparisonTimer !== undefined) {
@@ -844,15 +848,7 @@ watch(
       layoutComparisonTimer = undefined
       const request = {
         selections: [createPreviewSelection('1-6'), createPreviewSelection('2-6')],
-        options: {
-          properties,
-          ...(props.animation !== undefined && props.builderInsertionIndex !== undefined
-            ? {
-                source: toRaw(props.animation),
-                builderInsertionIndex: props.builderInsertionIndex,
-              }
-            : undefined),
-        },
+        options: { properties, ...previewBuilderContext.value },
       } as const
       void compareCandidateLayout(request).then(
         (paired) => {
@@ -992,7 +988,7 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
 
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
       const builderAnimation =
-        props.builderActive && props.builderInsertionIndex !== undefined && props.animation
+        compactBuilder.value && props.builderInsertionIndex !== undefined && props.animation
           ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
               minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
             })
@@ -1643,9 +1639,30 @@ const hasMultipleVtgBuilderPortions = (animation: RootDataFinal): boolean => {
   )
 }
 
+const builderDropSelected = computed(() => {
+  if (
+    !props.builderActive ||
+    props.animation === undefined ||
+    props.builderInsertionIndex === undefined
+  ) {
+    return false
+  }
+  if (props.animation.props.length === 0) return props.builderInsertionIndex === 0
+  const prepared = prepareVtg45TransitionPattern(props.animation)
+  return (
+    prepared.supported &&
+    props.builderInsertionIndex === getVtgTransitionPreviewCount(prepared.pattern)
+  )
+})
+
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
-  conceptsStore.hydrateVtgPropertyControls(animation)
+  if (!builderDropSelected.value) {
+    conceptsStore.hydrateVtgPropertyControls(
+      animation,
+      props.builderActive && (props.builderInsertionIndex ?? 0) > 0 ? 1 : 0,
+    )
+  }
   const patternAnimation = stripVtgPropertySettings(animation)
   // The parent suppresses revisions produced by this pane. A supplied revision therefore marks
   // an external change (Editor, Timeline, Quick Slots, or another control surface) and must be
@@ -1690,11 +1707,28 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const suppressionOwner = beginPatternEmitSuppression()
 
   if (match) {
-    speedRatio.value = match.speedRatio
-    isAnti.value = match.isAnti
-    swapProps.value = match.swapProps
-    reversePlane.value = match.reversePlane
-    beat.value = match.beat ?? 1
+    const builderSelection =
+      props.builderActive &&
+      result.status === 'matched' &&
+      result.source === 'vtg' &&
+      props.animation !== undefined &&
+      props.builderInsertionIndex !== undefined
+        ? resolveVtgCompactBuilderSelection({
+            source: props.animation,
+            target: animation,
+            targetIndex: props.builderInsertionIndex,
+            references: builderPatternCellReferences,
+            baseSelection: match,
+            properties: conceptsStore.getVtgPropertySettings(),
+            preferBaseTransforms: !compactBuilder.value,
+          })
+        : undefined
+    const controls = compactBuilder.value ? (builderSelection ?? match) : match
+    speedRatio.value = controls.speedRatio
+    isAnti.value = controls.isAnti ?? false
+    swapProps.value = controls.swapProps === true
+    reversePlane.value = controls.reversePlane === true
+    beat.value = controls.beat ?? 1
     transition.value = match.transition ?? false
     transitionAfterBeat.value = match.transitionAfterBeat ?? false
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
@@ -1740,8 +1774,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         : COLORS[animation.props[1].color]
     prop.value = animation.prop
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
+    const selectedReference = builderSelection?.reference ?? controls.reference
     const tile =
-      matrixTiles.value.find(({ reference }) => reference === match.reference) ??
+      matrixTiles.value.find(({ reference }) => reference === selectedReference) ??
       (compactBuilder.value
         ? matrixTiles.value.find(
             ({ label }) => label === describeVtgBuilderMotion(patternAnimation),
@@ -2122,7 +2157,6 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   active: previewsReady,
   createSelection: createPreviewSelection,
   previewContext: computed(() => [
-    props.animationRevision,
     props.builderInsertionIndex,
     transition.value,
     transitionAfterBeat.value,
@@ -2131,8 +2165,11 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   createVtgPreviews: async (selections) => {
     const activeProperties = previewPropertySettings.value
     const options = {
-      ...(props.animation !== undefined && props.builderInsertionIndex !== undefined
-        ? { source: toRaw(props.animation), builderInsertionIndex: props.builderInsertionIndex }
+      ...(previewBuilderContext.value
+        ? {
+            source: toRaw(previewBuilderContext.value.source),
+            builderInsertionIndex: previewBuilderContext.value.builderInsertionIndex,
+          }
         : undefined),
       ...(activeProperties === undefined
         ? undefined

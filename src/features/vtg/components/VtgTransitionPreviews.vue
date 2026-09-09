@@ -192,6 +192,13 @@
     >
       <span>Drag and drop a pattern here</span>
     </button>
+    <div
+      v-if="structureEditingEnabled && propertiesAfterDropPlaceholder"
+      class="vtg-transition-previews__properties"
+      data-role="vtg-transition-preview-properties"
+    >
+      <slot name="selected-properties" />
+    </div>
 
     <Teleport to="body">
       <div
@@ -280,9 +287,16 @@ const props = withDefaults(
     displaySettings?: VtgBuilderDisplaySettings
     selectedIndex?: number
     allowFirstDrop?: boolean
+    keepDropPlaceholderVisible?: boolean
     structureEditingEnabled?: boolean
   }>(),
-  { columns: 4, maximumScale: 10, allowFirstDrop: false, structureEditingEnabled: true },
+  {
+    columns: 4,
+    maximumScale: 10,
+    allowFirstDrop: false,
+    keepDropPlaceholderVisible: false,
+    structureEditingEnabled: true,
+  },
 )
 const { elementalLayout, sliders } = storeToRefs(useConceptsStore())
 const previewReferences = props.animations.map((_, index) => String(index + 1))
@@ -310,19 +324,33 @@ const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortion
 const dropPlaceholderVisible = computed(
   () =>
     props.structureEditingEnabled &&
-    (props.selectedIndex === undefined || props.selectedIndex >= props.animations.length),
+    (props.keepDropPlaceholderVisible ||
+      props.selectedIndex === undefined ||
+      props.selectedIndex >= props.animations.length),
 )
 const propertiesRowEndPosition = computed(() => {
-  if (props.selectedIndex === undefined || props.selectedIndex >= previewUrls.value.length) {
+  const selectedIndex = props.selectedIndex
+  const dropPlaceholderSelected =
+    dropPlaceholderVisible.value && selectedIndex === previewUrls.value.length
+  if (
+    selectedIndex === undefined ||
+    (selectedIndex >= previewUrls.value.length && !dropPlaceholderSelected)
+  ) {
     return undefined
   }
-  const rowStart = Math.floor(props.selectedIndex / props.columns) * props.columns
-  return Math.min(rowStart + props.columns - 1, previewUrls.value.length - 1)
+  const rowStart = Math.floor(selectedIndex / props.columns) * props.columns
+  const finalGridItemIndex = dropPlaceholderVisible.value
+    ? previewUrls.value.length
+    : previewUrls.value.length - 1
+  return Math.min(rowStart + props.columns - 1, finalGridItemIndex)
 })
 const propertiesAfterPreviewIndex = computed(() => {
   const rowEnd = propertiesRowEndPosition.value
   return rowEnd !== undefined && rowEnd < previewUrls.value.length ? rowEnd : undefined
 })
+const propertiesAfterDropPlaceholder = computed(
+  () => propertiesRowEndPosition.value === previewUrls.value.length,
+)
 const swappablePreviews = computed(() =>
   props.animations.map((animation) => {
     const { spins } = getVtgBuilderMotion(animation)

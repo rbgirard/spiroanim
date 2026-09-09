@@ -3227,6 +3227,45 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-tile')[6]?.classes()).toContain('vtg-tile--shared-preview-bottom')
   })
 
+  it('keeps the reported Drop settings authoritative and regenerates its thumbnails', async () => {
+    const animation = await decodeCurrentQuery(
+      'r=G0496k11Y&p0=QQ__v.bn_____U0.5L__6k_U0................_ZE-ZU................_ZE_6k.........._ZE-ZU.................._ZE_6k........_ZE-ZU.........._ZE_6k...............&x0=Qo__Oif_.____Luf_................____NBf_........____Luf_..................____NBf_............................................____Luf_&m0=_1_mxqv__&p1=NQ__v.bn_____U0.5L__6k_U0........_ZE-ZU................_ZE_6k........_ZE-ZU.................._ZE_6k.........._ZE-ZU.........................._ZE_6k.......&x1=Qo__Oif_.____NBf_................____Luf_........____NBf_........____Luf_..................____NBf_..........____Luf_..........................____NBf_&c=_i_bhq&v=12',
+    )
+    const previews = createVtgTransitionPreviewAnimations(animation)
+    const virtualPortion = resolveVtgBuilderPatternMatchAnimation(previews, previews?.length)
+    if (!virtualPortion) throw new Error('Expected a trailing Builder Drop virtual portion')
+    const store = useConceptsStore()
+
+    store.hydrateVtgPropertyControls(virtualPortion, 1)
+    expect(store.vtgThirdOrderSettings.map(({ timing }) => timing)).toEqual(['1:3-anti', '1:3-pro'])
+    expect(store.vtgThirdOrderMirror).toBe(true)
+    expect(store.vtgThirdOrderOpposed).toBe(true)
+
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: previews?.length,
+        builderMatchAnimation: virtualPortion,
+      },
+    })
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+    const requestsBeforeMirror = countWorkerMessages('reqimgs')
+
+    store.vtgThirdOrderMirror = false
+    store.vtgThirdOrderOpposed = false
+    await settlePreviewRendering()
+
+    expect(countWorkerMessages('reqimgs')).toBeGreaterThan(requestsBeforeMirror)
+    const updatedVirtualPortion = store.applyVtgPropertyControls(virtualPortion, 1)
+    await wrapper.setProps({ builderMatchAnimation: updatedVirtualPortion })
+    await flushPromises()
+    expect(store.vtgThirdOrderMirror).toBe(false)
+  })
+
   it('pairs the first but shares the second portion of the reported three-portion pattern', async () => {
     const animation = await decodeCurrentQuery(
       'r=Gw48Yk11Y&p0=Q__.blE-ZU.5JE_6k........5JE-ZU_ZE........___-ZU.......&x0=Qo____Yw.____L7L_........____NBf_........____NXL_&m0=_1_mxqv__&p1=N__.blE_98.5L__6k........5JE_6k........___-ZU.......&x1=Qo____Yw.____L7L_........____Luf_........____NXL_&c=_i_bhq&v=12',
@@ -3299,6 +3338,71 @@ describe('VtgPane', () => {
     await vi.waitFor(() => {
       expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
     })
+  })
+
+  it('uses the eight-cell Builder match when selecting the reported Q5, Q11, and Q12 in Full Grid', async () => {
+    const pattern = await decodeCurrentQuery(
+      'r=Gw496k11Y&p0=QR__v.bn_____U0.5L__6k_U0................_ZE-ZU................_ZE_6k.........._ZE-ZU.................._ZE_6k........_ZE-ZU.........._ZE_6k...............&x0=Qo__Oif_.____Luf_................____NBf_........____Luf_..................____NBf_............................................____Luf_&m0=_1_mxqv__&p1=NR__v.bn_____U0.5L__6k_U0........_ZE-ZU................_ZE_6k........_ZE-ZU.................._ZE_6k.........._ZE-ZU.........................._ZE_6k.......&x1=Qo__Oif_.____NBf_................____Luf_........____NBf_........____Luf_..................____NBf_..........____Luf_..........................____NBf_&c=_i_bhq&v=12',
+    )
+    const previews = createVtgTransitionPreviewAnimations(pattern)
+    if (!previews) throw new Error('Expected Builder portions from the supplied query')
+
+    const fifthPortion = resolveVtgBuilderPatternMatchAnimation(previews, 3)
+    if (!fifthPortion) throw new Error('Expected Builder portion 4')
+    setActivePinia(createPinia())
+    const fifthFullGrid = mount(VtgPane, {
+      props: {
+        animation: pattern,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderFullGrid: true,
+        builderInsertionIndex: 3,
+        builderMatchAnimation: fifthPortion,
+      },
+    })
+    await settlePreviewRendering()
+    await vi.waitFor(() => expect(fifthFullGrid.find('.vtg-tile--selected').exists()).toBe(true))
+    expect(fifthFullGrid.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('6-3')
+    fifthFullGrid.unmount()
+
+    for (const index of [9, 10]) {
+      const portion = resolveVtgBuilderPatternMatchAnimation(previews, index)
+      if (!portion) throw new Error(`Expected Builder portion ${index + 1}`)
+
+      setActivePinia(createPinia())
+      const compact = mount(VtgPane, {
+        props: {
+          animation: pattern,
+          builderActive: true,
+          builderInsertionIndex: index,
+          builderMatchAnimation: portion,
+        },
+      })
+      await settlePreviewRendering()
+      await vi.waitFor(() => expect(compact.find('.vtg-tile--selected').exists()).toBe(true))
+      const compactReference = compact.get('.vtg-tile--selected').attributes('data-cell-reference')
+      if (!compactReference) throw new Error('Expected a selected compact Builder reference')
+      const fullGridReference = compactReference.replace(/^2-/, '6-')
+      compact.unmount()
+
+      setActivePinia(createPinia())
+      const fullGrid = mount(VtgPane, {
+        props: {
+          animation: pattern,
+          builderActive: true,
+          builderFullCatalog: true,
+          builderFullGrid: true,
+          builderInsertionIndex: index,
+          builderMatchAnimation: portion,
+        },
+      })
+      await settlePreviewRendering()
+      await vi.waitFor(() => expect(fullGrid.find('.vtg-tile--selected').exists()).toBe(true))
+      expect(fullGrid.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe(
+        fullGridReference,
+      )
+      fullGrid.unmount()
+    }
   })
 
   it('shares the reported second portion after a three-beat first Builder portion', async () => {
@@ -3828,7 +3932,7 @@ describe('VtgPane', () => {
     )
   })
 
-  it('updates every Full Grid label without collapsing duplicate candidate cells', async () => {
+  it('keeps every Full Grid label on the standalone catalog path', async () => {
     const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
     const animation = first
       ? appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
@@ -3849,8 +3953,8 @@ describe('VtgPane', () => {
     await wrapper.setProps({ builderInsertionIndex: 1 })
 
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).toBe('TS / SS')
-    expect(wrapper.get('[data-cell-reference="1-3"] .vtg-tile__label-text').text()).toBe('TS / SS')
+    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).toBe('TS / TS')
+    expect(wrapper.get('[data-cell-reference="1-3"] .vtg-tile__label-text').text()).toBe('TS / TS')
   })
 
   it('uses a full-size copy of the VTG cell as the desktop Builder drag image', async () => {

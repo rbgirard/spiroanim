@@ -15,7 +15,6 @@ import type {
   VtgFoldSpan,
   VtgFoldValue,
   VtgFoldValues,
-  VtgPropertyKey,
   VtgTwistMode,
   VtgTwistValues,
 } from '@/features/concepts/stores/useConceptsStore'
@@ -96,7 +95,6 @@ export const useVtgBuilderPortionProperties = ({
     })
   })
 
-  const activeProperty = ref<VtgPropertyKey | 'scale' | null>(null)
   const offsetValues = ref<readonly [number, number]>([0, 0])
   const scaleMode = ref<VtgBuilderScaleMode>('simple')
   const twistMode = ref<VtgTwistMode>('simple')
@@ -266,8 +264,7 @@ export const useVtgBuilderPortionProperties = ({
     foldMirror.value = simpleFold.mirror
   }
 
-  watch(selectedIndex, (index) => {
-    if (index !== 0 && activeProperty.value === 'offset') activeProperty.value = null
+  watch(selectedIndex, () => {
     syncOffsetValues()
     hydrateModes()
   })
@@ -531,7 +528,6 @@ export const useVtgBuilderPortionProperties = ({
   return {
     firstEditableFrameIndex,
     selectedControlAnimation,
-    activeProperty,
     offsetValues,
     scaleMode,
     scaleValues,

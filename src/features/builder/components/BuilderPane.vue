@@ -75,6 +75,7 @@
             :display-settings="builderDisplaySettings"
             :selected-index="selectedPreviewIndex"
             :allow-first-drop="allowFirstDrop"
+            keep-drop-placeholder-visible
             :structure-editing-enabled="structureEditingEnabled"
             @pattern-drop="acceptPatternDrop"
             @pattern-delete="deletePreview"
@@ -138,6 +139,46 @@
                 @update:active-property="builderActiveProperty = $event"
                 @slider-start="beginSliderHistory"
                 @slider-end="endSliderHistory"
+              />
+              <PatternPropertyControls
+                v-else-if="dropPlaceholderSelected && dropPropertyAnimation"
+                context="builder-drop"
+                :animation="dropPropertyAnimation"
+                :show-offset="false"
+                :first-editable-frame-index="dropPropertyFirstEditableFrameIndex"
+                :twist-mode="dropTwistMode"
+                :twist-values="dropTwistValues"
+                :third-order-settings="dropThirdOrderSettings"
+                :third-order-display-settings="dropThirdOrderDisplaySettings"
+                :third-order-mirror="dropThirdOrderMirror"
+                :third-order-opposed="dropThirdOrderOpposed"
+                :fold-values="dropFoldValues"
+                :fold-values-materialized="dropFoldValuesMaterialized"
+                :fold-mode="dropFoldMode"
+                :fold-beat="dropFoldBeat"
+                :fold-repeat="dropFoldRepeat"
+                :fold-every="dropFoldEvery"
+                :fold-alternate="dropFoldAlternate"
+                :fold-span="dropFoldSpan"
+                :fold-mirror="dropFoldMirror"
+                :active-property="builderActiveProperty"
+                :sliders="sliders"
+                @twist-update="updateDropTwist"
+                @third-order-initial-update="updateDropThirdOrderInitial"
+                @third-order-strength-update="updateDropThirdOrderStrength"
+                @third-order-timing-update="updateDropThirdOrderTiming"
+                @update:third-order-mirror="updateDropThirdOrderMirror"
+                @update:third-order-opposed="updateDropThirdOrderOpposed"
+                @fold-update="updateDropFold"
+                @update:twist-mode="updateDropTwistMode"
+                @update:fold-mode="updateDropFoldMode"
+                @update:fold-beat="updateDropFoldBeat"
+                @update:fold-repeat="updateDropFoldRepeat"
+                @update:fold-every="updateDropFoldEvery"
+                @update:fold-alternate="updateDropFoldAlternate"
+                @update:fold-span="updateDropFoldSpan"
+                @update:fold-mirror="updateDropFoldMirror"
+                @update:active-property="builderActiveProperty = $event"
               />
             </template>
           </VtgTransitionPreviews>
@@ -252,7 +293,10 @@ import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
 import QuickSlotsAction from '@/features/concepts/components/QuickSlotsAction.vue'
-import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import {
+  useConceptsStore,
+  type VtgPropertyKey,
+} from '@/features/concepts/stores/useConceptsStore'
 import {
   MAX_BUILDER_COLUMNS,
   MIN_BUILDER_COLUMNS,
@@ -298,6 +342,9 @@ import { createBuilderQuickSlotCandidates } from '@/features/builder/createBuild
 import { preserveVtgBuilderScale } from '@/features/builder/preserveVtgBuilderScale'
 import { useVtgBuilderPortionProperties } from '@/features/builder/composables/useVtgBuilderPortionProperties'
 import { resolveVtgBuilderPatternMatchAnimation } from '@/features/builder/resolveVtgBuilderPatternMatchAnimation'
+import { usePatternPropertyControls } from '@/features/concepts/composables/usePatternPropertyControls'
+import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { materializeVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 
 const props = withDefaults(
   defineProps<{
@@ -498,12 +545,66 @@ const builderDisplaySettings = computed(() => ({
   prop: prop.value,
 }))
 const selectedPreviewIndex = ref<number>()
+const builderActiveProperty = ref<VtgPropertyKey | 'scale' | null>(null)
+watch(selectedPreviewIndex, (index) => {
+  if (index !== 0 && builderActiveProperty.value === 'offset') {
+    builderActiveProperty.value = null
+  }
+})
+const dropPlaceholderIndex = computed(() => resizedPreviewAnimations.value?.length)
+const dropPlaceholderSelected = computed(
+  () =>
+    dropPlaceholderIndex.value !== undefined &&
+    selectedPreviewIndex.value === dropPlaceholderIndex.value,
+)
+const dropPropertyFirstEditableFrameIndex = computed(() =>
+  dropPlaceholderIndex.value === 0 ? 0 : 1,
+)
+const dropPropertySource = shallowRef<RootDataFinal>()
+const dropPropertyAnimation = shallowRef<RootDataFinal>()
+const createDropPropertySource = () => {
+  const previews = resizedPreviewAnimations.value
+  const trailingIndex = previews?.length ?? 0
+  return (
+    resolveVtgBuilderPatternMatchAnimation(previews, trailingIndex) ??
+    createDefaultVtgAnimation(
+      { reference: '1-1', speedRatio: speedRatio.value },
+      { minimumCycleCount: conceptsStore.getVtgPropertyCycleCount() },
+    )
+  )
+}
+const beginDropPropertyDraft = () => {
+  const source = createDropPropertySource()
+  if (source) {
+    conceptsStore.hydrateVtgPropertyControls(
+      source,
+      dropPropertyFirstEditableFrameIndex.value,
+    )
+    conceptsStore.vtgThirdOrderSettings = materializeVtgThirdOrderSettings(
+      source,
+      dropPropertyFirstEditableFrameIndex.value,
+    )
+  }
+  dropPropertySource.value = source
+  dropPropertyAnimation.value = source
+    ? conceptsStore.applyVtgPropertyControls(
+        source,
+        dropPropertyFirstEditableFrameIndex.value,
+      )
+    : undefined
+}
+const clearDropPropertyDraft = () => {
+  dropPropertySource.value = undefined
+  dropPropertyAnimation.value = undefined
+}
 const previewRevision = ref(0)
 const patternMatchAnimation = computed(() =>
-  resolveVtgBuilderPatternMatchAnimation(
-    resizedPreviewAnimations.value,
-    selectedPreviewIndex.value,
-  ),
+  dropPlaceholderSelected.value
+    ? dropPropertyAnimation.value
+    : resolveVtgBuilderPatternMatchAnimation(
+        resizedPreviewAnimations.value,
+        selectedPreviewIndex.value,
+      ),
 )
 watchImmediate(patternMatchAnimation, (animation) => emit('patternMatchAnimationChange', animation))
 const builderMaximumScale = computed(() => getVtgBuilderMaximumScale(preparedPattern.value.pattern))
@@ -543,12 +644,15 @@ const selectPreview = (index: number | undefined) => {
   if (index === undefined) {
     const deselectedIndex = selectedPreviewIndex.value
     selectedPreviewIndex.value = undefined
+    clearDropPropertyDraft()
     emit('previewSelectionChange', undefined)
     if (deselectedIndex === undefined) return
     CURRENT.value = getPreviewStartMS(preparedPattern.value.pattern, deselectedIndex)
     return
   }
 
+  if (index === dropPlaceholderIndex.value) beginDropPropertyDraft()
+  else clearDropPropertyDraft()
   selectedPreviewIndex.value = index
   emit('previewSelectionChange', index)
   CURRENT.value = 0
@@ -569,7 +673,6 @@ const applyBuilderPatternUpdate = (
 const {
   firstEditableFrameIndex: builderFirstEditableFrameIndex,
   selectedControlAnimation,
-  activeProperty: builderActiveProperty,
   offsetValues: builderOffsetValues,
   scaleMode: builderScaleMode,
   scaleValues: builderScaleValues,
@@ -617,6 +720,45 @@ const {
   commit: (updated) => applyBuilderPatternUpdate(updated, undefined, true),
 })
 
+const {
+  vtgTwistMode: dropTwistMode,
+  vtgTwistValues: dropTwistValues,
+  vtgThirdOrderSettings: dropThirdOrderSettings,
+  vtgThirdOrderDisplaySettings: dropThirdOrderDisplaySettings,
+  vtgThirdOrderMirror: dropThirdOrderMirror,
+  vtgThirdOrderOpposed: dropThirdOrderOpposed,
+  vtgFoldValues: dropFoldValues,
+  vtgFoldValuesMaterialized: dropFoldValuesMaterialized,
+  vtgFoldMode: dropFoldMode,
+  vtgFoldBeat: dropFoldBeat,
+  vtgFoldRepeat: dropFoldRepeat,
+  vtgFoldEvery: dropFoldEvery,
+  vtgFoldAlternate: dropFoldAlternate,
+  vtgFoldSpan: dropFoldSpan,
+  vtgFoldMirror: dropFoldMirror,
+  updateTwistSetting: updateDropTwist,
+  updateTwistMode: updateDropTwistMode,
+  updateThirdOrderInitial: updateDropThirdOrderInitial,
+  updateThirdOrderStrength: updateDropThirdOrderStrength,
+  updateThirdOrderTiming: updateDropThirdOrderTiming,
+  updateThirdOrderMirror: updateDropThirdOrderMirror,
+  updateThirdOrderOpposed: updateDropThirdOrderOpposed,
+  updateFoldSetting: updateDropFold,
+  updateFoldMode: updateDropFoldMode,
+  updateFoldBeat: updateDropFoldBeat,
+  updateFoldRepeat: updateDropFoldRepeat,
+  updateFoldEvery: updateDropFoldEvery,
+  updateFoldAlternate: updateDropFoldAlternate,
+  updateFoldSpan: updateDropFoldSpan,
+  updateFoldMirror: updateDropFoldMirror,
+} = usePatternPropertyControls({
+  animation: dropPropertyAnimation,
+  onAnimationUpdate: (animation) => {
+    dropPropertyAnimation.value = animation
+  },
+  rebuildAnimationForThirdOrderCycle: () => dropPropertySource.value,
+  firstEditableFrameIndex: dropPropertyFirstEditableFrameIndex,
+})
 watch(historyApplied, (applied) => {
   if (applied === undefined) return
   if (PLAYBACK_PREVIEW_ACTIVE.value) playerStore.endPlaybackPreview()

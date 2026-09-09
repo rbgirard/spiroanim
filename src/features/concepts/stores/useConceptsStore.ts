@@ -25,6 +25,7 @@ import {
 import {
   detectVtgThirdOrderRelationship,
   extractVtgThirdOrderSettings,
+  materializeVtgThirdOrderSettings,
   updateVtgThirdOrderSettings,
   type VtgThirdOrderInitial,
   type VtgThirdOrderSettings,
@@ -183,23 +184,34 @@ export const useConceptsStore = defineStore(
       },
     })
 
-    const applyVtgPropertyControls = (animation: RootDataFinal): RootDataFinal =>
-      applyVtgPropertySettings(animation, getVtgPropertySettings())
+    const applyVtgPropertyControls = (
+      animation: RootDataFinal,
+      firstEditableFrameIndex = 0,
+    ): RootDataFinal =>
+      applyVtgPropertySettings(animation, getVtgPropertySettings(), {
+        firstEditableFrameIndex,
+      })
 
     const getVtgPropertyCycleCount = (): 1 | 2 =>
       getVtgPropertySettingsCycleCount(getVtgPropertySettings())
 
-    const hydrateVtgPropertyControls = (animation: RootDataFinal) => {
-      const twistValues = extractVtgTwistValues(animation)
+    const hydrateVtgPropertyControls = (animation: RootDataFinal, firstEditableFrameIndex = 0) => {
+      const twistValues = extractVtgTwistValues(animation, firstEditableFrameIndex)
       vtgTwistValues.value = twistValues
       vtgTwistMode.value = detectVtgTwistMode(twistValues)
-      vtgThirdOrderSettings.value = extractVtgThirdOrderSettings(animation)
-      const thirdOrderRelationship = detectVtgThirdOrderRelationship(animation)
+      vtgThirdOrderSettings.value =
+        firstEditableFrameIndex === 0
+          ? extractVtgThirdOrderSettings(animation)
+          : materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex)
+      const thirdOrderRelationship = detectVtgThirdOrderRelationship(
+        animation,
+        firstEditableFrameIndex,
+      )
       vtgThirdOrderMirror.value = thirdOrderRelationship.mirror
       vtgThirdOrderOpposed.value = thirdOrderRelationship.opposed
 
-      const foldValues = extractVtgFoldValues(animation)
-      const simple = detectVtgFoldSimpleSettings(animation, foldValues)
+      const foldValues = extractVtgFoldValues(animation, firstEditableFrameIndex)
+      const simple = detectVtgFoldSimpleSettings(animation, foldValues, firstEditableFrameIndex)
       vtgFoldValues.value = foldValues
       vtgFoldValuesMaterialized.value = true
       vtgFoldMode.value = simple ? 'simple' : 'advanced'

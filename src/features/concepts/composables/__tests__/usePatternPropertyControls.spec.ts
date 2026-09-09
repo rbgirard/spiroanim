@@ -131,4 +131,32 @@ describe('usePatternPropertyControls', () => {
     expect(controls.vtgThirdOrderSettings.value[1]?.timing).toBe('2:3-pro')
     expect(animation.value).toEqual(opposed)
   })
+
+  it('materializes a later opposed portion before Mirror is disabled', () => {
+    const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!source) throw new Error('Expected a supported VTG animation')
+    const animation = shallowRef<RootDataFinal | undefined>(source)
+    const controls = usePatternPropertyControls({
+      animation,
+      firstEditableFrameIndex: ref(1),
+      onAnimationUpdate: (updated) => {
+        animation.value = updated
+      },
+    })
+
+    controls.updateThirdOrderTiming(0, '1:3-anti')
+    controls.updateThirdOrderOpposed(true)
+
+    const opposed = animation.value
+    if (!opposed) throw new Error('Expected an opposed later portion')
+    const rightArc = resolveAnimationFrames(source.props[1]!.anim)[1]!.arc
+    expect(opposed.props[1]?.anim[1]?.warp).toBe(createVtgThirdOrderWarp(rightArc, '1:3-pro'))
+
+    controls.updateThirdOrderMirror(false)
+
+    expect(controls.vtgThirdOrderMirror.value).toBe(false)
+    expect(controls.vtgThirdOrderSettings.value[0]?.timing).toBe('1:3-anti')
+    expect(controls.vtgThirdOrderSettings.value[1]?.timing).toBe('1:3-pro')
+    expect(animation.value).toEqual(opposed)
+  })
 })

@@ -242,22 +242,6 @@ const sidesMatch = (
   )
 }
 
-/** Detects whether the right side can be reproduced exactly from the left side. */
-export const detectVtgThirdOrderRelationship = (
-  animation: RootDataFinal,
-  firstEditableFrameIndex = 0,
-): VtgThirdOrderRelationship => {
-  const settings = extractVtgThirdOrderSettings(animation, firstEditableFrameIndex)
-  const compareInitial = firstEditableFrameIndex === 0
-  if (sidesMatch(settings[0], settings[1], false, compareInitial)) {
-    return { mirror: true, opposed: false }
-  }
-  if (sidesMatch(settings[0], settings[1], true, compareInitial)) {
-    return { mirror: true, opposed: true }
-  }
-  return { mirror: false, opposed: false }
-}
-
 export interface VtgThirdOrderDisplaySettings {
   initial: readonly [VtgThirdOrderInitial | undefined, VtgThirdOrderInitial | undefined]
   strength: readonly [number, number]
@@ -305,6 +289,44 @@ export const getVtgThirdOrderDisplaySettings = (
     strength: strength as [number, number],
     timing: timing as [VtgThirdOrderTiming | undefined, VtgThirdOrderTiming | undefined],
   }
+}
+
+/** Materializes inherited values so a virtual portion can retain them while it is edited. */
+export const materializeVtgThirdOrderSettings = (
+  animation: RootDataFinal,
+  firstEditableFrameIndex = 0,
+): VtgThirdOrderSettings => {
+  const authored = extractVtgThirdOrderSettings(animation, firstEditableFrameIndex)
+  const display = getVtgThirdOrderDisplaySettings(
+    animation,
+    authored,
+    firstEditableFrameIndex,
+  )
+  return ([0, 1] as const).map((propIndex) => ({
+    ...(firstEditableFrameIndex !== 0 || display.initial[propIndex] === undefined
+      ? undefined
+      : { initial: display.initial[propIndex] }),
+    strength: display.strength[propIndex],
+    ...(display.timing[propIndex] === undefined
+      ? undefined
+      : { timing: display.timing[propIndex] }),
+  })) as VtgThirdOrderSettings
+}
+
+/** Detects whether the right side's effective values can be reproduced from the left side. */
+export const detectVtgThirdOrderRelationship = (
+  animation: RootDataFinal,
+  firstEditableFrameIndex = 0,
+): VtgThirdOrderRelationship => {
+  const settings = materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex)
+  const compareInitial = firstEditableFrameIndex === 0
+  if (sidesMatch(settings[0], settings[1], false, compareInitial)) {
+    return { mirror: true, opposed: false }
+  }
+  if (sidesMatch(settings[0], settings[1], true, compareInitial)) {
+    return { mirror: true, opposed: true }
+  }
+  return { mirror: false, opposed: false }
 }
 
 export const updateVtgThirdOrderSettings = (

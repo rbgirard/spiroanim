@@ -67,9 +67,12 @@ export const applyVtgFoldSettings = (
 })
 
 /** Captures the effective per-beat Fold values for display and editing in Advanced mode. */
-export const extractVtgFoldValues = (animation: RootDataFinal): VtgFoldValues => [
-  extractPropFoldValues(animation, 0),
-  extractPropFoldValues(animation, 1),
+export const extractVtgFoldValues = (
+  animation: RootDataFinal,
+  firstEditableFrameIndex = 0,
+): VtgFoldValues => [
+  extractPropFoldValues(animation, 0, firstEditableFrameIndex),
+  extractPropFoldValues(animation, 1, firstEditableFrameIndex),
 ]
 
 /** Reconstructs Simple's authored source values from the effective Advanced beat table. */
@@ -116,17 +119,26 @@ const deriveVtgFoldSimpleSource = (
   }
 }
 
-const extractPropFoldValues = (animation: RootDataFinal, propIndex: 0 | 1) => {
+const extractPropFoldValues = (
+  animation: RootDataFinal,
+  propIndex: 0 | 1,
+  firstEditableFrameIndex: number,
+) => {
   const prop = animation.props[propIndex]
   if (!prop) return {}
   let beat = 0
   const values: Record<string, VtgFoldValue> = {}
-  for (const frame of prop.anim) {
+  for (const [frameIndex, frame] of prop.anim.entries()) {
     const fold: VtgFoldValue = {
       ...(frame.yaw === undefined ? {} : { yaw: frame.yaw }),
       ...(frame.rotate === undefined ? {} : { rotate: frame.rotate }),
     }
-    if (fold.yaw !== undefined || fold.rotate !== undefined) values[String(beat)] = fold
+    if (
+      frameIndex >= firstEditableFrameIndex &&
+      (fold.yaw !== undefined || fold.rotate !== undefined)
+    ) {
+      values[String(beat)] = fold
+    }
     beat += frame.beats ?? 0.5
   }
   return values
@@ -201,11 +213,15 @@ const resolveFold = (
 const foldsEqual = (left: VtgFoldValue | undefined, right: VtgFoldValue | undefined) =>
   left?.yaw === right?.yaw && left?.rotate === right?.rotate
 
-const frameBeats = (animation: RootDataFinal, propIndex: 0 | 1) => {
+const frameBeats = (
+  animation: RootDataFinal,
+  propIndex: 0 | 1,
+  firstEditableFrameIndex: number,
+) => {
   const beats: number[] = []
   let beat = 0
-  for (const frame of animation.props[propIndex]?.anim ?? []) {
-    beats.push(beat)
+  for (const [frameIndex, frame] of (animation.props[propIndex]?.anim ?? []).entries()) {
+    if (frameIndex >= firstEditableFrameIndex) beats.push(beat)
     beat += frame.beats ?? 0.5
   }
   return beats
@@ -257,8 +273,13 @@ const simpleSources = (
 export const detectVtgFoldSimpleSettings = (
   animation: RootDataFinal,
   values: VtgFoldValues = extractVtgFoldValues(animation),
+  firstEditableFrameIndex = 0,
 ): VtgFoldSimpleSettings | undefined => {
-  const beats = [frameBeats(animation, 0), frameBeats(animation, 1)] as const
+  const beats = [
+    frameBeats(animation, 0, firstEditableFrameIndex),
+    frameBeats(animation, 1, firstEditableFrameIndex),
+  ] as const
+  const minimumFrameBeat = beats[0][0] ?? 0
   for (const span of ['quarter', 'eighth'] as const) {
     const candidates = [sideCandidates(beats[0], span), sideCandidates(beats[1], span)] as const
     for (const left of candidates[0]) {
@@ -270,11 +291,15 @@ export const detectVtgFoldSimpleSettings = (
         span,
         mirror: true,
       }
-      const sources = simpleSources(values, [left, left], span)
+      const sources = simpleSources(values, [left, left], span, minimumFrameBeat)
       const matches = beats.every((propBeats, propIndex) =>
         propBeats.every((beat) =>
           foldsEqual(
-            resolveFold(sources, propIndex, beat, { mode: 'simple', ...options }),
+            resolveFold(sources, propIndex, beat, {
+              mode: 'simple',
+              ...options,
+              minimumFrameBeat,
+            }),
             values[propIndex]?.[String(beat)],
           ),
         ),
@@ -292,11 +317,15 @@ export const detectVtgFoldSimpleSettings = (
           span,
           mirror: false,
         }
-        const sources = simpleSources(values, pair, span)
+        const sources = simpleSources(values, pair, span, minimumFrameBeat)
         const matches = beats.every((propBeats, propIndex) =>
           propBeats.every((beat) =>
             foldsEqual(
-              resolveFold(sources, propIndex, beat, { mode: 'simple', ...options }),
+              resolveFold(sources, propIndex, beat, {
+                mode: 'simple',
+                ...options,
+                minimumFrameBeat,
+              }),
               values[propIndex]?.[String(beat)],
             ),
           ),

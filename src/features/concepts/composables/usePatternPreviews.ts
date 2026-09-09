@@ -63,6 +63,17 @@ export const builderPatternPreviewReferences = [
   '6-3',
 ] as const satisfies readonly VtgCellReference[]
 
+export const builderPatternCellReferences = [
+  '1-1',
+  '1-2',
+  '1-3',
+  '1-4',
+  '6-1',
+  '6-2',
+  '6-3',
+  '6-4',
+] as const satisfies readonly VtgCellReference[]
+
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 const spinPreviewIndexes = pairedPatternPreviewReferences.flatMap((reference, index) =>
   spinToggleCells.has(reference) ? [index] : [],
