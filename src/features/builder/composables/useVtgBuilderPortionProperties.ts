@@ -389,7 +389,7 @@ export const useVtgBuilderPortionProperties = ({
     )
     applyThirdOrderSettings(
       settings,
-      ['warp'],
+      ['warp', 'strength'],
       previousCycleCount !== getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value),
     )
   }

@@ -258,6 +258,13 @@ describe('SpiroAnim view', () => {
     expect(playerRoot.value.props.every((prop) => prop.paths === false)).toBe(true)
     wrapper.get('[data-role="builder-properties"]')
     wrapper.get('[data-role="builder-property-offset-toggle"]')
+    await wrapper.get('[data-role="builder-property-third-order-toggle"]').trigger('click')
+    const firstPortionRatio = wrapper.get<HTMLSelectElement>(
+      '[data-role="builder-third-order-timing-0"]',
+    )
+    await firstPortionRatio.setValue('1:1-pro')
+    await flushPromises()
+    expect(firstPortionRatio.element.value).toBe('1:1-pro')
     await wrapper.get('[data-role="builder-property-twist-toggle"]').trigger('click')
     const firstPortionTwist = wrapper.get<HTMLInputElement>('[data-role="builder-twist-0-1"]')
     firstPortionTwist.element.value = '10'
@@ -375,6 +382,12 @@ describe('SpiroAnim view', () => {
     })
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
     await wrapper.get('[data-role="builder-drop-property-third-order-toggle"]').trigger('click')
+    const dropRatio = wrapper.get<HTMLSelectElement>(
+      '[data-role="builder-drop-third-order-timing-0"]',
+    )
+    await dropRatio.setValue('1:1-pro')
+    await flushPromises()
+    expect(dropRatio.element.value).toBe('1:1-pro')
     const dropMirror = wrapper.get<HTMLInputElement>('input[aria-label="Mirror Third Order"]')
     await dropMirror.setValue(false)
     await flushPromises()

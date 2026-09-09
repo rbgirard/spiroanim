@@ -212,11 +212,14 @@ During a Spherical transition, both vectors are sampled continuously:
 
 - `C(t)` rotates through the segment Arc;
 - `W(t)` rotates through `Arc + Warp`;
-- Scale and Strength interpolate between their endpoint values;
+- Scale interpolates between its endpoint values;
+- Strength uses the target value immediately when both Strengths produce the same rendered start;
+  otherwise it interpolates between the endpoint values to avoid a position jump;
 - the blend formula is evaluated for the current sample.
 
 This produces the rounded in-spin and anti-spin lobes rather than connecting sparse adjusted nodes
-with pointed chords.
+with pointed chords. Avoiding an unnecessary Strength tween at a shared start also prevents an
+artificial transition lobe while the canonical and auxiliary vectors separate.
 
 ## Linear interpolation
 
@@ -306,8 +309,9 @@ ends at `(0.113137, -0.113137, 0)`, and repeated Shift behavior was manually acc
 ### Double Frames
 
 For Spherical transitions, subdivision divides Arc, Turns, Twist, and Warp while interpolating
-Scale, Strength, Depth, and Adjust and transporting Plane/Axis state. The independent canonical and
-auxiliary rotations remain continuously representable.
+Scale, Depth, and Adjust, applying Strength's conditional interpolation rule, and transporting
+Plane/Axis state. The independent canonical and auxiliary rotations remain continuously
+representable.
 
 Linear transitions require an additional guard. Subdividing properties can produce an inserted
 rendered node that does not lie on the original straight line. If accepted, one original line would

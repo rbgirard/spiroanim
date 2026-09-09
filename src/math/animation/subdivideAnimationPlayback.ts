@@ -1,7 +1,10 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import { resolveMotionFrames } from '@/math/animation/frameSemantics'
-import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
+import {
+  applyWarpPath,
+  doesStrengthChangeWarpPathPosition,
+} from '@/math/animation/warpPathInterpolation'
 import { TTYPE } from '@/domain/animation/AnimStruct'
 import { toScaleMultiplier } from '@/domain/animation/scale'
 import { toStrengthRatio } from '@/domain/animation/strength'
@@ -159,7 +162,17 @@ const subdivideFrame = (
 ): AnimData => {
   const progress = step / subdivisionCount
   const scale = interpolate(start.scale, target.scale, progress)
-  const strength = interpolate(start.strength, target.strength, progress)
+  const strength =
+    target.type === TTYPE.SPHE &&
+    !doesStrengthChangeWarpPathPosition(
+      new Vector3().fromArray(start.pos),
+      new Vector3().fromArray(start.warpPos),
+      toScaleMultiplier(start.scale),
+      toStrengthRatio(start.strength),
+      toStrengthRatio(target.strength),
+    )
+      ? target.strength
+      : interpolate(start.strength, target.strength, progress)
   return {
     turns: target.turns / subdivisionCount,
     twist: target.twist / subdivisionCount,

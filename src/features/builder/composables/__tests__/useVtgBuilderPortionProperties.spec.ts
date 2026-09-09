@@ -78,4 +78,32 @@ describe('useVtgBuilderPortionProperties Third Order controls', () => {
     expect(controls.thirdOrderSettings.value[1]?.timing).toBe('1:3-pro')
     expect(pattern.value).toEqual(opposed)
   })
+
+  it('clears Strength and Adjust when Ratio is cleared', () => {
+    const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!source) throw new Error('Expected a supported VTG animation')
+    const pattern = shallowRef<RootDataFinal>(source)
+    const controls = useVtgBuilderPortionProperties({
+      pattern: computed(() => pattern.value),
+      previews: computed(() => [pattern.value]),
+      speedRatio: ref('1:3'),
+      initialPropRotationOffsets: ref<VtgPatternSelection['propRotationOffsets']>(),
+      selectedIndex: ref(0),
+      commit: (updated) => {
+        pattern.value = updated
+      },
+    })
+
+    controls.updateThirdOrderTiming(0, '1:1-pro')
+    expect(controls.thirdOrderSettings.value[0]?.timing).toBe('1:1-pro')
+    controls.updateThirdOrderStrength(0, 55)
+    controls.updateThirdOrderInitial(0, 90)
+    expect(pattern.value.props[0]?.anim[0]?.strength).toBe(550)
+
+    controls.updateThirdOrderTiming(0)
+
+    expect(controls.thirdOrderSettings.value[0]).toEqual({})
+    expect(pattern.value.props[0]?.anim.every((frame) => frame.warp === undefined)).toBe(true)
+    expect(pattern.value.props[0]?.anim.every((frame) => frame.strength === undefined)).toBe(true)
+  })
 })

@@ -32,7 +32,10 @@ import {
 
 import { InitialPoint, InitialOrtho } from '@/math/animation/OrthogonalFunc'
 import { motionPathOffset, sampleCompiledMotion } from '@/math/animation/MotionFunc'
-import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
+import {
+  applyWarpPath,
+  doesStrengthChangeWarpPathPosition,
+} from '@/math/animation/warpPathInterpolation'
 import { toScaleMultiplier } from '@/domain/animation/scale'
 import { toStrengthRatio } from '@/domain/animation/strength'
 
@@ -275,6 +278,12 @@ export const createSpiroAnimator = (vars: {
       scaleDiff = scale2 - scale1
       strength1 = toStrengthRatio(p1.strength)
       strength2 = toStrengthRatio(p2.strength)
+      if (
+        PathType == TTYPE.SPHE &&
+        !doesStrengthChangeWarpPathPosition(Pos, WarpPos, scale1, strength1, strength2)
+      ) {
+        strength1 = strength2
+      }
       strengthDiff = strength2 - strength1
       depth1 = p1.depth / 10
       depth2 = p2.depth / 10

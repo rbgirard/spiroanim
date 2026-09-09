@@ -120,7 +120,7 @@ describe('resampleAnimationFrames', () => {
       beats: 1,
       scale: 150,
       warp: 0,
-      strength: 400,
+      strength: 600,
       depth: 5,
       adjust: 10,
       arc: 45,

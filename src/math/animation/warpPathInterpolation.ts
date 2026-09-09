@@ -1,5 +1,18 @@
 import { Vector3 } from 'three'
 
+const renderedPositionTolerance = 1e-9
+
+/** Whether changing Strength at this canonical/auxiliary state would move the rendered hand. */
+export const doesStrengthChangeWarpPathPosition = (
+  canonical: Vector3,
+  auxiliary: Vector3,
+  scale: number,
+  startStrength: number,
+  targetStrength: number,
+): boolean =>
+  (Math.abs(scale * (targetStrength - startStrength)) / 2) * canonical.distanceTo(auxiliary) >
+  renderedPositionTolerance
+
 /**
  * Combines the canonical and auxiliary unit hand-path vectors into `target`.
  *

@@ -757,6 +757,11 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Third Order')
 
     await wrapper.get('[data-role="eight-step-property-third-order-toggle"]').trigger('click')
+    const ratio = wrapper.get<HTMLSelectElement>(
+      '[data-role="eight-step-third-order-timing-0"]',
+    )
+    await ratio.setValue('1:1-pro')
+    expect(ratio.element.value).toBe('1:1-pro')
     await wrapper
       .get<HTMLInputElement>('[data-role="eight-step-third-order-strength-0"]')
       .setValue('60')

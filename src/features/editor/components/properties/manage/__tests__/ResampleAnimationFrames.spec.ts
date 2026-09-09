@@ -80,7 +80,7 @@ describe('ResampleAnimationFrames', () => {
     expect(ROOT.value.props[0]!.anim[1]).toMatchObject({
       turns: 45,
       scale: 150,
-      strength: 400,
+      strength: 600,
       depth: 5,
       adjust: 10,
       arc: 45,

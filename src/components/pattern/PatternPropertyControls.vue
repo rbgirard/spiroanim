@@ -590,7 +590,7 @@
               >
                 <span>Ratio</span>
                 <select
-                  :value="thirdOrderDisplaySettings.timing[propIndex] ?? ''"
+                  :value="thirdOrderSettings[propIndex]?.timing ?? ''"
                   :aria-label="`${label} Third Order Ratio`"
                   :data-role="`${context}-third-order-timing-${propIndex}`"
                   @change="setThirdOrderTiming(propIndex, $event)"
@@ -631,6 +631,7 @@
                   max="100"
                   step="5"
                   :value="thirdOrderDisplaySettings.strength[propIndex]"
+                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
                   :aria-valuetext="`${thirdOrderDisplaySettings.strength[propIndex]}%`"
                   :aria-label="`${label} Third Order Strength`"
                   :data-role="`${context}-third-order-strength-${propIndex}`"

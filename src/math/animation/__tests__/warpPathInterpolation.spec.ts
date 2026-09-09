@@ -1,7 +1,10 @@
 import { Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
-import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
+import {
+  applyWarpPath,
+  doesStrengthChangeWarpPathPosition,
+} from '@/math/animation/warpPathInterpolation'
 
 describe('applyWarpPath', () => {
   it('preserves established Scale behavior while both vectors are aligned', () => {
@@ -22,5 +25,14 @@ describe('applyWarpPath', () => {
 
     expect(result.x).toBeCloseTo(0.2)
     expect(result.y).toBeCloseTo(0.6)
+  })
+
+  it('distinguishes harmless Strength changes from changes that move the hand', () => {
+    const canonical = new Vector3(0, 1, 0)
+
+    expect(doesStrengthChangeWarpPathPosition(canonical, canonical, 0.8, 1, 0.5)).toBe(false)
+    expect(doesStrengthChangeWarpPathPosition(canonical, new Vector3(1, 0, 0), 0.8, 1, 0.5)).toBe(
+      true,
+    )
   })
 })

@@ -258,6 +258,7 @@ describe('PatternPropertyControls', () => {
     ).toEqual(['Ratio', 'Strength', 'Adjust'])
 
     const leftTiming = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-timing-0"]')
+    const rightTiming = wrapper.get<HTMLSelectElement>('[data-role="vtg-third-order-timing-1"]')
     expect(leftTiming.findAll('option').map((option) => option.text())).toEqual([
       'Undefined',
       '1:1 Anti',
@@ -278,11 +279,13 @@ describe('PatternPropertyControls', () => {
       '2:5 Pro',
     ])
     expect(leftTiming.element.value).toBe('1:1-pro')
+    expect(rightTiming.element.value).toBe('')
     await leftTiming.setValue('1:2-pro')
     expect(wrapper.emitted('thirdOrderTimingUpdate')?.at(-1)).toEqual([0, '1:2-pro'])
 
     const leftStrength = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-strength-0"]')
     expect(leftStrength.attributes()).toMatchObject({ min: '0', max: '100', step: '5' })
+    expect(leftStrength.element.disabled).toBe(false)
     expect(leftStrength.attributes('aria-valuetext')).toBe('55%')
     leftStrength.element.value = '0'
     await leftStrength.trigger('input')
@@ -302,6 +305,8 @@ describe('PatternPropertyControls', () => {
     expect(wrapper.emitted('thirdOrderInitialUpdate')?.at(-1)).toEqual([0, 90])
 
     const rightAdjust = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-1"]')
+    const rightStrength = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-strength-1"]')
+    expect(rightStrength.element.disabled).toBe(true)
     expect(rightAdjust.element.disabled).toBe(true)
     expect(rightAdjust.attributes('aria-valuetext')).toBe('0°')
 

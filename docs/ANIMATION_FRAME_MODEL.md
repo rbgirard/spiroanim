@@ -126,21 +126,21 @@ worker can therefore seek directly to any frame without replaying earlier interv
 
 A displayed segment combines values from both endpoint frames.
 
-| Behavior                       | Source                                                            |
-| ------------------------------ | ----------------------------------------------------------------- |
-| Segment duration               | `p1.beats`                                                        |
-| Starting position and rotation | `p1.pos`, `p1.rot`                                                |
-| Starting adjusted rotation     | `p1.adju`                                                         |
-| Starting hand state            | `p1.pos`, `p1.scale`, `p1.strength`, `p1.depth`                   |
-| Transition type                | `p2.type`                                                         |
-| Spherical hand path            | Strength blend of canonical Arc and Warp vectors, scaled together |
-| Linear hand path               | Interpolate the fully rendered Warp/Strength/Scale endpoints      |
-| Rotation path                  | Rotate `p1.rot` around `p2.rotx`                                  |
-| Rotation amount                | `p2.turns`, plus `p2.arc` for Spherical                           |
-| Rotation adjustment            | `p2.adjust`, with optional smooth blending from `p1.adjust`       |
-| Local prop roll                | `p1.twistRoll + p2.twist * segment progress`                      |
-| Ending hand state              | `p2.pos`, `p2.scale`, `p2.strength`, `p2.depth`                   |
-| Warp rotation for the segment  | `p2.arc + p2.warp`                                                |
+| Behavior                       | Source                                                       |
+| ------------------------------ | ------------------------------------------------------------ |
+| Segment duration               | `p1.beats`                                                   |
+| Starting position and rotation | `p1.pos`, `p1.rot`                                           |
+| Starting adjusted rotation     | `p1.adju`                                                    |
+| Starting hand state            | `p1.pos`, `p1.scale`, `p1.strength`, `p1.depth`              |
+| Transition type                | `p2.type`                                                    |
+| Spherical hand path            | Target Strength blend, tweened only when its start differs   |
+| Linear hand path               | Interpolate the fully rendered Warp/Strength/Scale endpoints |
+| Rotation path                  | Rotate `p1.rot` around `p2.rotx`                             |
+| Rotation amount                | `p2.turns`, plus `p2.arc` for Spherical                      |
+| Rotation adjustment            | `p2.adjust`, with optional smooth blending from `p1.adjust`  |
+| Local prop roll                | `p1.twistRoll + p2.twist * segment progress`                 |
+| Ending hand state              | `p2.pos`, `p2.scale`, `p2.strength`, `p2.depth`              |
+| Warp rotation for the segment  | `p2.arc + p2.warp`                                           |
 
 The same setup routine is used for playback and for constructing visible path/hand lines. A
 management operation must therefore preserve the incoming axes on the new `p2`, not just its final
@@ -173,6 +173,12 @@ rounded inner radius. Scale controls the size of the complete result independent
 zero from the start, `C` and `W` remain aligned, so changing Strength does not alter the ordinary
 scaled path. After Warp has accumulated a phase difference, setting Warp to zero stops additional
 relative rotation; setting Strength to zero suppresses the deformation immediately.
+
+For each Spherical interval, the worker first checks whether changing from the starting Strength to
+the target Strength would move the rendered starting point. If both values produce the same point,
+the target Strength applies for the complete interval; tweening it while `C` and `W` separate would
+create an artificial transition lobe. If the two values produce different starting points,
+Strength continues to interpolate so playback remains position-continuous rather than teleporting.
 
 Assigning Warp the same interval values as Turns reproduces VTG timing geometry without coupling
 the hand path to the prop. For timing `p:q`, anti-spin produces `p + q` petals and in-spin produces
@@ -207,8 +213,9 @@ Animation, Motion, and Camera tracks.
 
 Animation Manage also exposes Double Frames and Halve Frames across every prop. Double Frames
 inserts the intermediate frame in each authored interval and doubles BPM. Turns, Twist, Warp, and
-Arc are split between the two intervals; Scale, Strength, Depth, and Adjust are interpolated; and
-Plane and Axis are transported through the continuation frame. This preserves the continuously
+Arc are split between the two intervals; Scale, Depth, and Adjust are interpolated; Strength uses
+the same conditional interpolation rule as playback; and Plane and Axis are transported through
+the continuation frame. This preserves the continuously
 sampled spherical canonical and auxiliary-vector paths. For Linear transitions, the generated
 rendered hand position must also equal the corresponding point on the original straight segment;
 otherwise Double is disabled rather than replacing one line with multiple angled chords. Because
