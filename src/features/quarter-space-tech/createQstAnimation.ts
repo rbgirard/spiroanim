@@ -7,7 +7,11 @@ import { buildQstPattern } from '@/features/quarter-space-tech/data/qstPatternCa
 import { analyzeQstPositionPairs } from '@/features/quarter-space-tech/math/analyzeQstAnimation'
 import { createQstFrames } from '@/features/quarter-space-tech/math/createQstFrames'
 import type { QstPatternSelection, QstReadableAnimation } from '@/features/quarter-space-tech/types'
-import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgDefaultProp,
+  vtgPlayerSettings,
+  vtgPropSettings,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
@@ -76,7 +80,7 @@ export const createQstAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
-    ...(selection.prop === undefined ? undefined : { prop: selection.prop }),
+    prop: selection.prop ?? vtgDefaultProp,
     camera: [createQstCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
     type: pattern.type ?? current.type,

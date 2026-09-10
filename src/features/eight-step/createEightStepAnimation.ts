@@ -4,7 +4,11 @@ import type {
   EightStepPatternSelection,
   EightStepReadableAnimation,
 } from '@/features/eight-step/types'
-import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgDefaultProp,
+  vtgPlayerSettings,
+  vtgPropSettings,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
@@ -72,7 +76,7 @@ export const createEightStepAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
-    ...(selection.prop === undefined ? undefined : { prop: selection.prop }),
+    prop: selection.prop ?? vtgDefaultProp,
     camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
     type: pattern.type ?? current.type,

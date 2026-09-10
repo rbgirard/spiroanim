@@ -9,6 +9,7 @@ import {
   getVtgDistanceForScale,
   toVtgInternalScale,
   vtgBpmControl,
+  vtgDefaultProp,
   vtgPlayerSettings,
   vtgScaleControl,
   vtgThickControl,
@@ -72,7 +73,7 @@ export const applyVtgCustomization = (
   return applyPatternPropColors(
     {
       ...animation,
-      prop: selection.prop ?? animation.prop,
+      prop: selection.prop ?? vtgDefaultProp,
       bpm: clampVtgBpm(selection.bpm ?? vtgBpmControl.default) * 2,
       paths,
       hands,

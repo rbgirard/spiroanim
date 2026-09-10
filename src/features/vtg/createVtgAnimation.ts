@@ -1,6 +1,10 @@
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
-import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgDefaultProp,
+  vtgPlayerSettings,
+  vtgPropSettings,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import {
   getVtgTimingCycleCount,
@@ -184,7 +188,7 @@ export const createVtgAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
-    ...(selection.prop === undefined ? undefined : { prop: selection.prop }),
+    prop: selection.prop ?? vtgDefaultProp,
     camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
     type: pattern.type ?? current.type,

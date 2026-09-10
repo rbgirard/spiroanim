@@ -2,6 +2,9 @@ import { getVtgPropSpeedRatios, parseVtgIndividualSpeedRatio } from '@/features/
 import type { VtgReadableAnimation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { AnimReadable, PropReadable } from '@/types/AnimTypes'
 import { toDisplayScale, toInternalScale } from '@/domain/animation/scale'
+import type { PropInd } from '@/types/AnimTypes'
+
+export const vtgDefaultProp = 0 satisfies PropInd
 
 export const vtgBpmControl = {
   min: 20,
