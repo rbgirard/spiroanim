@@ -7,8 +7,13 @@ export const resolveVtgBuilderPatternMatchAnimation = (
   selectedIndex: number | undefined,
 ): RootDataFinal | undefined => {
   if (!previews?.length || selectedIndex === undefined) return undefined
-  const preview = selectedIndex === previews.length ? previews.at(-1) : previews[selectedIndex]
+  const dropPlaceholderSelected = selectedIndex === previews.length
+  const preview = dropPlaceholderSelected ? previews.at(-1) : previews[selectedIndex]
   if (!preview) return undefined
+
+  // Drop candidates need the actual trailing endpoint. Normalizing its length would erase beat
+  // edits when the pattern contains only one portion.
+  if (dropPlaceholderSelected) return preview
 
   return resizeVtgTransitionPatternPreview(preview, 0, getVtgQuickSlotBeatCount(preview)) ?? preview
 }

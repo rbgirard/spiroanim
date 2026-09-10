@@ -5,16 +5,19 @@ import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 
 describe('applyVtgCustomization', () => {
-  it('applies default POI and every non-Scale Customize field to the complete Builder pattern', () => {
+  it('applies non-Scale Customize fields without changing the current pattern Scale', () => {
     const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3', prop: 2 })
     const source = first
       ? appendVtgBuilderPattern(first, { reference: '5-1', speedRatio: '1:3', prop: 2 })
       : undefined
     if (!source) throw new Error('Expected a two-portion Builder pattern')
+    const authoredAnimations = source.props.map((prop) => structuredClone(prop.anim))
+    const authoredCamera = structuredClone(source.camera)
 
     const customized = applyVtgCustomization(source, {
       reference: '1-1',
       speedRatio: '1:3',
+      scale: 1.4,
       bpm: 91,
       thick: 9,
       spacing: 7,
@@ -51,8 +54,7 @@ describe('applyVtgCustomization', () => {
       color: 3,
     })
     expect(customized.props.every(({ motion }) => motion.length === 1)).toBe(true)
-    expect(customized.props.map(({ anim }) => anim.length)).toEqual(
-      source.props.map(({ anim }) => anim.length),
-    )
+    expect(customized.props.map(({ anim }) => anim)).toEqual(authoredAnimations)
+    expect(customized.camera).toEqual(authoredCamera)
   })
 })

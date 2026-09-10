@@ -61,12 +61,21 @@ describe('resolveVtgBuilderPatternMatchAnimation', () => {
     ).toBe(8)
   })
 
-  it('uses the final portion for the selected dummy drop cell', () => {
+  it('uses the final portion at its actual length for the selected dummy drop cell', () => {
     const previews = createPreviews()
+    const resizedFinal = resizeVtgTransitionPatternPreview(previews[1], 0, 6)
+    if (!resizedFinal) throw new Error('Expected a resized final portion')
+    const resizedPreviews = [previews[0], resizedFinal]
 
-    expect(resolveVtgBuilderPatternMatchAnimation(previews, previews.length)).toEqual(
-      resolveVtgBuilderPatternMatchAnimation(previews, 1),
+    const dropContext = resolveVtgBuilderPatternMatchAnimation(
+      resizedPreviews,
+      resizedPreviews.length,
     )
+    expect(dropContext).toEqual(resizedFinal)
+    expect(dropContext && getVtgTransitionPreviewBeatCount(dropContext)).toBe(6)
+    expect(
+      getVtgTransitionPreviewBeatCount(resolveVtgBuilderPatternMatchAnimation(resizedPreviews, 1)!),
+    ).toBe(4)
   })
 
   it('does not provide a match animation without a selected existing portion', () => {

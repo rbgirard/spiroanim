@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
 
+import { toDisplayScale } from '@/domain/animation/scale'
 import { applyVtgBuilderScaleSettings } from '@/features/builder/applyVtgBuilderScaleSettings'
 import {
   applyVtgBuilderPortionProperties,
@@ -30,6 +31,7 @@ import {
   extractVtgThirdOrderSettings,
   getVtgThirdOrderCycleCount,
   getVtgThirdOrderDisplaySettings,
+  materializeVtgThirdOrderSettings,
   updateVtgThirdOrderSettings,
   updateVtgThirdOrderTimingSetting,
   type VtgThirdOrderDisplaySettings,
@@ -44,6 +46,7 @@ import {
   resizeVtgTransitionPatternPreview,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { updateVtgMirroredSideSetting } from '@/features/vtg/propertySettings'
 
@@ -134,6 +137,16 @@ export const useVtgBuilderPortionProperties = ({
         )
       : { initial: [undefined, undefined], strength: [100, 100], timing: [undefined, undefined] }
   })
+  const thirdOrderTimingSet = computed<readonly [boolean, boolean]>(() => {
+    const index = selectedIndex.value
+    const range = index === undefined ? undefined : getVtgBuilderPortionRanges(pattern.value)[index]
+    if (!range) return [false, false]
+    const timingFrameIndex = Math.max(range.firstOwnedFrameIndex, range.startFrameIndex + 1)
+    return [
+      pattern.value.props[0]?.anim[timingFrameIndex]?.warp !== undefined,
+      pattern.value.props[1]?.anim[timingFrameIndex]?.warp !== undefined,
+    ]
+  })
   const scaleValues = computed<VtgBuilderScaleValues>(() => {
     const index = selectedIndex.value
     if (index === undefined) return emptyScaleValues()
@@ -147,7 +160,7 @@ export const useVtgBuilderPortionProperties = ({
     return values.map((side) =>
       Object.fromEntries(
         Object.entries(side).flatMap(([beat, value]) =>
-          value === undefined ? [] : [[beat, value / 10]],
+          value === undefined ? [] : [[beat, toDisplayScale(value)]],
         ),
       ),
     ) as VtgBuilderScaleValues
@@ -163,7 +176,9 @@ export const useVtgBuilderPortionProperties = ({
     )
     if (!values) return emptyScaleValues()
     return values.map((side) =>
-      Object.fromEntries(Object.entries(side).map(([beat, value]) => [beat, value / 10])),
+      Object.fromEntries(
+        Object.entries(side).map(([beat, value]) => [beat, toDisplayScale(value)]),
+      ),
     ) as VtgBuilderScaleValues
   })
   const twistDisplayValues = computed<VtgTwistValues>(() => {
@@ -233,6 +248,18 @@ export const useVtgBuilderPortionProperties = ({
     offsetValues.value = initialPropRotationOffsets.value ?? [0, 0]
   }
 
+  const manuallyUnmirroredPortions = new Set<number>()
+  const hydrateThirdOrderRelationship = (animation: RootDataFinal) => {
+    const thirdOrderRelationship = detectVtgThirdOrderRelationship(
+      animation,
+      firstEditableFrameIndex.value,
+    )
+    thirdOrderMirror.value =
+      selectedIndex.value !== undefined && manuallyUnmirroredPortions.has(selectedIndex.value)
+        ? false
+        : thirdOrderRelationship.mirror
+    thirdOrderOpposed.value = thirdOrderRelationship.opposed
+  }
   const hydrateModes = () => {
     const animation = selectedControlAnimation.value
     if (!animation) return
@@ -243,12 +270,7 @@ export const useVtgBuilderPortionProperties = ({
       ? 'simple'
       : 'advanced'
     twistMode.value = detectVtgTwistMode(twistValues.value)
-    const thirdOrderRelationship = detectVtgThirdOrderRelationship(
-      animation,
-      firstEditableFrameIndex.value,
-    )
-    thirdOrderMirror.value = thirdOrderRelationship.mirror
-    thirdOrderOpposed.value = thirdOrderRelationship.opposed
+    hydrateThirdOrderRelationship(animation)
     const values = foldValues.value
     const hasAuthoredFold = values.some((side) => Object.keys(side).length > 0)
     const simpleFold = detectVtgFoldSimpleSettings(animation, values)
@@ -264,9 +286,12 @@ export const useVtgBuilderPortionProperties = ({
     foldMirror.value = simpleFold.mirror
   }
 
-  watch([selectedIndex, selectedControlAnimation], () => {
+  watch(selectedIndex, () => {
     syncOffsetValues()
     hydrateModes()
+  })
+  watch(selectedControlAnimation, (animation) => {
+    if (animation) hydrateThirdOrderRelationship(animation)
   })
   watch(initialPropRotationOffsets, syncOffsetValues)
 
@@ -327,6 +352,8 @@ export const useVtgBuilderPortionProperties = ({
     settings: VtgThirdOrderSettings,
     keys: readonly ('warp' | 'strength')[],
     resizeCycle = false,
+    propIndexes: readonly (0 | 1)[] = [0, 1],
+    compactKeys: readonly ('warp' | 'strength')[] = [],
   ) => {
     const index = selectedIndex.value
     if (index === undefined) return
@@ -344,14 +371,87 @@ export const useVtgBuilderPortionProperties = ({
       ? source && createVtgTransitionPreviewAnimation(source, index)
       : selectedControlAnimation.value
     if (!source || !animation) return
-    commitWorkingProperties(
-      applyVtgThirdOrderSettings(animation, settings, {
-        firstEditableFrameIndex: firstEditableFrameIndex.value,
-        mirror: thirdOrderMirror.value,
-        opposed: thirdOrderOpposed.value,
-      }),
-      keys,
-      source,
+    const sourceRange = getVtgBuilderPortionRanges(source)[index]
+    if (!sourceRange) return
+    const applied = applyVtgThirdOrderSettings(animation, settings, {
+      firstEditableFrameIndex: firstEditableFrameIndex.value,
+      mirror: thirdOrderMirror.value,
+      opposed: thirdOrderOpposed.value,
+    })
+    const working: RootDataFinal = {
+      ...applied,
+      props: applied.props.map((prop, propIndex) =>
+        propIndexes.includes(propIndex as 0 | 1)
+          ? {
+              ...prop,
+              anim:
+                compactKeys.length === 0
+                  ? prop.anim
+                  : compactAnimationFrames(prop.anim, {
+                      preserve: (frameIndex, key) =>
+                        !compactKeys.some((compactKey) => compactKey === key) ||
+                        key === 'warp' ||
+                        (key === 'strength' && frameIndex < firstEditableFrameIndex.value),
+                    }),
+            }
+          : {
+              ...prop,
+              anim: prop.anim.map((frame, localFrameIndex) => {
+                const sourceFrame =
+                  source.props[propIndex]?.anim[sourceRange.startFrameIndex + localFrameIndex]
+                if (!sourceFrame) return frame
+                const preserved = { ...frame }
+                for (const key of keys) {
+                  const value = sourceFrame[key]
+                  if (value === undefined) delete preserved[key]
+                  else preserved[key] = value
+                }
+                return preserved
+              }),
+            },
+      ),
+    }
+    const updated = applyVtgBuilderPortionProperties(source, index, working, keys)
+    if (!updated) return
+    if (!compactKeys.includes('warp') || !thirdOrderMirror.value) {
+      commit(updated)
+      return
+    }
+
+    const globalTimingStartIndex = Math.max(
+      sourceRange.firstOwnedFrameIndex,
+      sourceRange.startFrameIndex + 1,
+    )
+    const withoutRelationshipWarps: RootDataFinal = {
+      ...updated,
+      props: updated.props.map((prop, propIndex) =>
+        propIndexes.includes(propIndex as 0 | 1)
+          ? {
+              ...prop,
+              anim: prop.anim.map((frame, frameIndex) => {
+                if (
+                  frameIndex < globalTimingStartIndex ||
+                  frameIndex > sourceRange.endFrameIndex ||
+                  frame.warp === undefined
+                ) {
+                  return frame
+                }
+                const withoutWarp = { ...frame }
+                delete withoutWarp.warp
+                return withoutWarp
+              }),
+            }
+          : prop,
+      ),
+    }
+    const compactedPreview = createVtgTransitionPreviewAnimation(withoutRelationshipWarps, index)
+    const relationship = compactedPreview
+      ? detectVtgThirdOrderRelationship(compactedPreview, firstEditableFrameIndex.value)
+      : undefined
+    commit(
+      relationship?.mirror && relationship.opposed === thirdOrderOpposed.value
+        ? withoutRelationshipWarps
+        : updated,
     )
   }
   const updateThirdOrderInitial = (propIndex: 0 | 1, value?: VtgThirdOrderInitial) => {
@@ -366,13 +466,19 @@ export const useVtgBuilderPortionProperties = ({
       settings,
       ['warp'],
       previousCycleCount !== getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value),
+      thirdOrderMirror.value ? [0, 1] : [propIndex],
     )
   }
   const updateThirdOrderStrength = (propIndex: 0 | 1, value?: number) => {
     const settings = updateVtgThirdOrderSettings(thirdOrderSettings.value, propIndex, {
       strength: value,
     })
-    applyThirdOrderSettings(settings, ['strength'])
+    applyThirdOrderSettings(
+      settings,
+      ['strength'],
+      false,
+      thirdOrderMirror.value ? [0, 1] : [propIndex],
+    )
   }
   const updateThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
     const animation = selectedControlAnimation.value
@@ -381,35 +487,57 @@ export const useVtgBuilderPortionProperties = ({
       thirdOrderSettings.value,
       thirdOrderMirror.value,
     )
-    const settings = updateVtgThirdOrderTimingSetting(
-      animation,
-      thirdOrderSettings.value,
-      propIndex,
-      value,
-    )
+    const ownedSettings = thirdOrderSettings.value.map((side, sideIndex) => {
+      const owned = { ...side }
+      if (!thirdOrderTimingSet.value[sideIndex]) delete owned.timing
+      return owned
+    }) as VtgThirdOrderSettings
+    const settings = updateVtgThirdOrderTimingSetting(animation, ownedSettings, propIndex, value)
     applyThirdOrderSettings(
       settings,
       ['warp', 'strength'],
       previousCycleCount !== getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value),
+      thirdOrderMirror.value ? [0, 1] : [propIndex],
     )
   }
   const updateThirdOrderMirror = (mirror: boolean) => {
-    const previousCycleCount = getVtgThirdOrderCycleCount(
-      thirdOrderSettings.value,
-      thirdOrderMirror.value,
-    )
-    thirdOrderMirror.value = mirror
-    if (!mirror) thirdOrderOpposed.value = false
+    const index = selectedIndex.value
+    const animation = selectedControlAnimation.value
+    if (index === undefined || !animation) return
+    if (!mirror) {
+      manuallyUnmirroredPortions.add(index)
+      thirdOrderMirror.value = false
+      return
+    }
+
+    manuallyUnmirroredPortions.delete(index)
+    const relationship = detectVtgThirdOrderRelationship(animation, firstEditableFrameIndex.value)
+    thirdOrderMirror.value = true
+    thirdOrderOpposed.value = relationship.opposed
+    if (relationship.mirror) return
+
+    const settings = materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex.value)
+    const previousCycleCount = getVtgThirdOrderCycleCount(settings, false)
     applyThirdOrderSettings(
-      thirdOrderSettings.value,
+      settings,
       ['warp', 'strength'],
-      previousCycleCount !== getVtgThirdOrderCycleCount(thirdOrderSettings.value, mirror),
+      previousCycleCount !== getVtgThirdOrderCycleCount(settings, true),
+      [1],
+      ['warp', 'strength'],
     )
   }
   const updateThirdOrderOpposed = (opposed: boolean) => {
     if (!thirdOrderMirror.value) return
+    const animation = selectedControlAnimation.value
+    if (!animation) return
     thirdOrderOpposed.value = opposed
-    applyThirdOrderSettings(thirdOrderSettings.value, ['warp'])
+    applyThirdOrderSettings(
+      materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex.value),
+      ['warp'],
+      false,
+      [1],
+      ['warp'],
+    )
   }
 
   const foldOptions = () => ({
@@ -537,6 +665,7 @@ export const useVtgBuilderPortionProperties = ({
     twistDisplayValues,
     thirdOrderSettings,
     thirdOrderDisplaySettings,
+    thirdOrderTimingSet,
     thirdOrderMirror,
     thirdOrderOpposed,
     foldValues,

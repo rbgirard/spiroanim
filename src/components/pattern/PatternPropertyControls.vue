@@ -583,14 +583,13 @@
                 class="pattern-property-controls__third-order-row"
                 :class="{
                   'pattern-property-controls__twist-frame--inherited':
-                    thirdOrderSettings[propIndex]?.timing === undefined,
-                  'pattern-property-controls__value-set':
-                    thirdOrderSettings[propIndex]?.timing !== undefined,
+                    !isThirdOrderTimingSet(propIndex),
+                  'pattern-property-controls__value-set': isThirdOrderTimingSet(propIndex),
                 }"
               >
                 <span>Ratio</span>
                 <select
-                  :value="thirdOrderSettings[propIndex]?.timing ?? ''"
+                  :value="thirdOrderDisplaySettings.timing[propIndex] ?? ''"
                   :aria-label="`${label} Third Order Ratio`"
                   :data-role="`${context}-third-order-timing-${propIndex}`"
                   @change="setThirdOrderTiming(propIndex, $event)"
@@ -607,7 +606,7 @@
                 <button
                   type="button"
                   class="pattern-property-controls__delete"
-                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
+                  :disabled="!isThirdOrderTimingSet(propIndex)"
                   :aria-label="`Clear ${label} Third Order Ratio`"
                   @click="emitThirdOrderTiming(propIndex)"
                 >
@@ -631,7 +630,7 @@
                   max="100"
                   step="5"
                   :value="thirdOrderDisplaySettings.strength[propIndex]"
-                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
+                  :disabled="thirdOrderDisplaySettings.timing[propIndex] === undefined"
                   :aria-valuetext="`${thirdOrderDisplaySettings.strength[propIndex]}%`"
                   :aria-label="`${label} Third Order Strength`"
                   :data-role="`${context}-third-order-strength-${propIndex}`"
@@ -672,7 +671,7 @@
                   max="360"
                   step="5"
                   :value="thirdOrderInitialAngle(propIndex)"
-                  :disabled="thirdOrderSettings[propIndex]?.timing === undefined"
+                  :disabled="thirdOrderDisplaySettings.timing[propIndex] === undefined"
                   :aria-valuetext="`${thirdOrderInitialAngle(propIndex)}°`"
                   :aria-label="`${label} Third Order Adjust`"
                   :data-role="`${context}-third-order-initial-${propIndex}`"
@@ -752,6 +751,7 @@ const props = withDefaults(
     twistDisplayValues?: VtgTwistValues
     thirdOrderSettings?: VtgThirdOrderSettings
     thirdOrderDisplaySettings?: VtgThirdOrderDisplaySettings
+    thirdOrderTimingSet?: readonly [boolean, boolean]
     thirdOrderMirror?: boolean
     thirdOrderOpposed?: boolean
     initialYawValues?: readonly [number, number]
@@ -913,6 +913,9 @@ const thirdOrderInitialAngle = (propIndex: number) => {
   const value = props.thirdOrderDisplaySettings.initial[propIndex]
   return typeof value === 'number' ? value : 0
 }
+const isThirdOrderTimingSet = (propIndex: number) =>
+  props.thirdOrderTimingSet?.[propIndex] ??
+  props.thirdOrderSettings[propIndex]?.timing !== undefined
 const emitThirdOrderInitial = (propIndex: number, value?: VtgThirdOrderInitial) => {
   if (!isPropIndex(propIndex)) return
   emit('thirdOrderInitialUpdate', propIndex, value)

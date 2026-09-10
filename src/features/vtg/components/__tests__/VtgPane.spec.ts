@@ -11,6 +11,7 @@ import {
 } from '@/features/builder/describeVtgBuilderMotion'
 import { appendVtgBuilderPattern } from '@/features/builder/appendVtgBuilderPattern'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
+import { describeVtgBuilderPreviewRelationship } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import { resolveVtgBuilderPatternMatchAnimation } from '@/features/builder/resolveVtgBuilderPatternMatchAnimation'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { describePatternRelationships } from '@/features/concepts/math/describePatternRelationships'
@@ -25,6 +26,7 @@ import { findVtgPatternMatches } from '@/features/vtg/matchVtgAnimation'
 import {
   createVtgTransitionPreviewAnimations,
   createVtgTransitionQuickSlotAnimationCandidates,
+  resizeVtgTransitionPatternPreview,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import {
   exactlyMatchesQtrSelection,
@@ -1864,7 +1866,7 @@ describe('VtgPane', () => {
     ])
   })
 
-  it('offers Scale, Thick, Spacing, and BPM sliders that reapply the current pattern', async () => {
+  it('uses Scale for the next VTG pattern while reapplying the other sliders', async () => {
     const wrapper = mount(VtgPane)
     const bpm = wrapper.get<HTMLInputElement>('[data-role="vtg-bpm"]')
     const scale = wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]')
@@ -1891,18 +1893,27 @@ describe('VtgPane', () => {
 
     await wrapper.get('[data-cell-reference="1-6"]').trigger('click')
     await bpm.setValue(41)
+    const customizationsBeforeScale = wrapper.emitted('customize')?.length ?? 0
     await scale.setValue(1.4)
+    expect(wrapper.emitted('customize')).toHaveLength(customizationsBeforeScale)
     await thick.setValue(15)
     await spacing.setValue(20)
 
-    expect(wrapper.emitted('customize')).toHaveLength(4)
+    expect(wrapper.emitted('customize')).toHaveLength(3)
     expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
       reference: '1-6',
       speedRatio: '1:3',
       bpm: 41,
-      scale: 1.4,
       thick: 15,
       spacing: 20,
+    })
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('scale')
+
+    await wrapper.get('[data-cell-reference="2-6"]').trigger('click')
+    expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
+      reference: '2-6',
+      speedRatio: '1:3',
+      scale: 1.4,
     })
     expect(outputs.map((output) => output.text())).toEqual(['1.4', '15', '20', '41'])
   })
@@ -3227,6 +3238,33 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('.vtg-tile')[6]?.classes()).toContain('vtg-tile--shared-preview-bottom')
   })
 
+  it('regenerates Drop thumbnails when a single preceding portion changes length', async () => {
+    const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    if (!source) throw new Error('Expected a supported VTG animation')
+    const wrapper = mount(VtgPane, {
+      props: {
+        animation: source,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: 1,
+        builderMatchAnimation: source,
+      },
+    })
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+    const requestsBeforeResize = countWorkerMessages('reqimgs')
+    const resized = resizeVtgTransitionPatternPreview(source, 0, 6)
+    if (!resized) throw new Error('Expected a resized preceding portion')
+
+    await wrapper.setProps({ animation: resized, builderMatchAnimation: resized })
+    await settlePreviewRendering()
+
+    await vi.waitFor(() => {
+      expect(countWorkerMessages('reqimgs')).toBeGreaterThan(requestsBeforeResize)
+    })
+  })
+
   it('keeps the reported Drop settings authoritative and regenerates its thumbnails', async () => {
     const animation = await decodeCurrentQuery(
       'r=G0496k11Y&p0=QQ__v.bn_____U0.5L__6k_U0................_ZE-ZU................_ZE_6k.........._ZE-ZU.................._ZE_6k........_ZE-ZU.........._ZE_6k...............&x0=Qo__Oif_.____Luf_................____NBf_........____Luf_..................____NBf_............................................____Luf_&m0=_1_mxqv__&p1=NQ__v.bn_____U0.5L__6k_U0........_ZE-ZU................_ZE_6k........_ZE-ZU.................._ZE_6k.........._ZE-ZU.........................._ZE_6k.......&x1=Qo__Oif_.____NBf_................____Luf_........____NBf_........____Luf_..................____NBf_..........____Luf_..........................____NBf_&c=_i_bhq&v=12',
@@ -3643,6 +3681,7 @@ describe('VtgPane', () => {
     await wrapper.get('[data-role="vtg-transition"]').trigger('click')
     const patternSelectionsBeforeBuilder = wrapper.emitted('patternSelect')?.length ?? 0
     const standardLabel = wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()
+    useConceptsStore().scale = 1.2
     await wrapper.setProps({ builderActive: true })
     await nextTick()
     const tile = wrapper.get<HTMLButtonElement>('[data-cell-reference="1-1"]')
@@ -3677,6 +3716,7 @@ describe('VtgPane', () => {
       reversePlane: true,
     })
     expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).not.toHaveProperty('transition')
+    expect(wrapper.emitted('patternPreview')?.at(-1)?.[0]).not.toHaveProperty('scale')
     expect(wrapper.get('.vtg-tile--selected').attributes('data-cell-reference')).toBe('1-1')
 
     await wrapper.get('[data-cell-reference="1-2"]').trigger('click')
@@ -3706,6 +3746,9 @@ describe('VtgPane', () => {
     expect(JSON.parse(dragData.get('application/x-spiroanim-pattern') ?? '{}')).not.toHaveProperty(
       'transition',
     )
+    expect(JSON.parse(dragData.get('application/x-spiroanim-pattern') ?? '{}')).not.toHaveProperty(
+      'scale',
+    )
 
     const pairedDragData = new Map<string, string>()
     await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', {
@@ -3723,6 +3766,9 @@ describe('VtgPane', () => {
     )
 
     const previewsBeforeCustomize = wrapper.emitted('patternPreview')?.length ?? 0
+    const customizationsBeforeScale = wrapper.emitted('customize')?.length ?? 0
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(1.3)
+    expect(wrapper.emitted('customize')?.length ?? 0).toBe(customizationsBeforeScale)
     await wrapper.get<HTMLInputElement>('[data-role="vtg-thick"]').setValue(9)
     expect(wrapper.emitted('patternSelect')?.length ?? 0).toBe(patternSelectionsBeforeBuilder)
     expect(wrapper.emitted('customize')?.at(-1)?.[0]).toMatchObject({
@@ -3730,6 +3776,7 @@ describe('VtgPane', () => {
       speedRatio: '1:2',
       thick: 9,
     })
+    expect(wrapper.emitted('customize')?.at(-1)?.[0]).not.toHaveProperty('scale')
     expect(wrapper.emitted('patternPreview')).toHaveLength(previewsBeforeCustomize)
 
     const customizationsBeforeReset = wrapper.emitted('customize')?.length ?? 0
@@ -3750,6 +3797,7 @@ describe('VtgPane', () => {
     const conceptsStore = useConceptsStore()
     conceptsStore.elementalLayout = false
     conceptsStore.bpm = 20
+    conceptsStore.scale = 1.2
 
     const matches = ['1-1', '3-3'] as const
     let matchIndex = 0
@@ -3788,6 +3836,7 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
     expect(conceptsStore.bpm).toBe(20)
+    expect(conceptsStore.scale).toBe(1.2)
     expect(wrapper.emitted('patternPreview')).toBeUndefined()
     expect(matchVtg.mock.calls[0]?.[0].lastSelection).toBeUndefined()
 
@@ -3798,6 +3847,7 @@ describe('VtgPane', () => {
       )
     })
     expect(conceptsStore.bpm).toBe(20)
+    expect(conceptsStore.scale).toBe(1.2)
     expect(wrapper.emitted('patternPreview')).toBeUndefined()
 
     await wrapper.setProps({ builderMatchAnimation: undefined })
@@ -3932,11 +3982,10 @@ describe('VtgPane', () => {
     )
   })
 
-  it('keeps every Full Grid label on the standalone catalog path', async () => {
+  it('uses the selected Builder portion for Full Grid labels', async () => {
     const first = createDefaultVtgAnimation({ reference: '5-6', speedRatio: '1:3' })
-    const animation = first
-      ? appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
-      : undefined
+    if (!first) throw new Error('Expected a supported first Builder portion')
+    const animation = appendVtgBuilderPattern(first, { reference: '2-3', speedRatio: '1:3' })
     if (!animation) throw new Error('Expected a two-portion Builder pattern')
     const wrapper = mount(VtgPane, {
       props: {
@@ -3944,6 +3993,7 @@ describe('VtgPane', () => {
         builderActive: true,
         builderFullCatalog: true,
         builderInsertionIndex: 0,
+        builderMatchAnimation: first,
       },
     })
 
@@ -3952,9 +4002,19 @@ describe('VtgPane', () => {
 
     await wrapper.setProps({ builderInsertionIndex: 1 })
 
+    const expected = createVtgBuilderDropPreview(
+      first,
+      { reference: '1-1', speedRatio: '1:1', prop: 0 },
+      1,
+    )
+    if (!expected) throw new Error('Expected a contextual Full Grid candidate')
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).toBe('TS / TS')
-    expect(wrapper.get('[data-cell-reference="1-3"] .vtg-tile__label-text').text()).toBe('TS / TS')
+    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).toBe(
+      describeVtgBuilderPreviewRelationship(expected, '1:1').label,
+    )
+    expect(wrapper.get('[data-cell-reference="1-1"] .vtg-tile__label-text').text()).not.toBe(
+      'TS / TS',
+    )
   })
 
   it('uses a full-size copy of the VTG cell as the desktop Builder drag image', async () => {

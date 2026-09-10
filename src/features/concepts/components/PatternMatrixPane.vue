@@ -505,6 +505,7 @@ import type {
   VtgRuleDiagram,
   VtgRuleNumber,
   VtgRuleSpec,
+  VtgPatternMatch,
   VtgPatternSelection,
   VtgPatternOrientation,
   VtgTransitionInitialTurnsOffset,
@@ -659,7 +660,7 @@ const {
     if (props.builderActive || !props.animation || isQtr.value) return undefined
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
     if (!tile) return undefined
-    const selection = createPatternSelection(tile)
+    const selection = createVtgPatternSelection(tile)
     return 'quarters' in selection
       ? undefined
       : createVtgAnimation(props.animation, selection, { minimumCycleCount })
@@ -739,13 +740,12 @@ const usesClassicLayout = computed(
   () => (vtgAdvanced.value ? classicLayout.value : true) && !compactBuilder.value,
 )
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
-const createPreviewSelection = (
+const createScaleIndependentPreviewSelection = (
   reference: VtgCellReference,
 ): VtgPatternSelection | QtrPatternSelection => {
   const selection: VtgPatternSelection = {
     reference,
     speedRatio: speedRatio.value,
-    scale: scale.value,
     spacing: spacing.value,
     propColors: [leftPropColor.value, rightPropColor.value],
     prop: prop.value,
@@ -769,6 +769,18 @@ const createPreviewSelection = (
   }
   return isQtr.value ? { ...selection, quarters: 1 } : selection
 }
+const createVtgPreviewSelection = (
+  reference: VtgCellReference,
+): VtgPatternSelection | QtrPatternSelection => ({
+  ...createScaleIndependentPreviewSelection(reference),
+  scale: scale.value,
+})
+const createBuilderPreviewSelection = createScaleIndependentPreviewSelection
+const createPreviewSelection = (reference: VtgCellReference) =>
+  props.builderActive
+    ? createBuilderPreviewSelection(reference)
+    : createVtgPreviewSelection(reference)
+const previewScale = computed(() => (props.builderActive ? vtgScaleControl.default : scale.value))
 const appliesPropertiesToPreviews = computed(
   () => !props.builderActive || props.builderMatchAnimation !== undefined,
 )
@@ -798,7 +810,7 @@ const contextualPropertyPairing = ref<boolean>()
 const layoutComparisonKey = computed(() =>
   JSON.stringify([
     speedRatio.value,
-    scale.value,
+    previewScale.value,
     spacing.value,
     isAnti.value,
     swapProps.value,
@@ -987,16 +999,25 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       const selection = createPreviewSelection(address.reference)
 
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
+      const contextualLabelAnimation =
+        !compactBuilder.value &&
+        previewBuilderContext.value !== undefined &&
+        previewBuilderContext.value.builderInsertionIndex > 0
+          ? createPreviewCandidate(selection)
+          : undefined
       const builderAnimation =
         compactBuilder.value && props.builderInsertionIndex !== undefined && props.animation
           ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
               minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
             })
           : undefined
-      const displayedRelationships =
-        builderAnimation && (props.builderInsertionIndex ?? 0) > 0
-          ? describeVtgBuilderPreviewRelationship(builderAnimation, selection.speedRatio)
-          : relationships
+      const labelAnimation =
+        (props.builderInsertionIndex ?? 0) > 0
+          ? (contextualLabelAnimation ?? builderAnimation)
+          : undefined
+      const displayedRelationships = labelAnimation
+        ? describeVtgBuilderPreviewRelationship(labelAnimation, selection.speedRatio)
+        : relationships
       if (!compactBuilder.value) return { ...address, ...displayedRelationships }
 
       const animation = isQtr.value
@@ -1156,7 +1177,9 @@ const isTileHighlighted = (tile: VtgMatrixTile) =>
 
 const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(reference)
 
-const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrPatternSelection => {
+const createScaleIndependentPatternSelection = (
+  tile: VtgMatrixTile,
+): VtgPatternSelection | QtrPatternSelection => {
   if (!suppressPatternEmit) hydrationVersion++
 
   const baseSelection: VtgPatternSelection = {
@@ -1191,7 +1214,6 @@ const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrP
     baseSelection.propRotationOffsets = propRotationOffsets.value
   }
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
-  if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
   if (spacing.value !== vtgSpacingControl.default) baseSelection.spacing = spacing.value
   if (paths.value !== vtgPlayerSettings.paths) baseSelection.paths = paths.value
@@ -1211,16 +1233,26 @@ const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrP
   return selection
 }
 
+const createVtgPatternSelection = (
+  tile: VtgMatrixTile,
+): VtgPatternSelection | QtrPatternSelection => {
+  const selection = createScaleIndependentPatternSelection(tile)
+  return scale.value === vtgScaleControl.default ? selection : { ...selection, scale: scale.value }
+}
+
+const createBuilderPatternSelection = createScaleIndependentPatternSelection
+
 const createCustomizationSelection = () => {
   const tile =
     matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value) ??
     matrixTiles.value[0]
-  return tile === undefined ? undefined : createPatternSelection(tile)
+  if (tile === undefined) return undefined
+  return createScaleIndependentPatternSelection(tile)
 }
 
 const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (props.builderActive) return
-  const selection = createPatternSelection(tile)
+  const selection = createVtgPatternSelection(tile)
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
@@ -1236,7 +1268,7 @@ const emitBuilderPreview = (tile?: VtgMatrixTile) => {
     )
   if (!activeTile) return
 
-  emit('patternPreview', createPatternSelection(activeTile))
+  emit('patternPreview', createBuilderPatternSelection(activeTile))
 }
 
 // Full Grid thumbnails sit at the shared corner of each 2x2 tile group. Paired layouts share
@@ -1317,7 +1349,7 @@ const setBuilderDragImage = (
 
 const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   if (!props.builderActive || !event.dataTransfer) return
-  const selection = createPatternSelection(tile)
+  const selection = createBuilderPatternSelection(tile)
   event.dataTransfer.effectAllowed = 'copy'
   event.dataTransfer.setData(builderPatternDragType, JSON.stringify(selection))
   event.dataTransfer.setData('text/plain', `VTG ${tile.reference}`)
@@ -1356,7 +1388,7 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
-    selection: createPatternSelection(tile),
+    selection: createBuilderPatternSelection(tile),
     tile,
     source,
     active: false,
@@ -1565,7 +1597,6 @@ watch(
 watch(
   [
     bpm,
-    scale,
     thick,
     spacing,
     paths,
@@ -1654,6 +1685,34 @@ const builderDropSelected = computed(() => {
     props.builderInsertionIndex === getVtgTransitionPreviewCount(prepared.pattern)
   )
 })
+
+const hydrateSharedCustomizationControls = (animation: RootDataFinal) => {
+  thick.value = animation.thick
+  paths.value = animation.paths
+  hands.value = animation.hands ?? vtgPlayerSettings.hands
+  arms.value = animation.arms
+  leftPropVisible.value = isPatternPropVisible(animation.props[0])
+  rightPropVisible.value = isPatternPropVisible(animation.props[1])
+  leftPropColor.value =
+    animation.props[0]?.color === undefined
+      ? defaultPatternPropColors[0]
+      : COLORS[animation.props[0].color]
+  rightPropColor.value =
+    animation.props[1]?.color === undefined
+      ? defaultPatternPropColors[1]
+      : COLORS[animation.props[1].color]
+  prop.value = animation.prop
+}
+
+const hydrateVtgCustomizationControls = (animation: RootDataFinal, match: VtgPatternMatch) => {
+  bpm.value = match.bpm
+  scale.value = match.scale
+  hydrateSharedCustomizationControls(animation)
+}
+
+const hydrateBuilderCustomizationControls = (animation: RootDataFinal) => {
+  hydrateSharedCustomizationControls(animation)
+}
 
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
@@ -1754,25 +1813,8 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       (exactPatternMatch
         ? undefined
         : inferPatternRelationshipPropRotationOffsets(patternAnimation, relationshipSelection))
-    // Builder matching identifies one extracted portion. BPM belongs to the complete pattern, so
-    // selecting a portion must not replace the user's global VTG setting with that slice's BPM.
-    if (!props.builderActive) bpm.value = match.bpm
-    scale.value = match.scale
-    thick.value = animation.thick
-    paths.value = animation.paths
-    hands.value = animation.hands ?? vtgPlayerSettings.hands
-    arms.value = animation.arms
-    leftPropVisible.value = isPatternPropVisible(animation.props[0])
-    rightPropVisible.value = isPatternPropVisible(animation.props[1])
-    leftPropColor.value =
-      animation.props[0]?.color === undefined
-        ? defaultPatternPropColors[0]
-        : COLORS[animation.props[0].color]
-    rightPropColor.value =
-      animation.props[1]?.color === undefined
-        ? defaultPatternPropColors[1]
-        : COLORS[animation.props[1].color]
-    prop.value = animation.prop
+    if (props.builderActive) hydrateBuilderCustomizationControls(animation)
+    else hydrateVtgCustomizationControls(animation, match)
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
     const selectedReference = builderSelection?.reference ?? controls.reference
     const tile =
@@ -2142,7 +2184,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   swapProps,
   reversePlane,
   beat,
-  scale,
+  scale: previewScale,
   spacing,
   hands,
   quarters: activeQtrMode,
@@ -2158,6 +2200,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   createSelection: createPreviewSelection,
   previewContext: computed(() => [
     props.builderInsertionIndex,
+    previewBuilderContext.value?.source,
     transition.value,
     transitionAfterBeat.value,
     JSON.stringify(previewPropertySettings.value),

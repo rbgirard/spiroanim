@@ -239,6 +239,7 @@ describe('PatternPropertyControls', () => {
           strength: [55, 80],
           timing: ['1:1-pro', '1:3-anti'],
         },
+        thirdOrderTimingSet: [true, false],
       },
     })
 
@@ -279,7 +280,7 @@ describe('PatternPropertyControls', () => {
       '2:5 Pro',
     ])
     expect(leftTiming.element.value).toBe('1:1-pro')
-    expect(rightTiming.element.value).toBe('')
+    expect(rightTiming.element.value).toBe('1:3-anti')
     await leftTiming.setValue('1:2-pro')
     expect(wrapper.emitted('thirdOrderTimingUpdate')?.at(-1)).toEqual([0, '1:2-pro'])
 
@@ -306,12 +307,15 @@ describe('PatternPropertyControls', () => {
 
     const rightAdjust = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-initial-1"]')
     const rightStrength = wrapper.get<HTMLInputElement>('[data-role="vtg-third-order-strength-1"]')
-    expect(rightStrength.element.disabled).toBe(true)
-    expect(rightAdjust.element.disabled).toBe(true)
+    expect(rightStrength.element.disabled).toBe(false)
+    expect(rightAdjust.element.disabled).toBe(false)
     expect(rightAdjust.attributes('aria-valuetext')).toBe('0°')
 
     const leftTimingClear = wrapper.get<HTMLButtonElement>(
       'button[aria-label="Clear Left Third Order Ratio"]',
+    )
+    const rightTimingClear = wrapper.get<HTMLButtonElement>(
+      'button[aria-label="Clear Right Third Order Ratio"]',
     )
     const rightAdjustClear = wrapper.get<HTMLButtonElement>(
       'button[aria-label="Clear Right Third Order Adjust"]',
@@ -320,6 +324,7 @@ describe('PatternPropertyControls', () => {
       'button[aria-label="Clear Right Third Order Strength"]',
     )
     expect(leftTimingClear.element.disabled).toBe(false)
+    expect(rightTimingClear.element.disabled).toBe(true)
     expect(rightAdjustClear.element.disabled).toBe(false)
     expect(rightStrengthClear.element.disabled).toBe(true)
     await leftTimingClear.trigger('click')

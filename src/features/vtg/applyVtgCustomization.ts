@@ -5,17 +5,12 @@ import {
 import { getPatternPropMoves } from '@/features/concepts/patternPropSpacing'
 import {
   clampVtgBpm,
-  getAdjustedVtgScale,
-  getVtgDistanceForScale,
-  toVtgInternalScale,
   vtgBpmControl,
   vtgDefaultProp,
   vtgPlayerSettings,
-  vtgScaleControl,
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection } from '@/features/vtg/types'
-import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import type { MotionData, PropDataFinal, RootDataFinal } from '@/types/AnimTypes'
 
 const createSpacingMotion = (move: number): MotionData[] =>
@@ -29,22 +24,14 @@ const applyVisibility = (prop: PropDataFinal, visible: boolean): PropDataFinal =
   return result
 }
 
-const applyScale = (prop: PropDataFinal, scale: number): PropDataFinal => {
-  const firstFrame = prop.anim[0]
-  if (firstFrame === undefined) return prop
-  return { ...prop, anim: [{ ...firstFrame, scale }, ...prop.anim.slice(1)] }
-}
-
-/** Applies only VTG Customize fields, preserving the current pattern frames and transforms. */
+/**
+ * Applies live VTG Customize fields while preserving the current pattern frames and camera.
+ * Scale belongs to VTG pattern generation and is intentionally not applied here.
+ */
 export const applyVtgCustomization = (
   animation: RootDataFinal,
   selection: VtgPatternSelection,
 ): RootDataFinal => {
-  const adjustedScale = getAdjustedVtgScale(
-    selection.scale ?? vtgScaleControl.default,
-    selection.speedRatio,
-  )
-  const internalScale = toVtgInternalScale(adjustedScale)
   const moves = getPatternPropMoves(selection.spacing)
   const paths = selection.paths ?? vtgPlayerSettings.paths
   const hands = selection.hands ?? vtgPlayerSettings.hands
@@ -54,17 +41,14 @@ export const applyVtgCustomization = (
   const props = animation.props.map((original, index) => {
     const visible = (index === 0 ? selection.left : selection.right) !== false
     const prop = applyVisibility(
-      applyScale(
-        {
-          ...original,
-          paths,
-          hands,
-          arms,
-          thick,
-          motion: createSpacingMotion(moves[index] ?? 0),
-        },
-        internalScale,
-      ),
+      {
+        ...original,
+        paths,
+        hands,
+        arms,
+        thick,
+        motion: createSpacingMotion(moves[index] ?? 0),
+      },
       visible,
     )
     return prop
@@ -79,7 +63,6 @@ export const applyVtgCustomization = (
       hands,
       arms,
       thick,
-      camera: [createDefaultCameraFrame(getVtgDistanceForScale(adjustedScale))],
       props,
     },
     { propColors: selection.propColors ?? defaultPatternPropColors },

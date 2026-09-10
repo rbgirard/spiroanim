@@ -102,6 +102,7 @@
                 :twist-display-values="builderTwistDisplayValues"
                 :third-order-settings="builderThirdOrderSettings"
                 :third-order-display-settings="builderThirdOrderDisplaySettings"
+                :third-order-timing-set="builderThirdOrderTimingSet"
                 :third-order-mirror="builderThirdOrderMirror"
                 :third-order-opposed="builderThirdOrderOpposed"
                 :fold-values="builderFoldValues"
@@ -584,6 +585,16 @@ const beginDropPropertyDraft = () => {
     ? conceptsStore.applyVtgPropertyControls(source, dropPropertyFirstEditableFrameIndex.value)
     : undefined
 }
+const refreshDropPropertyDraftSource = () => {
+  if (!dropPlaceholderSelected.value) return
+
+  const source = createDropPropertySource()
+  dropPropertySource.value = source
+  dropPropertyAnimation.value = source
+    ? conceptsStore.applyVtgPropertyControls(source, dropPropertyFirstEditableFrameIndex.value)
+    : undefined
+}
+watch(resizedPreviewAnimations, refreshDropPropertyDraftSource)
 const clearDropPropertyDraft = () => {
   dropPropertySource.value = undefined
   dropPropertyAnimation.value = undefined
@@ -673,6 +684,7 @@ const {
   twistDisplayValues: builderTwistDisplayValues,
   thirdOrderSettings: builderThirdOrderSettings,
   thirdOrderDisplaySettings: builderThirdOrderDisplaySettings,
+  thirdOrderTimingSet: builderThirdOrderTimingSet,
   thirdOrderMirror: builderThirdOrderMirror,
   thirdOrderOpposed: builderThirdOrderOpposed,
   foldValues: builderFoldValues,

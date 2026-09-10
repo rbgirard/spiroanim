@@ -145,6 +145,7 @@ import {
   toVtgBuilderDisplayAnimation,
 } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
+import { applyVtgBuilderCustomization } from '@/features/builder/applyVtgBuilderCustomization'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
@@ -415,14 +416,15 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
 }
 
 const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
-  const appliesToVtgPattern =
-    isVtgPatternSelection(selection) || isQtrPatternSelection(selection)
+  const appliesToVtgPattern = isVtgPatternSelection(selection) || isQtrPatternSelection(selection)
   // Non-VTG customization rebuilds the selected concept. Never let that replacement path run
   // against a selected Builder portion; VTG/QTR Customize fields instead edit the whole pattern.
   if (selectedBuilderPreviewIndex.value !== undefined && !appliesToVtgPattern) return
   if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
   const animation = appliesToVtgPattern
-    ? applyVtgCustomization(ROOT.value, selection)
+    ? paneStore.isPaneHijacked
+      ? applyVtgBuilderCustomization(ROOT.value, selection)
+      : applyVtgCustomization(ROOT.value, selection)
     : (() => {
         const createdAnimation = createConceptPattern(ROOT.value, selection, {
           minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
