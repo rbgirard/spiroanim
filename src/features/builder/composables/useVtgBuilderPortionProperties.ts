@@ -264,7 +264,7 @@ export const useVtgBuilderPortionProperties = ({
     foldMirror.value = simpleFold.mirror
   }
 
-  watch(selectedIndex, () => {
+  watch([selectedIndex, selectedControlAnimation], () => {
     syncOffsetValues()
     hydrateModes()
   })

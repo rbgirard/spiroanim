@@ -293,10 +293,7 @@ import PaneSwapButton from '@/components/layout/PaneSwapButton.vue'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
 import QuickSlotsAction from '@/features/concepts/components/QuickSlotsAction.vue'
-import {
-  useConceptsStore,
-  type VtgPropertyKey,
-} from '@/features/concepts/stores/useConceptsStore'
+import { useConceptsStore, type VtgPropertyKey } from '@/features/concepts/stores/useConceptsStore'
 import {
   MAX_BUILDER_COLUMNS,
   MIN_BUILDER_COLUMNS,
@@ -576,10 +573,7 @@ const createDropPropertySource = () => {
 const beginDropPropertyDraft = () => {
   const source = createDropPropertySource()
   if (source) {
-    conceptsStore.hydrateVtgPropertyControls(
-      source,
-      dropPropertyFirstEditableFrameIndex.value,
-    )
+    conceptsStore.hydrateVtgPropertyControls(source, dropPropertyFirstEditableFrameIndex.value)
     conceptsStore.vtgThirdOrderSettings = materializeVtgThirdOrderSettings(
       source,
       dropPropertyFirstEditableFrameIndex.value,
@@ -587,10 +581,7 @@ const beginDropPropertyDraft = () => {
   }
   dropPropertySource.value = source
   dropPropertyAnimation.value = source
-    ? conceptsStore.applyVtgPropertyControls(
-        source,
-        dropPropertyFirstEditableFrameIndex.value,
-      )
+    ? conceptsStore.applyVtgPropertyControls(source, dropPropertyFirstEditableFrameIndex.value)
     : undefined
 }
 const clearDropPropertyDraft = () => {
@@ -831,10 +822,12 @@ const reversePreview = (index: number) => {
   applyBuilderPatternUpdate(updated, undefined, true)
 }
 const swapPreviewProps = (index: number) => {
+  const preserveThirdOrderOpposed = builderThirdOrderOpposed.value
   const updated = swapVtgBuilderPatternProps(preparedPattern.value.pattern, index)
   if (updated === undefined) return
 
   applyBuilderPatternUpdate(updated, undefined, true)
+  if (preserveThirdOrderOpposed) updateBuilderThirdOrderOpposed(true)
 }
 const previewRefreshKey = computed(() =>
   [

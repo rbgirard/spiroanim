@@ -173,9 +173,7 @@ const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 }
 
 .concepts-pane__docs-anchor {
-  position: sticky;
-  inset-block-start: 1px;
-  inset-inline-end: 1px;
+  position: relative;
   z-index: 2900;
   width: var(--size-concepts-docs-trigger);
   height: calc(var(--size-editor-toolbar-height) - 1px);

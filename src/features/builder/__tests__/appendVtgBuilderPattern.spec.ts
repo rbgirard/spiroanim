@@ -25,6 +25,10 @@ import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import type { AnimData, RootDataFinal } from '@/types/AnimTypes'
 import type { VtgCellReference } from '@/features/vtg/types'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import {
+  applyVtgThirdOrderSettings,
+  detectVtgThirdOrderRelationship,
+} from '@/features/vtg/thirdOrder'
 
 const expectSameMotionAndDuration = (actual: RootDataFinal, expected: RootDataFinal) => {
   expect(
@@ -78,6 +82,32 @@ const expectOnlyNecessaryFrameValues = (animation: RootDataFinal, frameIndex: nu
 }
 
 describe('appendVtgBuilderPattern', () => {
+  it('preserves an opposed Third Order relationship when swapping a portion', () => {
+    const first = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
+    const second = first
+      ? appendVtgBuilderPattern(first, { reference: '1-1', speedRatio: '1:3' })
+      : undefined
+    const base = second
+      ? appendVtgBuilderPattern(second, { reference: '1-1', speedRatio: '1:3' })
+      : undefined
+    if (!base) throw new Error('Expected a supported VTG animation')
+    const source = applyVtgThirdOrderSettings(
+      base,
+      [{ initial: 90, strength: 60, timing: '1:3-anti' }, {}],
+      { mirror: true, opposed: true },
+    )
+    for (const targetIndex of [0, 1, 2]) {
+      const swapped = swapVtgBuilderPatternProps(source, targetIndex)
+      const preview = swapped && createVtgTransitionPreviewAnimations(swapped)?.[targetIndex]
+      if (!preview) throw new Error('Expected the swapped Builder preview')
+
+      expect(detectVtgThirdOrderRelationship(preview, targetIndex === 0 ? 0 : 1)).toEqual({
+        mirror: true,
+        opposed: true,
+      })
+    }
+  })
+
   it.each([0, 1, 2])(
     'swaps props in portion %s while preserving that portion and its successor',
     (targetIndex) => {
