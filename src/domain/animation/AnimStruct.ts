@@ -199,6 +199,7 @@ export const CMDMAN = MANCMD.reduce(
 
 export const RADIUS = 5
 export const ORIGRADIUS = 5 // For calculating a multiplier, if/when changing Radius
+export const PROP_PATH_RADIUS = 2.4
 
 // Cartesian Points, converted to Spherical for PHI/THETA, and resulting 1 is discarded.
 export const POINTS: [PointTypes, number, number, number][] = [

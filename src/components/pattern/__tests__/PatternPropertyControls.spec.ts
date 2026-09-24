@@ -372,7 +372,7 @@ describe('PatternPropertyControls', () => {
     )
   })
 
-  it('offers independent Builder-only Scale values from 0 through 1.4', async () => {
+  it('offers independent Builder Scale values from 0 through 1.4 without Auto', async () => {
     const builder = mount(PatternPropertyControls, {
       props: {
         context: 'builder',
@@ -381,13 +381,12 @@ describe('PatternPropertyControls', () => {
         scaleDisplayValues: [{ 0: 0.8 }, { 0: 1.2 }],
       },
     })
-    const vtg = mount(PatternPropertyControls, { props: { context: 'vtg' } })
     const left = builder.get<HTMLInputElement>('[data-role="builder-scale-0"]')
     const right = builder.get<HTMLInputElement>('[data-role="builder-scale-1"]')
     const leftDelete = builder.get<HTMLButtonElement>('button[aria-label="Clear Left Scale"]')
     const rightDelete = builder.get<HTMLButtonElement>('button[aria-label="Clear Right Scale"]')
 
-    expect(vtg.find('[data-role="vtg-property-scale-toggle"]').exists()).toBe(false)
+    expect(builder.find('[data-role="vtg-scale-auto"]').exists()).toBe(false)
     expect(builder.get<HTMLInputElement>('input[value="simple"]').element.checked).toBe(true)
     expect(builder.get('[aria-label="Left Scale"] header').text()).toBe('BeatLeftValue')
     expect(builder.get('[aria-label="Left Scale"] .pattern-property-controls__beat').text()).toBe(
@@ -404,6 +403,33 @@ describe('PatternPropertyControls', () => {
     expect(builder.emitted('scaleUpdate')?.at(-1)).toEqual([0, 0, 0])
     await rightDelete.trigger('click')
     expect(builder.emitted('scaleUpdate')?.at(-1)).toEqual([1, 0])
+  })
+
+  it('shows VTG manual Scale controls only when Auto is off', async () => {
+    const wrapper = mount(PatternPropertyControls, {
+      props: { context: 'vtg', activeProperty: 'scale' },
+    })
+    expect(wrapper.find('[data-role="vtg-property-scale-toggle"]').exists()).toBe(true)
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-scale-auto"]').element.checked).toBe(true)
+    const scaleModes = () =>
+      wrapper
+        .get('fieldset.pattern-property-controls__twist-mode')
+        .findAll('label')
+        .map((label) => label.text())
+    expect(scaleModes()).toEqual(['Auto'])
+    expect(wrapper.find('[data-role="vtg-scale-0"]').exists()).toBe(false)
+    await wrapper.get('[data-role="vtg-scale-auto"]').setValue(false)
+    expect(wrapper.emitted('update:scaleAuto')?.at(-1)).toEqual([false])
+    await wrapper.setProps({ scaleAuto: false })
+    expect(scaleModes()).toEqual(['Auto', 'Simple', 'Advanced'])
+    expect(wrapper.get('[data-role="vtg-scale-0"]').attributes()).toMatchObject({
+      min: '0',
+      max: '1.4',
+      step: '0.1',
+    })
+    expect(wrapper.find('[data-role="vtg-scale-1"]').exists()).toBe(true)
+    const eightStep = mount(PatternPropertyControls, { props: { context: 'eight-step' } })
+    expect(eightStep.find('[data-role="eight-step-property-scale-toggle"]').exists()).toBe(false)
   })
 
   it('offers inherited per-frame Scale values in Advanced mode', async () => {

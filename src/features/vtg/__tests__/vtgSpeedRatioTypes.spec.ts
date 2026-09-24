@@ -7,11 +7,28 @@ import {
   getVtgTimingCycleCount,
   getVtgPropSpeedRatios,
   isVtgSpeedRatio,
+  vtgMoreRatioPickerRatios,
+  vtgRatioPickerRatios,
   parseVtgIndividualSpeedRatio,
-  requiresPairedVtgPreviewLayout,
 } from '@/features/vtg/types'
 
 describe('VTG speed ratio helpers', () => {
+  it('extends the More picker without changing the established ratio controls', () => {
+    expect(vtgMoreRatioPickerRatios.slice(0, vtgRatioPickerRatios.length)).toEqual(
+      vtgRatioPickerRatios,
+    )
+    expect(vtgMoreRatioPickerRatios.slice(vtgRatioPickerRatios.length)).toEqual([
+      '1:7',
+      '2:7',
+      '1:9',
+      '2:9',
+      '1:11',
+      '2:11',
+      '1:13',
+      '2:13',
+    ])
+  })
+
   it.each([
     ['2:1', ['2:1', '2:1']],
     ['2:3v5', ['2:3', '2:5']],
@@ -51,24 +68,4 @@ describe('VTG speed ratio helpers', () => {
   it.each(['2:1', '2:3', '2:5'] as const)('defaults %s to -90 degrees', (speedRatio) => {
     expect(getDefaultVtgPatternOrientation(speedRatio)).toBe(-90)
   })
-
-  it.each([
-    ['1:1', false],
-    ['1:2', true],
-    ['1:3', false],
-    ['1:4', true],
-    ['1:5', false],
-    ['2:1', false],
-    ['2:3', false],
-    ['2:5', false],
-    ['1:1v3', false],
-    ['1:1v2', true],
-    ['1:1v2:3', false],
-    ['3:1', false],
-  ] as const)(
-    'derives whether %s needs independently paired path previews',
-    (speedRatio, expected) => {
-      expect(requiresPairedVtgPreviewLayout(speedRatio)).toBe(expected)
-    },
-  )
 })

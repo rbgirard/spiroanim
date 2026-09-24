@@ -9,6 +9,7 @@ import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import { applyVtgScaleSettings } from '@/features/vtg/scaleSettings'
 import {
   applyVtgInitialTurnsPlayback,
   withVtgInitialTurnsOffsetBeat,
@@ -73,6 +74,7 @@ const withoutFinalTransforms = ({
   initialTurnsOffset: _initialTurnsOffset,
   initialTurnsOffsetBeat: _initialTurnsOffsetBeat,
   propRotationOffsets: _propRotationOffsets,
+  scaleSettings: _scaleSettings,
   ...selection
 }: QtrPatternSelection): QtrPatternSelection => selection
 
@@ -121,7 +123,10 @@ export const createQtrAnimation = (
     selection.propRotationOffsets,
     applyQtrFinalTransforms(qtrAnimation, selection),
   )
-  return applyVtgInitialTurnsPlayback(aligned, selection)
+  const playback = applyVtgInitialTurnsPlayback(aligned, selection)
+  return playback && selection.scaleSettings
+    ? applyVtgScaleSettings(playback, selection.scaleSettings, selection.speedRatio)
+    : playback
 }
 
 export const createDefaultQtrAnimation = (
@@ -141,7 +146,10 @@ export const createDefaultQtrAnimation = (
     selection.propRotationOffsets,
     applyQtrFinalTransforms(base, selection),
   )
-  return applyVtgInitialTurnsPlayback(aligned, selection)
+  const playback = applyVtgInitialTurnsPlayback(aligned, selection)
+  return playback && selection.scaleSettings
+    ? applyVtgScaleSettings(playback, selection.scaleSettings, selection.speedRatio)
+    : playback
 }
 
 export const createQtrPreviewAnimation = (

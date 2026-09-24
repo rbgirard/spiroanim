@@ -121,7 +121,7 @@ export const useConceptsStore = defineStore(
     const vtgFoldAlternate = ref<VtgFoldSideSettings<boolean>>(propertyDefaults.fold.alternate)
     const vtgFoldSpan = ref<VtgFoldSpan>(propertyDefaults.fold.span)
     const vtgFoldMirror = ref(propertyDefaults.fold.mirror)
-    const vtgActiveProperty = ref<VtgPropertyKey | null>(null)
+    const vtgActiveProperty = ref<VtgPropertyKey | 'scale' | null>(null)
 
     const setVtgTwistValue = (propIndex: 0 | 1, beat: number, value?: number) => {
       const beatKey = String(beat)
@@ -611,7 +611,7 @@ export const useConceptsStore = defineStore(
         }
         if (typeof store.sliders !== 'boolean') store.sliders = !isTouchDevice()
         if (
-          !['offset', 'axis', 'twist', 'turns', 'third-order', null].includes(
+          !['offset', 'scale', 'axis', 'twist', 'turns', 'third-order', null].includes(
             store.vtgActiveProperty,
           )
         ) {

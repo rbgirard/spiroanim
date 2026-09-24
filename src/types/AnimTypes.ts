@@ -112,6 +112,8 @@ export interface PropData {
 
 // Root Data
 export interface RootData {
+  /** VTG authoring intent, serialized separately from the numeric animation channels. */
+  vtgScale?: import('@/types/AnimationScale').VtgScaleIntent
   bpm: number
   prop: PropInd
   color: ColorInd
@@ -257,7 +259,7 @@ export type MotionKeys = keyof MotionData
 export type MotionPathKeys = keyof MotionPathData
 export type CameraKeys = keyof CameraData
 export type PropKeys = keyof Omit<PropData, 'anim' | 'motion'>
-export type RootKeys = keyof Omit<RootDataFinal, 'props' | 'camera'>
+export type RootKeys = keyof Omit<RootDataFinal, 'props' | 'camera' | 'vtgScale'>
 
 export type AnimCompKeys = keyof AnimDataCompiled
 export type MotionCompKeys = keyof MotionDataCompiled
@@ -272,7 +274,7 @@ export type AllCommonKeys = Extract<PropCommonKeys, AnimCommonKeys>
 
 // List of variables - Min / Max / Bits / Transform defined in AnimStruct.ts
 export type AllVars =
-  | keyof Omit<RootData, 'props' | 'camera'>
+  | keyof Omit<RootData, 'props' | 'camera' | 'vtgScale'>
   | keyof Omit<PropData, 'anim' | 'motion'>
   | keyof AnimData
   | keyof MotionData

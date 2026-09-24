@@ -6,6 +6,7 @@ import { loadSpiroAnimQSVersion } from '@/services/query/versions'
 import { migrateLegacyMotion } from '@/services/query/migrateLegacyMotion'
 import { migrateLegacyScale } from '@/services/query/migrateLegacyScale'
 import { migrateLegacyTurns } from '@/services/query/migrateLegacyTurns'
+import { decodeVtgScaleIntent, encodeVtgScaleIntent } from '@/services/query/vtgScaleIntent'
 
 import type { BaseQS, VDefEntry } from '@/services/query/types/BaseQSTypes'
 import type { ConfigData, ConfigItem, ConfigThird } from '@/services/query/types/SpiroAnimQSTypes'
@@ -161,6 +162,7 @@ export async function useSpiroAnimQS(
     }
 
     query.v = String(VER)
+    if (VER >= 12 && root.vtgScale) query.vs = encodeVtgScaleIntent(root.vtgScale)
 
     if (hist) {
       if (qsSkip.value) {
@@ -224,6 +226,9 @@ export async function useSpiroAnimQS(
     const data = decodeBoundary<RootData>(
       Object.assign({ props: [] }, decodeVar(rootConfig, route.r as string)),
     )
+
+    const scaleIntent = decodeVtgScaleIntent(route.vs)
+    if (scaleIntent) data.vtgScale = scaleIntent
 
     let i = 0
     let val: string | undefined

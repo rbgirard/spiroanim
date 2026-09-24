@@ -43,6 +43,7 @@ const mergeWithCurrentAnimation = (
   pattern: QstReadableAnimation,
 ): RootReadable => ({
   ...encodeReadable(current),
+  vtgScale: undefined,
   ...pattern,
   props: pattern.props,
 })

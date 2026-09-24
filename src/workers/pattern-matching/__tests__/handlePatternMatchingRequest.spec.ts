@@ -47,6 +47,27 @@ describe('handlePatternMatchingRequest', () => {
     ).resolves.toBe(true)
   })
 
+  it.each([
+    ['1:3', false],
+    ['1:2', true],
+    ['2:1', true],
+    ['2:3', true],
+    ['2:5', true],
+  ] as const)(
+    'compares unmodified %s thumbnails without property settings',
+    async (speedRatio, paired) => {
+      await expect(
+        compareVtgCandidateLayoutRequest({
+          selections: [
+            { reference: '1-6', speedRatio },
+            { reference: '2-6', speedRatio },
+          ],
+          options: {},
+        }),
+      ).resolves.toBe(paired)
+    },
+  )
+
   it('matches VTG and preserves a selection that produced the animation', async () => {
     const selection = {
       reference: '2-2',

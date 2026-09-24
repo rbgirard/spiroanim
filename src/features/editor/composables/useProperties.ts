@@ -254,6 +254,11 @@ export function useProperties(store: string = 'main') {
         break
     }
 
+    if (key === 'scale' && ANIMS.value.length > 0 && ROOT.value.vtgScale) {
+      // Explicit Editor Scale edits supersede the VTG generator's automatic sizing intent.
+      ROOT.value.vtgScale = { ...ROOT.value.vtgScale, auto: false, mode: 'advanced' }
+    }
+
     // trigger shallow watchers
     triggerRef(ROOT)
   }

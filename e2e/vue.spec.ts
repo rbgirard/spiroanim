@@ -225,8 +225,8 @@ test('keeps the Full Grid touch drag preview visible over VTG with its shared th
     '/play-vtg?r=Ew08Yk11Y&p0=Q__.mBEQDk.5JE.......&x0=_s_&m0=_1_mxqv__&p1=N__.blERhw.5JEQpg.......&x1=_s_&c=_i_bhq&v=11',
   )
   await page
-    .locator('label.vtg-pattern-builder-button')
-    .filter({ hasText: 'Pattern Builder' })
+    .locator('label')
+    .filter({ has: page.getByRole('checkbox', { name: 'Pattern Builder', exact: true }) })
     .click()
   await page.locator('label.vtg-pattern-builder-button').filter({ hasText: 'Full Grid' }).click()
   await page.locator('[data-role="vtg-elemental"]').setChecked(true)

@@ -20,6 +20,7 @@ describe('applyVtgBuilderScaleSettings', () => {
     })
 
     expect(updated.props[0]?.anim[0]?.scale).toBe(70)
+    expect(updated.vtgScale).toEqual({ auto: false, base: 0.8, mode: 'simple' })
     expect(updated.props[0]?.anim[1]?.scale).toBe(80)
     expect(updated.props[0]?.anim[2]?.scale).toBeUndefined()
     expect(animation.props[0]?.anim[2]?.scale).toBe(130)

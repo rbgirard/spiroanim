@@ -8,7 +8,7 @@ import {
 } from 'three'
 import { Group, Mesh, MeshStandardMaterial, MeshToonMaterial } from 'three'
 
-import { COLSET } from '@/domain/animation/AnimStruct'
+import { COLSET, PROP_PATH_RADIUS } from '@/domain/animation/AnimStruct'
 
 import { type ColorInd, type ModelGroup } from '@/types/AnimTypes'
 
@@ -50,7 +50,6 @@ const createTetherMaterial = (color: number) =>
     }),
   )
 
-const PROP_PATH_RADIUS = 2.4
 const RADIAL_GRIP_RADIUS = 0.28
 const RADIAL_GRIP_TUBE_RADIUS = 0.055
 const RADIAL_SPOKE_START = 0.32

@@ -209,12 +209,31 @@ it.
 
 ## Ratio-dependent Scale
 
-VTG's established Scale adjustments are keyed by the individual timing denominator rather than by
-the complete ratio string. Consequently, `2:3` uses the same adjustment as `1:3`, and `2:5` uses
-the same adjustment as `1:5`.
+VTG's automatic Scale adjustments use the individual timing denominator, subtracting one from
+that lookup level for a numerator of `2`. Levels `1` through `5` add `+0.1`, `-0.2`, `0`, `+0.1`,
+and `+0.2`, respectively; unmapped levels add zero. Consequently, `2:3` uses the `2` adjustment,
+and `2:5` uses the `4` adjustment.
 
 For a compound timing, generation uses the larger of the two denominator adjustments. For example,
 `1:3v2` uses the `3` adjustment because it is larger than the `2` adjustment.
+
+VTG and QTR share the same Scale modes. Properties > Scale has an Auto toggle. Auto is on for
+new patterns, hides per-prop Scale controls, and shows the base Scale in Customize (default `0.8`).
+The base plus the larger ratio adjustment is clamped to `0.5..1.4` and applied to both props.
+
+Turning Auto off hides Customize Scale and initializes both manual values from the currently
+rendered automatic values. Manual Simple and Advanced controls match Builder: independent Left
+and Right values, `0..1.4` in `0.1` steps, with Advanced supporting sparse per-beat values and
+inheritance. Manual values receive no ratio adjustment. Turning Auto back on reapplies automatic
+sizing; turning it off again starts from those new automatic values, not earlier manual edits.
+Reset returns to Auto. Manual Scale is applied after final VTG/QTR transforms and also feeds grid
+previews. Pattern matching normalizes manual Scale on a copy, including zero values.
+
+Scale intent and the automatic base travel with the animation, including shared URLs. Unmarked
+older animations open in manual mode without modifying their authored Scale. Builder, QST, and
+Eight Step do not expose this Auto toggle.
+Explicit Scale edits in Builder or Editor switch existing VTG intent to manual so those authored
+values remain editable when returning to VTG.
 
 ## Pattern Builder Arc conversion
 
@@ -238,14 +257,17 @@ intervals and multiplies Arc and Turns cleanly; it never discards a partial inte
 6. Verify that every continuation for the prop has the same timing and spin.
 7. Combine the two prop timings using the canonical compound naming rules.
 
-The ratio picker remains curated. Its row contains `1:1`, `2:1`, `1:2`, `1:3`, `2:3`, `1:4`,
-`1:5`, and `2:5`. Compound and other canonical ratios can still be generated programmatically,
-recovered from loaded animations, and used by VTG pattern matching even though they are not exposed
-as picker options.
+The radio ratio row remains curated. It contains `1:1`, `2:1`, `1:2`, `1:3`, `2:3`, `1:4`,
+`1:5`, and `2:5`. Other canonical ratios can still be generated programmatically, recovered from
+loaded animations, and used by VTG pattern matching.
 
 The `More` control replaces the radio row with one ratio selector per prop. The first selector starts
 with the current radio ratio. The second starts at `none`, which applies the first ratio to both
-props. Selecting a second ratio creates the canonical compound timing for the two prop tracks.
+props. Both selectors add `1:7`, `2:7`, `1:9`, `2:9`, `1:11`, `2:11`, `1:13`, and `2:13` after
+the existing options, paired by increasing denominator. Selecting a second ratio creates the
+canonical compound timing for the two prop tracks. These additions do not change the radio row
+or Third Order timing choices. The existing fallback gives them the canonical `1:3` direction
+definitions, standard top headers, and zero automatic Scale adjustment.
 
 Pattern Builder drag/drop operations retain one complete cycle of the selected timing. A
 numerator-1-only selection inserts a four-beat piece; a selection involving a numerator-2 timing,

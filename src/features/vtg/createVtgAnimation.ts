@@ -4,6 +4,7 @@ import {
   vtgDefaultProp,
   vtgPlayerSettings,
   vtgPropSettings,
+  vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import {
@@ -29,6 +30,7 @@ import {
   applyPatternInitialArcRotation,
 } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
+import { applyVtgScaleSettings } from '@/features/vtg/scaleSettings'
 
 const axesPointInSameDirection = (first: readonly number[], second: readonly number[]) =>
   (first[0] ?? 0) * (second[0] ?? 0) +
@@ -210,7 +212,15 @@ export const createVtgAnimation = (
     offsetReference,
   )
   const playback = applyVtgInitialTurnsPlayback(aligned, selection)
-  return playback ? applyPatternPropColors(playback, selection) : undefined
+  if (!playback) return undefined
+  const colored = applyPatternPropColors(playback, selection)
+  if (selection.scaleSettings) {
+    return applyVtgScaleSettings(colored, selection.scaleSettings, selection.speedRatio)
+  }
+  return {
+    ...colored,
+    vtgScale: { auto: true, base: selection.scale ?? vtgScaleControl.default, mode: 'simple' },
+  }
 }
 
 /**

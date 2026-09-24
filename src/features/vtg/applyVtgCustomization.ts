@@ -26,7 +26,7 @@ const applyVisibility = (prop: PropDataFinal, visible: boolean): PropDataFinal =
 
 /**
  * Applies live VTG Customize fields while preserving the current pattern frames and camera.
- * Scale belongs to VTG pattern generation and is intentionally not applied here.
+ * Scale is handled separately by VTG Scale controls and pattern generation.
  */
 export const applyVtgCustomization = (
   animation: RootDataFinal,

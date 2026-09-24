@@ -59,7 +59,10 @@ and Editor. Slots persist complete animation paths, update only after animation 
 saved as named sets. Their interaction, startup, routing, and Timeline placement contracts are
 documented in [`QUICK_SLOTS.md`](./QUICK_SLOTS.md).
 
-Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG. Each
+Thick, Spacing, and BPM appear in Customize below the Starting Beat and transition controls in VTG.
+Scale appears there only with Auto enabled in Properties > Scale; manual mode exposes independent
+Left/Right Simple or Advanced controls instead. VTG and QTR share this behavior; see
+[`VTG_TIMING_RATIOS.md`](./VTG_TIMING_RATIOS.md#ratio-dependent-scale). Each
 slider gesture is one undo step. The sliders begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
 matching the editor slider interaction boundary. Touch and pen pointer input allows vertical page
@@ -79,13 +82,14 @@ motion can be inspected directly.
 
 Current VTG numeric behavior is:
 
-| Control                | UI range and step    | Stored transform                                                    |
-| ---------------------- | -------------------- | ------------------------------------------------------------------- |
-| BPM                    | 20..140, step 1      | Explicitly clamped by `clampVtgBpm()`                               |
-| Scale                  | 0.5..1.4, step 0.1   | Explicitly clamped, multiplied by 10, and rounded for frame `scale` |
-| Scale-derived Distance | Piecewise 14..15..25 | Interpolated from Scale and rounded to the nearest whole number     |
-| Thick                  | 1..15, step 1        | Defaults to 5 and is passed directly from the UI selection          |
-| Spacing                | 0..20, step 1        | Alternates precise horizontal placement between the two props       |
+| Control                | UI range and step    | Stored transform                                                     |
+| ---------------------- | -------------------- | -------------------------------------------------------------------- |
+| BPM                    | 20..140, step 1      | Explicitly clamped by `clampVtgBpm()`                                |
+| Auto Scale base        | 0.5..1.4, step 0.1   | Add the ratio adjustment, clamp to 0.5..1.4, then store hundredths   |
+| Manual Scale           | 0..1.4, step 0.1     | Independent authored frame values in hundredths; no ratio adjustment |
+| Scale-derived Distance | Piecewise 14..15..25 | Interpolated from Scale and rounded to the nearest whole number      |
+| Thick                  | 1..15, step 1        | Defaults to 5 and is passed directly from the UI selection           |
+| Spacing                | 0..20, step 1        | Alternates precise horizontal placement between the two props        |
 
 Spacing is a persisted Concepts preference and is never inferred from a loaded pattern. Its
 default is `1`. The integer value is distributed outward one step at a time: `0 -> (0, 0)`,
@@ -109,7 +113,9 @@ features, replaces pattern props, and then assigns `ROOT.value`. The normal rout
 subsequently serializes it.
 
 VTG matching identifies patterns from their normalized authored `turns`, `arc`, `plane`, and `axis`
-frame values. Scale is recovered separately from the first frame's internal hundredths, while Warp
+frame values. Unmarked legacy Scale is recovered separately from frame hundredths; new animations
+carry explicit Auto/manual intent and an automatic base. The VTG pane normalizes manual Scale on
+a match-only copy so independent or zero values do not lose the selection. Warp
 and Strength are deliberately excluded from the structural signature. Matching authored frames
 is important because two closed cycles can compile to the same geometry while retaining different
 first-frame instructions that identify their selected starting beat. The authored rotation axis is
@@ -370,18 +376,25 @@ corresponding non-Tilted pattern.
 
 The top-header prop diagrams are not displayed in QTR mode.
 
-VTG normally shares one rendered path thumbnail across each four-cell group. Ratios whose adjacent
-rows diverge use the paired 18-thumbnail layout instead. The pane compares the final compiled paths
+VTG shares one rendered path thumbnail across each four-cell group when the paths match. Candidates
+whose adjacent rows diverge use the paired 18-thumbnail layout instead, without ratio-specific rules
+or an exception for unmodified patterns. The pane compares the final sampled prop-head paths (and
+hand paths when Hands is enabled)
 for the representative `1-6` and `2-6` candidates in the active context, including Builder
 insertion context and all effective VTG property settings. Equivalent results retain the shared
 nine-thumbnail layout. Candidate generation and compiled-path comparison run in the shared pattern
 matching worker, while rapid control changes are batched and stale results are ignored. The same
-candidate-generation path supplies both this comparison and the rendered thumbnails.
+candidate-generation path supplies both this comparison and the rendered thumbnails. Comparison
+uses only this representative pair for performance. Unordered, deduplicated world-space samples
+ignore starting point, direction, and repeated visits without rotating the path based on its initial
+hand position. Samples between authored frames distinguish curves with shared endpoints. Thumbnail
+rendering waits for the current comparison to finish, avoiding a redundant batch for the old layout.
 
 In Pattern Builder, selecting the empty Drop target clears the effective per-portion Third Order
-preview context. Enabling Full Grid from that target therefore returns to the shared layout and
-renders unmodified candidate paths. Selecting a concrete Builder portion restores its effective
-Third Order layout and thumbnails.
+preview context. Full Grid then compares unmodified candidate paths: equivalent paths share nine
+thumbnails, while different paths require eighteen. Selecting a concrete Builder portion restores
+its effective Third Order context. Changes to the source portion or insertion position also trigger
+comparison, even when the property controls are unchanged. Compact Builder retains its own layout.
 
 Detected VTG property controls remain active when another matrix cell is selected, including for
 QTR selections and tilted layouts. Reset clears the active Twist, Third Order, Fold, and transition

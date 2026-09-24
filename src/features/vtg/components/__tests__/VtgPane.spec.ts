@@ -62,6 +62,7 @@ const mountVtgPane = async (qtrEnabled = false) => {
 
 const selectSpeedRatio = async (wrapper: VueWrapper, speedRatio: VtgSpeedRatio) => {
   await wrapper.get<HTMLInputElement>(`input[value="${speedRatio}"]`).setValue()
+  await settlePreviewRendering()
   await flushPromises()
   await nextTick()
 }
@@ -146,6 +147,9 @@ const reportAllBlankDimensions = (width: number, height: number) => {
 
 const settlePreviewRendering = async () => {
   for (let index = 0; index < 12; index++) await flushPromises()
+  // Layout comparison is debounced before the preview render queue starts.
+  await new Promise((resolve) => setTimeout(resolve, 80))
+  for (let index = 0; index < 12; index++) await flushPromises()
   await nextTick()
 }
 
@@ -198,7 +202,7 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
     expect(wrapper.findAll('[data-role="vtg-rule-card"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
-    expect(wrapper.findAll('button')).toHaveLength(63)
+    expect(wrapper.findAll('button')).toHaveLength(64)
     expect(wrapper.findAll('[data-role="vtg-divider"]')).toHaveLength(12)
     expect(wrapper.findAll('[data-role="vtg-prop"]')).toHaveLength(24)
     expect(wrapper.findAll('.vtg-rule-card__prop-handle--large')).toHaveLength(24)
@@ -436,6 +440,29 @@ describe('VtgPane', () => {
     expect(wrapper.findAll('fieldset.vtg-speed-ratio input[type="radio"]')).toHaveLength(0)
     const first = wrapper.get<HTMLSelectElement>('select[aria-label="Left prop timing ratio"]')
     const second = wrapper.get<HTMLSelectElement>('select[aria-label="Right prop timing ratio"]')
+    const orderedRatios = [
+      '1:1',
+      '2:1',
+      '1:2',
+      '1:3',
+      '2:3',
+      '1:4',
+      '1:5',
+      '2:5',
+      '1:7',
+      '2:7',
+      '1:9',
+      '2:9',
+      '1:11',
+      '2:11',
+      '1:13',
+      '2:13',
+    ]
+    expect(first.findAll('option').map((option) => option.element.value)).toEqual(orderedRatios)
+    expect(second.findAll('option').map((option) => option.element.value)).toEqual([
+      '',
+      ...orderedRatios,
+    ])
     expect(wrapper.findAll('.vtg-ratio-select__label').map((label) => label.text())).toEqual([
       'Left:',
       'Right:',
@@ -450,6 +477,11 @@ describe('VtgPane', () => {
 
     await second.setValue('1:5')
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:3v1:5')
+
+    await first.setValue('1:13')
+    await second.setValue('2:11')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:13v2:11')
+    await first.setValue('2:3')
 
     await second.setValue('')
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:3')
@@ -572,8 +604,12 @@ describe('VtgPane', () => {
     for (const reference of ['5-6', '6-6', '5-5', '6-5'] as const) {
       await wrapper.get(`[data-cell-reference="${reference}"]`).trigger('click')
       const classes = wrapper.get('[data-role="vtg-spin-toggle"]').classes()
-      expect(classes).not.toContain('vtg-tile__spin-toggle--left')
-      expect(classes).not.toContain('vtg-tile__spin-toggle--right')
+      expect(
+        classes.some(
+          (name) =>
+            name === 'vtg-tile__spin-toggle--left' || name === 'vtg-tile__spin-toggle--right',
+        ),
+      ).toBe(true)
     }
   })
 
@@ -1102,6 +1138,7 @@ describe('VtgPane', () => {
       reversePlane: true,
       propRotationOffsets: [90, 0],
       scale: 0.7,
+      scaleSettings: expect.objectContaining({ auto: false }),
     })
   })
 
@@ -1222,7 +1259,12 @@ describe('VtgPane', () => {
 
     expect(wrapper.emitted('animationUpdate')).toBeUndefined()
     const selection = wrapper.emitted<QtrPatternSelection[]>('patternSelect')?.at(-1)?.[0]
-    expect(selection).toEqual({ reference: '1-6', speedRatio: '1:3', quarters: 1 })
+    expect(selection).toEqual({
+      reference: '1-6',
+      speedRatio: '1:3',
+      quarters: 1,
+      scaleSettings: expect.objectContaining({ auto: false }),
+    })
 
     const regenerated = selection ? createQtrAnimation(animation, selection) : undefined
     expect(regenerated).toBeDefined()
@@ -1269,6 +1311,7 @@ describe('VtgPane', () => {
     await vi.waitFor(() => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('6-3')
     })
+    await settlePreviewRendering()
     reportAllBlankDimensions(80, 80)
     await settlePreviewRendering()
 
@@ -1276,9 +1319,9 @@ describe('VtgPane', () => {
       (message) => message.type === 'loadFinalData',
     )
       .map((message) => rootCompile(message.data as RootDataFinal))
-      .slice(-18)
-    expect(compiledPreviews).toHaveLength(18)
-    expect(getCompiledVtgBuilderMotion(compiledPreviews[16]!, 1).spins).toEqual(['A', 'I'])
+      .slice(-9)
+    expect(compiledPreviews).toHaveLength(9)
+    expect(getCompiledVtgBuilderMotion(compiledPreviews[7]!, 1).spins).toEqual(['A', 'I'])
   })
 
   it('renders Hands and Third Order timing in VTG thumbnails', async () => {
@@ -1290,8 +1333,7 @@ describe('VtgPane', () => {
     await settlePreviewRendering()
 
     store.setVtgThirdOrderTiming(0, '2:3-anti')
-    await nextTick()
-    await nextTick()
+    await settlePreviewRendering()
     reportAllBlankDimensions(72, 68)
     await settlePreviewRendering()
 
@@ -3139,24 +3181,74 @@ describe('VtgPane', () => {
   )
 
   it.each(['2:1', '2:3', '2:5'] as const)(
-    'uses the shared VTG layout for unmodified %s candidates',
+    'uses the paired VTG layout for unmodified %s candidates',
     async (speedRatio) => {
       const wrapper = mount(VtgPane)
       await selectSpeedRatio(wrapper, speedRatio)
       await nextTick()
 
-      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
       expect(wrapper.get('[data-cell-reference="1-1"]').classes()).toContain(
-        'vtg-tile--shared-preview-top',
+        'vtg-tile--paired-left',
       )
       expect(wrapper.get('[data-cell-reference="2-1"]').classes()).toContain(
-        'vtg-tile--shared-preview-bottom',
+        'vtg-tile--paired-left',
       )
       expect(wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]').element.value).toBe(
         '-90',
       )
     },
   )
+
+  it.each(['2:1', '2:3', '2:5'] as const)(
+    'compares %s previews in Builder Full Grid for both Drop and a selected portion',
+    async (speedRatio) => {
+      useConceptsStore().speedRatio = speedRatio
+      const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio })!
+      const wrapper = mount(VtgPane, {
+        props: {
+          animation,
+          builderActive: true,
+          builderFullCatalog: true,
+          builderFullGrid: true,
+          builderInsertionIndex: 1,
+        },
+      })
+      await vi.waitFor(() => expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18))
+      await wrapper.setProps({ builderInsertionIndex: 0, builderMatchAnimation: animation })
+      await settlePreviewRendering()
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    },
+  )
+
+  it('recompares Builder context without relying on property settings or the ratio', async () => {
+    const compareVtgCandidateLayout = vi.fn<
+      NonNullable<PatternMatchingClient['compareVtgCandidateLayout']>
+    >(async () => false)
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+      compareVtgCandidateLayout,
+    }
+    useConceptsStore().speedRatio = '1:2'
+    const source = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:2' })!
+    const wrapper = mount(VtgPane, {
+      props: {
+        patternMatcher,
+        builderActive: true,
+        builderFullCatalog: true,
+        builderInsertionIndex: 0,
+        builderMatchAnimation: source,
+      },
+    })
+    await vi.waitFor(() => expect(compareVtgCandidateLayout).toHaveBeenCalledTimes(1))
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
+    compareVtgCandidateLayout.mockResolvedValue(true)
+    await wrapper.setProps({ builderInsertionIndex: 1 })
+    await vi.waitFor(() => expect(compareVtgCandidateLayout).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18))
+  })
 
   it('uses the paired 1:3 layout when Third Order makes shared thumbnail paths diverge', async () => {
     const store = useConceptsStore()
@@ -3232,6 +3324,7 @@ describe('VtgPane', () => {
     })
 
     await wrapper.setProps({ builderInsertionIndex: 1, builderMatchAnimation: undefined })
+    await settlePreviewRendering()
 
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
     expect(wrapper.findAll('.vtg-tile')[0]?.classes()).toContain('vtg-tile--shared-preview-top')
@@ -3629,9 +3722,11 @@ describe('VtgPane', () => {
       wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(1.1),
     )
     await wrapper.get('[data-role="vtg-property-offset-toggle"]').trigger('click')
-    await expectNineMorePreviews(() =>
-      wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]').setValue(45),
-    )
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]').setValue(45)
+    await settlePreviewRendering()
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    reportAllBlankDimensions(80, 76)
+    await settlePreviewRendering()
 
     const beforeRenderingControls = countWorkerMessages('data')
     await wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').setValue(false)
@@ -3640,13 +3735,16 @@ describe('VtgPane', () => {
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').setValue(true)
     await settlePreviewRendering()
-    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 9)
+    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 18)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').setValue(false)
     await settlePreviewRendering()
-    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 9)
+    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 18)
 
-    await expectNineMorePreviews(() => reportAllBlankDimensions(80, 76))
+    const beforeResize = countWorkerMessages('data')
+    reportAllBlankDimensions(84, 80)
+    await settlePreviewRendering()
+    expect(countWorkerMessages('data')).toBe(beforeResize + 18)
   })
 
   it('observes and refreshes every paired-ratio thumbnail after exiting Builder', async () => {
@@ -3660,6 +3758,7 @@ describe('VtgPane', () => {
     expect(countWorkerMessages('data')).toBe(4)
 
     await wrapper.setProps({ builderActive: false })
+    await settlePreviewRendering()
     await nextTick()
     expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
 
@@ -3876,6 +3975,7 @@ describe('VtgPane', () => {
 
     await wrapper.setProps({ builderActive: true })
     await wrapper.setProps({ builderActive: false })
+    await settlePreviewRendering()
     await flushPromises()
 
     expect(wrapper.emitted('builderOpen')).toHaveLength(1)

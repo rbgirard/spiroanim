@@ -308,7 +308,7 @@
       </div>
     </div>
 
-    <ConceptAnimationControls :animation="animation">
+    <ConceptAnimationControls :animation="animation" :show-scale="builderActive || scaleAuto">
       <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
           v-if="vtgAdvanced && (!builderActive || builderFullCatalogForced)"
@@ -378,6 +378,10 @@
         <PatternPropertyControls
           v-if="vtgAdvanced && !builderActive"
           context="vtg"
+          :scale-auto="scaleAuto"
+          :scale-mode="scaleMode"
+          :scale-values="scaleValues"
+          :scale-display-values="scaleDisplayValues"
           :show-turns="showVtgTurns"
           :animation="animation"
           :offset-values="propRotationOffsets"
@@ -399,6 +403,9 @@
           :active-property="vtgActiveProperty"
           :sliders="sliders"
           @offset-update="updatePropRotationOffset"
+          @update:scale-auto="updateScaleAuto"
+          @update:scale-mode="updateScaleMode"
+          @scale-update="updateScaleValue"
           @twist-update="updateTwistSetting"
           @third-order-initial-update="updateThirdOrderInitial"
           @third-order-strength-update="updateThirdOrderStrength"
@@ -429,6 +436,7 @@ import ElementalRelationshipIcons from '@/features/concepts/components/Elemental
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
+import { useVtgScaleControls } from '@/features/vtg/composables/useVtgScaleControls'
 import { COLORS, COLSET, PROPSR } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
@@ -520,9 +528,8 @@ import {
   getDefaultVtgPatternOrientation,
   getVtgTimingCycleCount,
   getVtgPatternOrientations,
-  requiresPairedVtgPreviewLayout,
   vtgDefaultTransitionBeats,
-  vtgRatioPickerRatios,
+  vtgMoreRatioPickerRatios,
   vtgSpeedRatioRows,
 } from '@/features/vtg/types'
 import {
@@ -532,7 +539,7 @@ import {
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
-import { cloneVtgPropertySettings, hasVtgPropertySettings } from '@/features/vtg/propertySettings'
+import { cloneVtgPropertySettings } from '@/features/vtg/propertySettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { toColor } from '@/utils/UtilFunc'
@@ -595,7 +602,7 @@ const emit = defineEmits<{
 const showVtgTurns = ref(false)
 
 const basicHiddenSpeedRatios = new Set<VtgSpeedRatio>(['2:1', '1:2', '2:3', '1:4', '2:5'])
-const ratioPickerRatios = vtgRatioPickerRatios
+const ratioPickerRatios = vtgMoreRatioPickerRatios
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const conceptsStore = useConceptsStore()
 const {
@@ -621,6 +628,26 @@ const {
   elementalLayout,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
+const {
+  auto: scaleAuto,
+  mode: scaleMode,
+  values: scaleValues,
+  displayValues: scaleDisplayValues,
+  settings: scaleSettings,
+  hydrating: scaleHydrating,
+  reset: resetScaleControls,
+  updateAuto: updateScaleAuto,
+  updateMode: updateScaleMode,
+  updateValue: updateScaleValue,
+  apply: applyScaleControls,
+} = useVtgScaleControls({
+  animation: toRef(props, 'animation'),
+  revision: toRef(props, 'animationRevision'),
+  enabled: computed(() => !props.builderActive),
+  base: scale,
+  ratio: speedRatio,
+  onAnimationUpdate: (animation) => emit('animationUpdate', animation),
+})
 const {
   vtgTwistMode,
   vtgTwistValues,
@@ -678,7 +705,7 @@ const visibleSpeedRatios = computed<ReadonlySet<VtgSpeedRatio>>(
   () => new Set<VtgSpeedRatio>(speedRatioRows.value.flat()),
 )
 const updateVtgActiveProperty = (property: VtgPropertyKey | 'scale' | null) => {
-  if (property !== 'scale') vtgActiveProperty.value = property
+  vtgActiveProperty.value = property
 }
 const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
   const offsets: [number, number] = [
@@ -774,6 +801,7 @@ const createVtgPreviewSelection = (
 ): VtgPatternSelection | QtrPatternSelection => ({
   ...createScaleIndependentPreviewSelection(reference),
   scale: scale.value,
+  ...(scaleAuto.value ? undefined : { scaleSettings: scaleSettings.value }),
 })
 const createBuilderPreviewSelection = createScaleIndependentPreviewSelection
 const createPreviewSelection = (reference: VtgCellReference) =>
@@ -806,13 +834,14 @@ const createPreviewCandidate = (selection: VtgPatternSelection | QtrPatternSelec
     ...previewBuilderContext.value,
     ...(previewPropertySettings.value ? { properties: previewPropertySettings.value } : undefined),
   })
-const contextualPropertyPairing = ref<boolean>()
+const candidatePairing = ref<boolean>()
+const layoutComparisonPending = ref(false)
 const layoutComparisonKey = computed(() =>
   JSON.stringify([
     speedRatio.value,
     previewScale.value,
+    props.builderActive ? undefined : scaleSettings.value,
     spacing.value,
-    isAnti.value,
     swapProps.value,
     reversePlane.value,
     beat.value,
@@ -823,6 +852,9 @@ const layoutComparisonKey = computed(() =>
     orientation.value,
     propRotationOffsets.value,
     previewPropertySettings.value,
+    previewBuilderContext.value,
+    hands.value,
+    prop.value,
   ]),
 )
 let layoutComparisonRevision = 0
@@ -838,7 +870,7 @@ const compareCandidateLayout = async (
   return compareVtgCandidateLayoutRequest(request)
 }
 watch(
-  [layoutComparisonKey, isQtr],
+  [layoutComparisonKey, isQtr, compactBuilder],
   () => {
     const revision = ++layoutComparisonRevision
     if (layoutComparisonTimer !== undefined) {
@@ -846,28 +878,39 @@ watch(
       layoutComparisonTimer = undefined
     }
     const activeProperties = previewPropertySettings.value
-    if (
-      isQtr.value ||
-      activeProperties === undefined ||
-      !hasVtgPropertySettings(activeProperties)
-    ) {
-      contextualPropertyPairing.value = undefined
+    if (compactBuilder.value) {
+      candidatePairing.value = undefined
+      layoutComparisonPending.value = false
       return
     }
-    const properties = cloneVtgPropertySettings(activeProperties)
-
+    layoutComparisonPending.value = true
+    const properties = activeProperties && cloneVtgPropertySettings(activeProperties)
     layoutComparisonTimer = setTimeout(() => {
       layoutComparisonTimer = undefined
       const request = {
         selections: [createPreviewSelection('1-6'), createPreviewSelection('2-6')],
-        options: { properties, ...previewBuilderContext.value },
+        options: {
+          properties,
+          ...(previewBuilderContext.value
+            ? {
+                source: toRaw(previewBuilderContext.value.source),
+                builderInsertionIndex: previewBuilderContext.value.builderInsertionIndex,
+              }
+            : undefined),
+        },
       } as const
       void compareCandidateLayout(request).then(
         (paired) => {
-          if (revision === layoutComparisonRevision) contextualPropertyPairing.value = paired
+          if (revision === layoutComparisonRevision) {
+            candidatePairing.value = paired
+            layoutComparisonPending.value = false
+          }
         },
         () => {
-          if (revision === layoutComparisonRevision) contextualPropertyPairing.value = undefined
+          if (revision === layoutComparisonRevision) {
+            candidatePairing.value = true
+            layoutComparisonPending.value = false
+          }
         },
       )
     }, 50)
@@ -880,9 +923,7 @@ onBeforeUnmount(() => {
 })
 const usesPairedPreviewLayout = computed(() => {
   if (compactBuilder.value) return true
-  return (
-    requiresPairedVtgPreviewLayout(speedRatio.value) || contextualPropertyPairing.value === true
-  )
+  return candidatePairing.value === true
 })
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
 const hideColumnHeaderDetails = computed(
@@ -959,6 +1000,14 @@ let componentMounted = false
 let initialAnimationHandled = false
 let ratioOrientationChangeActive = false
 const previewsReady = ref(false)
+watch(
+  scale,
+  () => {
+    if (!suppressPatternEmit && !scaleHydrating.value && !props.builderActive && scaleAuto.value)
+      applyScaleControls()
+  },
+  { flush: 'sync' },
+)
 
 const beginPatternEmitSuppression = () => {
   suppressPatternEmit = true
@@ -1237,7 +1286,11 @@ const createVtgPatternSelection = (
   tile: VtgMatrixTile,
 ): VtgPatternSelection | QtrPatternSelection => {
   const selection = createScaleIndependentPatternSelection(tile)
-  return scale.value === vtgScaleControl.default ? selection : { ...selection, scale: scale.value }
+  return {
+    ...selection,
+    ...(scale.value === vtgScaleControl.default ? undefined : { scale: scale.value }),
+    ...(scaleAuto.value ? undefined : { scaleSettings: scaleSettings.value }),
+  }
 }
 
 const createBuilderPatternSelection = createScaleIndependentPatternSelection
@@ -1520,6 +1573,7 @@ const resetPatternControls = async () => {
   const tile = matrixTiles.value.find(({ reference }) => reference === activeReference)
   const suppressionOwner = beginPatternEmitSuppression()
   conceptsStore.resetPatternControls()
+  if (!props.builderActive) resetScaleControls()
   moreRatios.value = false
   isQtr.value = false
   isAnti.value = false
@@ -1706,7 +1760,7 @@ const hydrateSharedCustomizationControls = (animation: RootDataFinal) => {
 
 const hydrateVtgCustomizationControls = (animation: RootDataFinal, match: VtgPatternMatch) => {
   bpm.value = match.bpm
-  scale.value = match.scale
+  scale.value = animation.vtgScale?.base ?? match.scale
   hydrateSharedCustomizationControls(animation)
 }
 
@@ -2196,9 +2250,10 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffset,
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
-  active: previewsReady,
+  active: computed(() => previewsReady.value && !layoutComparisonPending.value),
   createSelection: createPreviewSelection,
   previewContext: computed(() => [
+    props.builderActive ? undefined : scaleSettings.value,
     props.builderInsertionIndex,
     previewBuilderContext.value?.source,
     transition.value,

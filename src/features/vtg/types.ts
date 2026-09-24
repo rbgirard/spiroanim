@@ -48,6 +48,17 @@ export const vtgRatioPickerRatios = [
   '1:5',
   '2:5',
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
+export const vtgMoreRatioPickerRatios = [
+  ...vtgRatioPickerRatios,
+  '1:7',
+  '2:7',
+  '1:9',
+  '2:9',
+  '1:11',
+  '2:11',
+  '1:13',
+  '2:13',
+] as const satisfies readonly VtgIndividualSpeedRatio[]
 export const vtgSpeedRatioRows = [
   vtgRatioPickerRatios,
 ] as const satisfies readonly (readonly VtgSpeedRatio[])[]
@@ -106,13 +117,6 @@ export const getVtgTimingCycleCount = (speedRatio: VtgSpeedRatio): number => {
   if (!leftParts || !rightParts) throw new RangeError(`Invalid VTG speed ratio: ${speedRatio}`)
   return leastCommonMultiple(leftParts.numerator, rightParts.numerator)
 }
-
-/** Whether an even denominator intrinsically needs independently rendered path previews. */
-export const requiresPairedVtgPreviewLayout = (speedRatio: VtgSpeedRatio): boolean =>
-  getVtgPropSpeedRatios(speedRatio).some((ratio) => {
-    const parts = parseVtgIndividualSpeedRatio(ratio)
-    return parts !== undefined && parts.denominator % 2 === 0
-  })
 
 export const formatVtgSpeedRatio = (
   left: VtgIndividualSpeedRatio,
@@ -182,6 +186,7 @@ export interface VtgPatternSelection
   propRotationOffsets?: readonly [number, number]
   bpm?: number
   scale?: number
+  scaleSettings?: import('@/types/AnimationScale').VtgScaleSettings
   thick?: number
   paths?: boolean
   hands?: boolean

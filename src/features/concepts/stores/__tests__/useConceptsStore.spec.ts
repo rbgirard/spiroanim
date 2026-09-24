@@ -33,6 +33,15 @@ describe('useConceptsStore', () => {
     localStorage.clear()
   })
 
+  it('persists the active Scale property tab', () => {
+    const first = mountStore()
+    first.store.vtgActiveProperty = 'scale'
+    first.app.unmount()
+    const second = mountStore()
+    expect(second.store.vtgActiveProperty).toBe('scale')
+    second.app.unmount()
+  })
+
   it('defaults to VTG with shared pattern controls', () => {
     const { app, store } = mountStore()
 

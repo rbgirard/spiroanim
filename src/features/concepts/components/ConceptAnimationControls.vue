@@ -101,7 +101,7 @@
         :class="{ 'concept-slider-controls--touch': protectTouchScrolling }"
       >
         <legend class="concept-controls__visually-hidden">Animation settings</legend>
-        <div>
+        <div v-if="showScale">
           <span class="concept-slider-controls__label vtg-slider-controls__label">
             <span>Scale</span>
             <output v-if="sliders">{{ scale.toFixed(1) }}</output>
@@ -274,8 +274,9 @@ const props = withDefaults(
   defineProps<{
     animation?: RootDataFinal
     rolePrefix?: string
+    showScale?: boolean
   }>(),
-  { rolePrefix: 'vtg' },
+  { rolePrefix: 'vtg', showScale: true },
 )
 
 const {

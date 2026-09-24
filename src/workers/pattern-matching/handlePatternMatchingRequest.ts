@@ -23,25 +23,25 @@ export const compareVtgCandidateLayoutRequest = async ({
   selections,
   options,
 }: VtgCandidateLayoutRequest): Promise<boolean> => {
-  const [{ createVtgPreviewCandidate }, { requiresPairedVtgCandidateLayout }] = await Promise.all([
+  const [
+    { createVtgPreviewCandidate },
+    { requiresPairedVtgCandidateLayout },
+    { toConceptPreviewAnimation },
+  ] = await Promise.all([
     import('@/features/concepts/createVtgPreviewCandidate'),
     import('@/features/vtg/math/requiresPairedVtgCandidateLayout'),
+    import('@/features/concepts/data/toConceptPreviewAnimation'),
   ])
   const selectionByReference = new Map(
     selections.map((selection) => [selection.reference, selection]),
   )
   const createCandidate = (reference: (typeof selections)[number]['reference']) => {
     const selection = selectionByReference.get(reference)
-    return selection ? createVtgPreviewCandidate(selection, options) : undefined
-  }
-  const createBaselineCandidate = (reference: (typeof selections)[number]['reference']) => {
-    const selection = selectionByReference.get(reference)
     if (!selection) return undefined
-    const { properties: _properties, ...baselineOptions } = options
-    return createVtgPreviewCandidate(selection, baselineOptions)
+    const candidate = createVtgPreviewCandidate(selection, options)
+    return candidate ? toConceptPreviewAnimation(candidate, { hands: selection.hands }) : undefined
   }
-
-  return requiresPairedVtgCandidateLayout(createCandidate, createBaselineCandidate)
+  return requiresPairedVtgCandidateLayout(createCandidate)
 }
 
 const matchedVtg = (

@@ -58,7 +58,7 @@ export interface VtgCandidateLayoutRequest {
   options: {
     source?: RootDataFinal
     builderInsertionIndex?: number
-    properties: VtgPropertySettings
+    properties?: VtgPropertySettings
   }
 }
 
