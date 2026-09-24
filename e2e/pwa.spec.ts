@@ -1,4 +1,5 @@
 import { expect, test, type Response } from '@playwright/test'
+import { readdir } from 'node:fs/promises'
 
 import { stagePwaBuildTransition } from './support/pwaBuildTransition.js'
 
@@ -74,6 +75,37 @@ test('ships an installable manifest and every declared icon', async ({ request }
     name: 'SpiroAnim Dev',
     short_name: 'SpiroAnim Dev',
   })
+})
+
+test('precaches every elemental image before its first offline use', async ({ context, page }) => {
+  const assets = await readdir(new URL('../build/assets/', import.meta.url))
+  const elementalImages = assets.filter((name) =>
+    /^(air|earth|fire|moon|sun|water)-.*\.webp$/.test(name),
+  )
+  expect(elementalImages).toHaveLength(6)
+
+  // Install from the landing page without first displaying the elemental artwork.
+  await page.goto('/')
+  await page.evaluate(async () => navigator.serviceWorker.ready)
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true)
+
+  await context.setOffline(true)
+  try {
+    for (const name of elementalImages) {
+      const dimensions = await page.evaluate(async (source) => {
+        const image = new Image()
+        image.src = source
+        await image.decode()
+        return { width: image.naturalWidth, height: image.naturalHeight }
+      }, `/assets/${name}`)
+      expect(dimensions.width).toBeGreaterThan(0)
+      expect(dimensions.height).toBeGreaterThan(0)
+    }
+  } finally {
+    await context.setOffline(false)
+  }
 })
 
 test('serves rendered HTML only for public pages', async ({ request }) => {

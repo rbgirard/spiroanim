@@ -1,6 +1,56 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, devices } from '@playwright/test'
 
 const expectedCleanupMessages = new Set(['WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost'])
+
+test('keeps QST Customize in view while changing settings on a touch viewport', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({
+    viewport: { width: 412, height: 915 },
+    hasTouch: true,
+    userAgent: devices['Pixel 7'].userAgent,
+  })
+  const page = await context.newPage()
+  try {
+    await page.goto('/play-qst')
+    await page.locator('[data-role="qst-collection"]').first().click()
+    await page.locator('[data-pattern-reference]').first().click()
+    await page.locator('[data-role="qst-customize-toggle"]').click()
+    const pane = page.locator('[data-concepts-pane]')
+    const settings = [
+      'paths',
+      'hands',
+      'arms',
+      'left',
+      'right',
+      ...['scale', 'thick', 'spacing', 'bpm'].flatMap((setting) => [
+        `${setting}-stepper-increase`,
+        `${setting}-stepper-decrease`,
+      ]),
+    ]
+    for (const setting of settings) {
+      const control = page.locator(`[data-role="qst-${setting}"]`)
+      // Keep controls clear of the floating pane controls so click's own scrolling isn't measured.
+      await control.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+      const scrollTop = await pane.evaluate((element) => element.scrollTop)
+      expect(scrollTop).toBeGreaterThan(0)
+      const beforeUrl = page.url()
+      await control.click()
+      await expect(page).not.toHaveURL(beforeUrl)
+      // Allow the updated layout to paint before checking the focused control's scroll position.
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          }),
+      )
+      expect(await pane.evaluate((element) => element.scrollTop), setting).toBeCloseTo(scrollTop, 0)
+      await expect(control).toBeInViewport()
+    }
+  } finally {
+    await context.close()
+  }
+})
 
 test('restores both routes with browser back and forward navigation', async ({ page }) => {
   const pageErrors: string[] = []

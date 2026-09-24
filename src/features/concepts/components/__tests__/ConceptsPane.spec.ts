@@ -604,6 +604,50 @@ describe('ConceptsPane', () => {
     )
   })
 
+  it('does not reveal the same QST card again when customization updates the animation', async () => {
+    useConceptsStore().selectedConcept = 'qst'
+    const animation = createDefaultQstAnimation({ concept: 'qst', reference: 'beyond-100' })
+    if (!animation) throw new Error('Expected a supported QST animation')
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      if (this instanceof HTMLElement && this.matches('[data-concepts-pane]')) {
+        return new DOMRect(0, 0, 320, 500)
+      }
+      if (this instanceof HTMLElement && this.dataset.patternReference) {
+        return new DOMRect(0, 700, 300, 180)
+      }
+      return new DOMRect(0, 0, 0, 0)
+    })
+    const wrapper = mount(ConceptsPane, { props: { animation, animationReady: true } })
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
+    scrollIntoView.mockClear()
+
+    for (const thick of [12, 10]) {
+      const updated = createDefaultQstAnimation({
+        concept: 'qst',
+        reference: 'beyond-100',
+        thick,
+        paths: false,
+      })
+      if (!updated) throw new Error('Expected a supported customized QST animation')
+      await wrapper.setProps({ animation: updated })
+      await vi.waitFor(() =>
+        expect(wrapper.get<HTMLInputElement>('[data-role="qst-thick"]').element.value).toBe(
+          String(thick),
+        ),
+      )
+      await flushPromises()
+      expect(scrollIntoView).not.toHaveBeenCalled()
+    }
+
+    const differentPattern = createDefaultQstAnimation({ concept: 'qst', reference: 'beyond-99' })
+    if (!differentPattern) throw new Error('Expected another supported QST animation')
+    await wrapper.setProps({ animation: differentPattern })
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
+    wrapper.unmount()
+  })
+
   it('preserves shared controls when merged VTG receives an Eight Step animation', async () => {
     const store = useConceptsStore()
     store.selectedConcept = '8stp'

@@ -90,8 +90,12 @@
               </template>
             </AppTooltip>
             <AppTooltip
-              v-if="structureEditingEnabled && swappablePreviews[index]"
-              text="Swap Props"
+              v-if="structureEditingEnabled && swappablePreviews[index] !== false"
+              :text="
+                swappablePreviews[index] === undefined
+                  ? 'Swap Props is unavailable because this portion\'s motion relationships could not be determined.'
+                  : 'Swap Props'
+              "
             >
               <template #activator="{ props: tooltipProps }">
                 <button
@@ -99,8 +103,9 @@
                   class="vtg-transition-previews__swap"
                   type="button"
                   :aria-label="`Swap props in pattern ${index + 1}`"
+                  :aria-disabled="swappablePreviews[index] === undefined"
                   data-role="vtg-transition-preview-swap"
-                  @click.stop="emit('patternSwap', index)"
+                  @click.stop="swappablePreviews[index] === true && emit('patternSwap', index)"
                 >
                   <BaseIcon :path="mdiSwapHorizontal" :size="18" />
                 </button>
@@ -353,8 +358,14 @@ const propertiesAfterDropPlaceholder = computed(
 )
 const swappablePreviews = computed(() =>
   props.animations.map((animation) => {
-    const { spins } = getVtgBuilderMotion(animation)
-    return spins[0] !== spins[1]
+    try {
+      // Swapping needs full motion classification to rejoin adjacent portions. QST plane breaks
+      // can lack classifiable directions without preventing the portions themselves from rendering.
+      const { spins } = getVtgBuilderMotion(animation)
+      return spins[0] !== spins[1]
+    } catch {
+      return undefined
+    }
   }),
 )
 const pointerPosition = ref<
@@ -705,6 +716,12 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 .vtg-transition-previews__swap:focus-visible {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* Keep unavailable swaps focusable and tappable so their explanatory tooltip remains accessible. */
+.vtg-transition-previews__swap[aria-disabled='true'] {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
 }
 
 .vtg-transition-previews__reverse:focus-visible,
