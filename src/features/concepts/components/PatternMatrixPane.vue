@@ -1067,14 +1067,25 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
       const displayedRelationships = labelAnimation
         ? describeVtgBuilderPreviewRelationship(labelAnimation, selection.speedRatio)
         : relationships
-      if (!compactBuilder.value) return { ...address, ...displayedRelationships }
-
-      const animation = isQtr.value
-        ? createDefaultQtrAnimation(selection as QtrPatternSelection)
-        : (builderAnimation ?? createDefaultVtgAnimation(selection as VtgPatternSelection))
+      const animation =
+        (!compactBuilder.value ? labelAnimation : undefined) ??
+        (isQtr.value
+          ? createDefaultQtrAnimation(selection as QtrPatternSelection)
+          : (builderAnimation ?? createDefaultVtgAnimation(selection as VtgPatternSelection)))
       if (!animation) throw new Error(`Missing Builder animation for ${selection.reference}`)
 
       const label = describeVtgBuilderMotion(animation)
+      if (!compactBuilder.value) {
+        const spins = [label[0], label[1]]
+          .map((spin) => (spin === 'A' ? 'Anti' : spin === 'I' ? 'Spin' : 'Indeterminate'))
+          .join(' / ')
+        return {
+          ...address,
+          ...displayedRelationships,
+          description: `${displayedRelationships.description}\n${spins}`,
+        }
+      }
+
       return {
         ...address,
         ...displayedRelationships,

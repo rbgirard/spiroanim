@@ -310,7 +310,7 @@ describe('VtgPane', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Quarter / Opposite\nProps: Quarter / Same',
+      'Hands: Quarter / Opposite\nProps: Quarter / Same\nSpin / Anti',
     )
 
     wrapper.unmount()
@@ -325,8 +325,8 @@ describe('VtgPane', () => {
     expect(group.get('legend').classes()).toContain('vtg-pane__visually-hidden')
     expect(options.map((option) => option.element.value)).toEqual([
       '1:1',
-      '2:1',
       '1:2',
+      '2:1',
       '1:3',
       '2:3',
       '1:4',
@@ -342,7 +342,7 @@ describe('VtgPane', () => {
             .findAll<HTMLInputElement>('input[type="radio"]')
             .map((option) => option.element.value),
         ),
-    ).toEqual([['1:1', '2:1', '1:2', '1:3', '2:3', '1:4', '1:5', '2:5']])
+    ).toEqual([['1:1', '1:2', '2:1', '1:3', '2:3', '1:4', '1:5', '2:5']])
     expect(options[3]?.element.checked).toBe(true)
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:3')
   })
@@ -383,7 +383,7 @@ describe('VtgPane', () => {
       wrapper
         .findAll<HTMLInputElement>('fieldset.vtg-speed-ratio input[type="radio"]')
         .map((option) => option.element.value),
-    ).toEqual(['1:1', '2:1', '1:2', '1:3', '2:3', '1:4', '1:5', '2:5'])
+    ).toEqual(['1:1', '1:2', '2:1', '1:3', '2:3', '1:4', '1:5', '2:5'])
     expect(wrapper.find('[data-role="vtg-more"]').exists()).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-classic"]').element.checked).toBe(false)
     expect(wrapper.find('[data-role="vtg-swap"]').exists()).toBe(true)
@@ -442,21 +442,22 @@ describe('VtgPane', () => {
     const second = wrapper.get<HTMLSelectElement>('select[aria-label="Right prop timing ratio"]')
     const orderedRatios = [
       '1:1',
-      '2:1',
       '1:2',
+      '2:1',
       '1:3',
       '2:3',
       '1:4',
       '1:5',
       '2:5',
+      '1:6',
       '1:7',
       '2:7',
+      '1:8',
       '1:9',
       '2:9',
+      '1:10',
       '1:11',
       '2:11',
-      '1:13',
-      '2:13',
     ]
     expect(first.findAll('option').map((option) => option.element.value)).toEqual(orderedRatios)
     expect(second.findAll('option').map((option) => option.element.value)).toEqual([
@@ -478,9 +479,9 @@ describe('VtgPane', () => {
     await second.setValue('1:5')
     expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('2:3v1:5')
 
-    await first.setValue('1:13')
+    await first.setValue('1:10')
     await second.setValue('2:11')
-    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:13v2:11')
+    expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-speed-ratio')).toBe('1:10v2:11')
     await first.setValue('2:3')
 
     await second.setValue('')
@@ -699,9 +700,37 @@ describe('VtgPane', () => {
     await nextTick()
 
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Split / Opposite\nProps: Together / Same',
+      'Hands: Split / Opposite\nProps: Together / Same\nSpin / Anti',
     )
 
+    wrapper.unmount()
+  })
+
+  it('updates tooltip spin order when props are swapped and the variant changes', async () => {
+    vi.useFakeTimers()
+    const wrapper = mount(VtgPane)
+    const spinLine = async (reference: string) => {
+      const cell = wrapper.get(`[data-cell-reference="${reference}"]`)
+      await cell.trigger('mouseenter')
+      vi.advanceTimersByTime(0)
+      await nextTick()
+      const line = document.body.querySelector('[role="tooltip"]')?.textContent?.split('\n').at(-1)
+      await cell.trigger('mouseleave')
+      vi.advanceTimersByTime(0)
+      await nextTick()
+      return line
+    }
+
+    expect(await spinLine('1-1')).toBe('Anti / Anti')
+    expect(await spinLine('3-1')).toBe('Spin / Spin')
+    expect(await spinLine('1-6')).toBe('Spin / Anti')
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    expect(await spinLine('1-6')).toBe('Anti / Spin')
+
+    await wrapper.get('[data-cell-reference="5-6"]').trigger('click')
+    expect(await spinLine('5-6')).toBe('Spin / Spin')
+    await wrapper.get('[data-role="vtg-spin-toggle"]').trigger('click')
+    expect(await spinLine('5-6')).toBe('Anti / Anti')
     wrapper.unmount()
   })
 
@@ -728,7 +757,7 @@ describe('VtgPane', () => {
     vi.advanceTimersByTime(0)
     await nextTick()
     expect(document.body.querySelector('[role="tooltip"]')?.textContent).toBe(
-      'Hands: Split / Opposite\nProps: Together / Same',
+      'Hands: Split / Opposite\nProps: Together / Same\nSpin / Anti',
     )
 
     wrapper.unmount()
@@ -893,6 +922,29 @@ describe('VtgPane', () => {
       ])
     },
   )
+
+  it('bases More default rotation on the first dropdown only', async () => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-more"]').setValue(true)
+    const first = wrapper.get<HTMLSelectElement>('[aria-label="Left prop timing ratio"]')
+    const second = wrapper.get<HTMLSelectElement>('[aria-label="Right prop timing ratio"]')
+    const rotate = wrapper.get<HTMLSelectElement>('[data-role="vtg-orientation"]')
+
+    expect(rotate.element.value).toBe('0')
+    await second.setValue('1:2')
+    expect(rotate.element.value).toBe('0')
+    await second.setValue('2:3')
+    expect(rotate.element.value).toBe('0')
+    await first.setValue('1:2')
+    expect(rotate.element.value).toBe('-90')
+    await second.setValue('1:3')
+    expect(rotate.element.value).toBe('-90')
+    await second.setValue('')
+    expect(rotate.element.value).toBe('-90')
+    await rotate.setValue('45')
+    await second.setValue('2:3')
+    expect(rotate.element.value).toBe('45')
+  })
 
   it('remembers Rotate while switching between supported ratios', async () => {
     const wrapper = mount(VtgPane)
@@ -1158,13 +1210,13 @@ describe('VtgPane', () => {
     )
     const wrapper = mount(VtgPane, { props: { animation } })
     await vi.waitFor(() => {
-      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('5-5')
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('3-1')
     })
     const leftRatio = wrapper.get<HTMLSelectElement>('[aria-label="Left prop timing ratio"]')
     const rightRatio = wrapper.get<HTMLSelectElement>('[aria-label="Right prop timing ratio"]')
     await wrapper.get('[data-role="vtg-property-offset-toggle"]').trigger('click')
     expect(wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]').element.value).toBe(
-      '-90',
+      '90',
     )
     expect(
       wrapper.get<HTMLButtonElement>('button[aria-label="Clear Left offset"]').element.disabled,
@@ -1178,7 +1230,7 @@ describe('VtgPane', () => {
       reference: '5-5',
       speedRatio: '1:1v3',
       quarters: 1,
-      propRotationOffsets: [-90, 0],
+      propRotationOffsets: [90, 0],
     })
 
     await rightRatio.setValue('')
@@ -1187,7 +1239,7 @@ describe('VtgPane', () => {
       reference: '5-5',
       speedRatio: '1:1',
       quarters: 1,
-      propRotationOffsets: [-90, 0],
+      propRotationOffsets: [90, 0],
     })
 
     await leftRatio.setValue('1:3')
@@ -1197,26 +1249,26 @@ describe('VtgPane', () => {
       reference: '5-5',
       speedRatio: '1:3',
       quarters: 1,
-      propRotationOffsets: [-90, 0],
+      propRotationOffsets: [90, 0],
     })
 
     await leftRatio.setValue('1:1')
     await flushPromises()
     await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      propRotationOffsets: [-90, 0],
+      propRotationOffsets: [90, 0],
     })
     await leftRatio.setValue('1:3')
     await flushPromises()
     expect(wrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      propRotationOffsets: [-90, 0],
+      propRotationOffsets: [90, 0],
     })
 
     wrapper.unmount()
     const resetWrapper = mount(VtgPane, { props: { animation: structuredClone(animation) } })
     await vi.waitFor(() => {
       expect(resetWrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe(
-        '5-5',
+        '3-1',
       )
     })
 
@@ -1226,7 +1278,7 @@ describe('VtgPane', () => {
     if (confirmReset.exists()) await confirmReset.trigger('click')
     await vi.waitFor(() => expect(resetWrapper.emitted('patternSelect')).toBeDefined())
     expect(resetWrapper.emitted('patternSelect')?.at(-1)?.[0]).toMatchObject({
-      reference: '5-5',
+      reference: '3-1',
       speedRatio: '1:3',
     })
     expect(resetWrapper.emitted('patternSelect')?.at(-1)?.[0]).not.toHaveProperty(
@@ -2565,13 +2617,13 @@ describe('VtgPane', () => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
     const target = () => wrapper.get('[data-cell-reference="1-1"]')
-    expect(target().text()).toContain('TS / XO')
+    expect(target().text()).toContain('TS / XS')
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-beat"]').setValue('1.5')
-    expect(target().text()).toContain('TS / XO')
+    expect(target().text()).toContain('TS / XS')
 
     await target().trigger('click')
-    expect(target().text()).toContain('TS / XO')
+    expect(target().text()).toContain('TS / XS')
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-elemental"]').setValue(true)
     expect(
@@ -2587,7 +2639,7 @@ describe('VtgPane', () => {
       builderFullCatalog: true,
       builderInsertionIndex: 1,
     })
-    expect(target().text()).toContain('TS / XO')
+    expect(target().text()).toContain('TS / XS')
   })
 
   it('ignores a stale match after a newer animation has been hydrated', async () => {

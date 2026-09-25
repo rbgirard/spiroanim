@@ -182,14 +182,14 @@ describe('describePatternRelationships', () => {
           }).label,
       ),
     ).toEqual([
-      'TS / SO',
-      'TS / QO',
-      'TS / TO',
-      'TS / QO',
-      'TS / SO',
-      'TS / QO',
-      'TS / TO',
-      'TS / QO',
+      'TS / TS',
+      'TS / QS',
+      'TS / SS',
+      'TS / QS',
+      'TS / TS',
+      'TS / QS',
+      'TS / SS',
+      'TS / QS',
     ])
   })
 
@@ -207,9 +207,9 @@ describe('describePatternRelationships', () => {
         beat: 1.5,
       }),
     ).toMatchObject({
-      label: 'TS / XO',
-      description: 'Hands: Together / Same\nProps: Indeterminate / Opposite',
-      props: { timing: 'X', direction: 'O' },
+      label: 'TS / XS',
+      description: 'Hands: Together / Same\nProps: Indeterminate / Same',
+      props: { timing: 'X', direction: 'S' },
       propsIndeterminate: true,
     })
   })

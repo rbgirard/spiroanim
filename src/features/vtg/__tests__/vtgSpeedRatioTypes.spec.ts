@@ -18,14 +18,15 @@ describe('VTG speed ratio helpers', () => {
       vtgRatioPickerRatios,
     )
     expect(vtgMoreRatioPickerRatios.slice(vtgRatioPickerRatios.length)).toEqual([
+      '1:6',
       '1:7',
       '2:7',
+      '1:8',
       '1:9',
       '2:9',
+      '1:10',
       '1:11',
       '2:11',
-      '1:13',
-      '2:13',
     ])
   })
 
@@ -67,5 +68,15 @@ describe('VTG speed ratio helpers', () => {
 
   it.each(['2:1', '2:3', '2:5'] as const)('defaults %s to -90 degrees', (speedRatio) => {
     expect(getDefaultVtgPatternOrientation(speedRatio)).toBe(-90)
+  })
+
+  it.each([
+    ['1:3v2', 0],
+    ['1:3v2:3', 0],
+    ['1:2v3', -90],
+    ['2:3v1:3', -90],
+    ['1:6v2:11', -90],
+  ] as const)('bases the default rotation of %s only on the first ratio', (ratio, expected) => {
+    expect(getDefaultVtgPatternOrientation(ratio)).toBe(expected)
   })
 })

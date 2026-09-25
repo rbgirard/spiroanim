@@ -11,14 +11,15 @@ import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/service
 import type { VtgIndividualSpeedRatio } from '@/features/vtg/types'
 
 const newRatios = [
+  '1:6',
   '1:7',
   '2:7',
+  '1:8',
   '1:9',
   '2:9',
+  '1:10',
   '1:11',
   '2:11',
-  '1:13',
-  '2:13',
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
 
 describe('extended MORE ratios', () => {
@@ -40,8 +41,8 @@ describe('extended MORE ratios', () => {
     expect(findVtgPatternMatch(decoded)).toMatchObject({ reference: '1-1', speedRatio: ratio })
   })
 
-  it('supports a mixed 1:13 and 2:11 pairing in VTG and QTR', () => {
-    const selection = { reference: '1-1' as const, speedRatio: '1:13v2:11' as const }
+  it('supports a mixed 1:10 and 2:11 pairing in VTG and QTR', () => {
+    const selection = { reference: '1-1' as const, speedRatio: '1:10v2:11' as const }
     const vtg = createDefaultVtgAnimation(selection)!
     const qtr = createDefaultQtrAnimation({ ...selection, quarters: 1 })!
     expect(inferVtgSpeedRatio(vtg)).toBe(selection.speedRatio)

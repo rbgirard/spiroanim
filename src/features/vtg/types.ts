@@ -40,8 +40,8 @@ export const vtgIndividualSpeedRatios = [
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
 export const vtgRatioPickerRatios = [
   '1:1',
-  '2:1',
   '1:2',
+  '2:1',
   '1:3',
   '2:3',
   '1:4',
@@ -50,14 +50,15 @@ export const vtgRatioPickerRatios = [
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
 export const vtgMoreRatioPickerRatios = [
   ...vtgRatioPickerRatios,
+  '1:6',
   '1:7',
   '2:7',
+  '1:8',
   '1:9',
   '2:9',
+  '1:10',
   '1:11',
   '2:11',
-  '1:13',
-  '2:13',
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
 export const vtgSpeedRatioRows = [
   vtgRatioPickerRatios,
@@ -159,11 +160,12 @@ export const getVtgPatternOrientations = (
 export const vtgDefaultPatternOrientation = -90 satisfies VtgPatternOrientation
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
-): VtgPatternOrientation =>
-  getVtgTimingCycleCount(speedRatio) === 2 ||
-  getVtgPropSpeedRatios(speedRatio).some((ratio) => Number(ratio.slice(2)) % 2 === 0)
+): VtgPatternOrientation => {
+  const [firstRatio] = getVtgPropSpeedRatios(speedRatio)
+  return getVtgTimingCycleCount(firstRatio) === 2 || Number(firstRatio.slice(2)) % 2 === 0
     ? vtgDefaultPatternOrientation
     : 0
+}
 export const vtgDefaultTransitionBeats = 4 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection

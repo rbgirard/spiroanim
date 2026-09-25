@@ -295,7 +295,9 @@ change the Cartesian endpoint reached in one beat, so both starting orientations
 same canonical phase along their real incoming axes instead of treating the compiled endpoints as
 the timing definition. At 1:3, this checkpoint is the ordinary compiled destination, preserving the
 established 1:3 labels. The generated tooltip expands the independent results as
-`Hands: Timing / Direction` and `Props: Timing / Direction`.
+`Hands: Timing / Direction` and `Props: Timing / Direction`. A third line gives each prop's
+spin in left/right order, such as `Spin / Anti` or `Anti / Anti`, following the current Swap
+and Spin/Anti settings.
 
 An unrotated matrix classifies the destination rule relationship. A 90-degree pattern orientation
 swaps the horizontal and vertical rule axes, so the same classifier uses the source relationship.

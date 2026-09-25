@@ -99,10 +99,10 @@ const createPattern = (
   speedRatio: VtgSpeedRatio,
 ): VtgReadableAnimation => {
   const speedRatios = getVtgPropSpeedRatios(speedRatio)
+  const definitionSpeedRatio = getDefinitionSpeedRatio(speedRatios[0])
   const sourceIndexes = row.swapProps ? ([1, 0] as const) : ([0, 1] as const)
   const createProp = (outputIndex: 0 | 1) => {
     const sourceIndex = sourceIndexes[outputIndex]
-    const definitionSpeedRatio = getDefinitionSpeedRatio(speedRatios[outputIndex])
     const cellPattern =
       row.columnsBySpeedRatio?.[definitionSpeedRatio]?.[column] ?? row.columns[column]
     const continuations =
@@ -145,10 +145,10 @@ const createPatternDefinition = (
  * the same first animation frame for each prop. Continuations are the
  * semantic Anti/In directions; the builder derives Turns from the target ratio. The historical
  * 1:1 and 1:5 definitions intentionally reverse several directions from the canonical 1:3 data.
- * Compound timings select the appropriate definition independently for each prop. Definition
- * families are selected from each timing denominator: 1-2 use 1:1, 3-4 use 1:3, and 5-6 use
+ * Compound timings use the first prop's definition family for both props. Definition
+ * families are selected from the first timing denominator: 1-2 use 1:1, 3-4 use 1:3, and 5-6 use
  * 1:5. Unrecognized denominators use the canonical 1:3 definitions. Actual timing math still uses
- * the complete ratio.
+ * each prop's complete ratio.
  * Only the four special cells define explicit Spin/Anti variants.
  */
 // prettier-ignore

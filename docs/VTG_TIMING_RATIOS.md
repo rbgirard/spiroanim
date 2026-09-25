@@ -178,6 +178,18 @@ the timing.
 
 ## Compound timings
 
+Generation uses the first prop's definition family for both props: denominators 1-2 select
+`1:1`, 3-4 select `1:3`, 5-6 select `1:5`, and other denominators fall back to `1:3`.
+Each prop still calculates Turns from its own complete timing ratio, and cycle length still
+uses the least common multiple of both numerators. For example, `1:2v2:5` uses the `1:1`
+definitions for both props, with `1:2` rotation amounts on the left and `2:5` on the right.
+This replaces independent family selection for newly generated compound patterns; existing
+animation frame data is unchanged until regenerated.
+
+Default rotation also follows only the first ratio: numerator-2 or even-denominator timings
+default to -90 degrees; other timings default to 0 degrees. Changing the second More dropdown
+does not change rotation, and manually selected rotations remain preserved.
+
 Each prop's timing is detected independently and retains prop order. When both props have the same
 individual timing, the pattern uses that timing directly:
 
@@ -257,17 +269,18 @@ intervals and multiplies Arc and Turns cleanly; it never discards a partial inte
 6. Verify that every continuation for the prop has the same timing and spin.
 7. Combine the two prop timings using the canonical compound naming rules.
 
-The radio ratio row remains curated. It contains `1:1`, `2:1`, `1:2`, `1:3`, `2:3`, `1:4`,
+The radio ratio row remains curated. It contains `1:1`, `1:2`, `2:1`, `1:3`, `2:3`, `1:4`,
 `1:5`, and `2:5`. Other canonical ratios can still be generated programmatically, recovered from
 loaded animations, and used by VTG pattern matching.
 
 The `More` control replaces the radio row with one ratio selector per prop. The first selector starts
 with the current radio ratio. The second starts at `none`, which applies the first ratio to both
-props. Both selectors add `1:7`, `2:7`, `1:9`, `2:9`, `1:11`, `2:11`, `1:13`, and `2:13` after
-the existing options, paired by increasing denominator. Selecting a second ratio creates the
+props. Both selectors add `1:6`, `1:7`, `2:7`, `1:8`, `1:9`, `2:9`, `1:10`, `1:11`, and `2:11`
+after the existing options, ordered by increasing denominator. Selecting a second ratio creates the
 canonical compound timing for the two prop tracks. These additions do not change the radio row
-or Third Order timing choices. The existing fallback gives them the canonical `1:3` direction
-definitions, standard top headers, and zero automatic Scale adjustment.
+or Third Order timing choices. When selected first, `1:6` uses the `1:5` definition family;
+the other additions use the canonical `1:3` fallback. All use standard top headers and zero
+automatic Scale adjustment. `1:12`, `1:13`, and `2:13` are not offered in the dropdowns.
 
 Pattern Builder drag/drop operations retain one complete cycle of the selected timing. A
 numerator-1-only selection inserts a four-beat piece; a selection involving a numerator-2 timing,

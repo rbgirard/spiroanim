@@ -109,9 +109,18 @@ describe('VTG row patterns', () => {
     },
   )
 
-  it('selects definition families independently for compound timing props', () => {
-    expect(buildPattern('1-1', '1:2v4')?.props.map((prop) => prop.anim[1]?.turns)).toEqual([
-      45, -225,
-    ])
-  })
+  it.each([
+    ['1:2v4', [45, 135]],
+    ['1:4v2', [-225, -135]],
+    ['1:2v2:5', [45, 67.5]],
+    ['2:5v1:4', [67.5, 135]],
+    ['1:7v2:5', [-360, -157.5]],
+  ] as const)(
+    'uses the first prop definition family and preserves individual timing for %s',
+    (speedRatio, turns) => {
+      expect(buildPattern('1-1', speedRatio)?.props.map((prop) => prop.anim[1]?.turns)).toEqual(
+        turns,
+      )
+    },
+  )
 })
