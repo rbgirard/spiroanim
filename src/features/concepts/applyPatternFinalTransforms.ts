@@ -47,8 +47,11 @@ const reverseInitialPlane = (frame: AnimData): AnimData => ({
   ...(frame.axis === undefined ? undefined : { axis: reverseAngle(frame.axis) }),
 })
 
-/** Exchanges animation tracks while keeping colors, visibility, spacing, and other prop-slot settings fixed. */
-const swapAnimationTracks = (animation: RootDataFinal): RootDataFinal => {
+/** Exchanges tracks while keeping prop identity fixed. Include motion to preserve spatial paths. */
+export const swapAnimationTracks = (
+  animation: RootDataFinal,
+  options: { includeMotion?: boolean } = {},
+): RootDataFinal => {
   if (animation.props.length !== 2) return animation
 
   const firstTrack = animation.props[0]?.anim
@@ -60,6 +63,7 @@ const swapAnimationTracks = (animation: RootDataFinal): RootDataFinal => {
     props: animation.props.map((prop, index) => ({
       ...prop,
       anim: index === 0 ? secondTrack : firstTrack,
+      ...(options.includeMotion ? { motion: animation.props[1 - index]!.motion } : undefined),
     })),
   }
 }

@@ -2,11 +2,7 @@ import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilder
 import type { VtgBuilderPatternSelection } from '@/features/builder/types'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
-import {
-  applyVtgPropertySettings,
-  getVtgPropertyCycleCount,
-  type VtgPropertySettings,
-} from '@/features/vtg/propertySettings'
+import { getVtgPropertyCycleCount, type VtgPropertySettings } from '@/features/vtg/propertySettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
 interface VtgPreviewCandidateOptions {
@@ -28,11 +24,8 @@ export const createVtgPreviewCandidate = (
     })
   }
 
-  const animation =
-    'quarters' in selection
-      ? createDefaultQtrAnimation(selection)
-      : createDefaultVtgAnimation(selection, { minimumCycleCount })
-  return animation && options.properties
-    ? applyVtgPropertySettings(animation, options.properties)
-    : animation
+  const generationOptions = { minimumCycleCount, properties: options.properties }
+  return 'quarters' in selection
+    ? createDefaultQtrAnimation(selection, generationOptions)
+    : createDefaultVtgAnimation(selection, generationOptions)
 }

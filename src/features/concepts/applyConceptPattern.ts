@@ -9,9 +9,11 @@ import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type { VtgPropertySettings } from '@/features/vtg/propertySettings'
 
 export interface ApplyConceptPatternOptions {
   minimumVtgCycleCount?: 1 | 2
+  vtgProperties?: VtgPropertySettings
 }
 
 export const applyConceptPattern = (
@@ -24,7 +26,11 @@ export const applyConceptPattern = (
     : isQstPatternSelection(selection)
       ? createQstAnimation(root, selection)
       : isQtrPatternSelection(selection)
-        ? createQtrAnimation(root, selection)
+        ? createQtrAnimation(root, selection, {
+            minimumCycleCount: options.minimumVtgCycleCount,
+            properties: options.vtgProperties,
+          })
         : createVtgAnimation(root, selection, {
             minimumCycleCount: options.minimumVtgCycleCount,
+            properties: options.vtgProperties,
           })

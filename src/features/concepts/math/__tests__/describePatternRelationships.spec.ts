@@ -237,7 +237,8 @@ describe('describePatternRelationships', () => {
       speedRatio: '1:3',
       orientation: 135,
       swapProps: true,
-      propRotationOffsets: [90, 0],
+      // Offsets belong to authored paths, before the final Swap.
+      propRotationOffsets: [0, 90],
     } as const
 
     expect(

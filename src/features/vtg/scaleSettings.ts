@@ -24,7 +24,7 @@ export const readPatternScaleValues = (
   return [read(0), read(1)]
 }
 
-/** Apply final Scale after VTG/QTR transforms so Left and Right refer to displayed props. */
+/** Apply Scale in authored path order, before the final VTG/QTR Swap assignment. */
 export const applyVtgScaleSettings = (
   animation: RootDataFinal,
   settings: VtgScaleSettings,

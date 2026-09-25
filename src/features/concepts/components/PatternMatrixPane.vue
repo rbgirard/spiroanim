@@ -383,7 +383,7 @@
           :scale-values="scaleValues"
           :scale-display-values="scaleDisplayValues"
           :show-turns="showVtgTurns"
-          :animation="animation"
+          :animation="propertyAnimation"
           :offset-values="propRotationOffsets"
           :twist-mode="vtgTwistMode"
           :twist-values="vtgTwistValues"
@@ -437,6 +437,7 @@ import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
 import { useVtgScaleControls } from '@/features/vtg/composables/useVtgScaleControls'
+import { applyVtgSwap } from '@/features/vtg/applyVtgSwap'
 import { COLORS, COLSET, PROPSR } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
@@ -628,6 +629,14 @@ const {
   elementalLayout,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
+// Property controls always read and edit the original path order. Swap only assigns finished paths.
+const propertyAnimation = computed(() =>
+  props.animation
+    ? applyVtgSwap(props.animation, !props.builderActive && swapProps.value)
+    : undefined,
+)
+const emitPropertyAnimation = (animation: RootDataFinal) =>
+  emit('animationUpdate', applyVtgSwap(animation, !props.builderActive && swapProps.value))
 const {
   auto: scaleAuto,
   mode: scaleMode,
@@ -641,12 +650,12 @@ const {
   updateValue: updateScaleValue,
   apply: applyScaleControls,
 } = useVtgScaleControls({
-  animation: toRef(props, 'animation'),
+  animation: propertyAnimation,
   revision: toRef(props, 'animationRevision'),
   enabled: computed(() => !props.builderActive),
   base: scale,
   ratio: speedRatio,
-  onAnimationUpdate: (animation) => emit('animationUpdate', animation),
+  onAnimationUpdate: emitPropertyAnimation,
 })
 const {
   vtgTwistMode,
@@ -681,8 +690,8 @@ const {
   updateFoldSpan,
   updateFoldMirror,
 } = usePatternPropertyControls({
-  animation: toRef(props, 'animation'),
-  onAnimationUpdate: (animation) => emit('animationUpdate', animation),
+  animation: propertyAnimation,
+  onAnimationUpdate: emitPropertyAnimation,
   rebuildAnimationForThirdOrderCycle: (minimumCycleCount) => {
     if (props.builderActive || !props.animation || isQtr.value) return undefined
     const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
@@ -690,7 +699,11 @@ const {
     const selection = createVtgPatternSelection(tile)
     return 'quarters' in selection
       ? undefined
-      : createVtgAnimation(props.animation, selection, { minimumCycleCount })
+      : createVtgAnimation(
+          props.animation,
+          { ...selection, swapProps: false },
+          { minimumCycleCount },
+        )
   },
 })
 const isAnti = ref(false)
@@ -1781,7 +1794,7 @@ const hydrateBuilderCustomizationControls = (animation: RootDataFinal) => {
 
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
-  if (!builderDropSelected.value) {
+  if (props.builderActive && !builderDropSelected.value) {
     conceptsStore.hydrateVtgPropertyControls(
       animation,
       props.builderActive && (props.builderInsertionIndex ?? 0) > 0 ? 1 : 0,
@@ -1823,6 +1836,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const evaluateAutoBuilderOpen = !props.builderActive && shouldEvaluateAutoBuilderOpen(animation)
   if (evaluateAutoBuilderOpen) markAutoBuilderOpenEvaluated(animation)
   if (result.status === 'unchanged') {
+    if (!props.builderActive) {
+      conceptsStore.hydrateVtgPropertyControls(applyVtgSwap(animation, swapProps.value))
+    }
     previewsReady.value = true
     return
   }
@@ -1851,6 +1867,9 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     speedRatio.value = controls.speedRatio
     isAnti.value = controls.isAnti ?? false
     swapProps.value = controls.swapProps === true
+    if (!props.builderActive) {
+      conceptsStore.hydrateVtgPropertyControls(applyVtgSwap(animation, swapProps.value))
+    }
     reversePlane.value = controls.reversePlane === true
     beat.value = controls.beat ?? 1
     transition.value = match.transition ?? false
@@ -1891,6 +1910,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         : undefined)
     selectedCell.value = tile ? { column: tile.column, row: tile.row } : undefined
   } else {
+    if (!props.builderActive) conceptsStore.hydrateVtgPropertyControls(animation)
     selectedCell.value = undefined
     isQtr.value = false
     isAnti.value = false

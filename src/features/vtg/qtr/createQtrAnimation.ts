@@ -1,19 +1,15 @@
 import {
   applyVtgPlaybackControls,
-  applyVtgPropRotationOffsets,
+  finalizeVtgAnimation,
+  type CreateVtgAnimationOptions,
   createDefaultVtgAnimation,
   createVtgAnimation,
   toVtgPreviewAnimation,
 } from '@/features/vtg/createVtgAnimation'
 import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
-import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
-import { applyVtgScaleSettings } from '@/features/vtg/scaleSettings'
-import {
-  applyVtgInitialTurnsPlayback,
-  withVtgInitialTurnsOffsetBeat,
-} from '@/features/vtg/math/applyVtgInitialTurnsOffset'
+import { withVtgInitialTurnsOffsetBeat } from '@/features/vtg/math/applyVtgInitialTurnsOffset'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
 const propIndices = [0, 1] as const
@@ -82,20 +78,19 @@ const withoutFinalTransforms = ({
 // not select a different QTR base geometry.
 const getSelectedQtrMode = (selection: QtrPatternSelection): QtrMode => selection.quarters
 
-const applyQtrFinalTransforms = (
-  animation: RootDataFinal,
-  selection: QtrPatternSelection,
-): RootDataFinal => applyPatternFinalTransforms(animation, selection)
-
 /** Builds the concept-specific QTR state before playback and shared final transforms. */
 export const createDefaultQtrBaseAnimation = (
   selection: QtrPatternSelection,
+  options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
-  const animation = createDefaultVtgAnimation({
-    ...withoutFinalTransforms(selection),
-    beat: 1,
-    transition: false,
-  })
+  const animation = createDefaultVtgAnimation(
+    {
+      ...withoutFinalTransforms(selection),
+      beat: 1,
+      transition: false,
+    },
+    { minimumCycleCount: options.minimumCycleCount },
+  )
 
   return animation ? transformQtrAnimation(animation, getSelectedQtrMode(selection), 1) : undefined
 }
@@ -103,12 +98,17 @@ export const createDefaultQtrBaseAnimation = (
 export const createQtrAnimation = (
   current: RootDataFinal,
   selection: QtrPatternSelection,
+  options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
-  const animation = createVtgAnimation(current, {
-    ...withoutFinalTransforms(selection),
-    beat: 1,
-    transition: false,
-  })
+  const animation = createVtgAnimation(
+    current,
+    {
+      ...withoutFinalTransforms(selection),
+      beat: 1,
+      transition: false,
+    },
+    { minimumCycleCount: options.minimumCycleCount },
+  )
   if (!animation) return undefined
 
   const qtrAnimation = transformQtrAnimation(animation, getSelectedQtrMode(selection), 1)
@@ -117,22 +117,14 @@ export const createQtrAnimation = (
     return undefined
   }
 
-  const transformed = applyQtrFinalTransforms(completed, selection)
-  const aligned = applyVtgPropRotationOffsets(
-    transformed,
-    selection.propRotationOffsets,
-    applyQtrFinalTransforms(qtrAnimation, selection),
-  )
-  const playback = applyVtgInitialTurnsPlayback(aligned, selection)
-  return playback && selection.scaleSettings
-    ? applyVtgScaleSettings(playback, selection.scaleSettings, selection.speedRatio)
-    : playback
+  return finalizeVtgAnimation(completed, qtrAnimation, selection, options)
 }
 
 export const createDefaultQtrAnimation = (
   selection: QtrPatternSelection,
+  options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
-  const base = createDefaultQtrBaseAnimation(selection)
+  const base = createDefaultQtrBaseAnimation(selection, options)
   if (!base) return undefined
 
   const completed = applyVtgPlaybackControls(base, withVtgInitialTurnsOffsetBeat(selection))
@@ -140,16 +132,7 @@ export const createDefaultQtrAnimation = (
     return undefined
   }
 
-  const transformed = applyQtrFinalTransforms(completed, selection)
-  const aligned = applyVtgPropRotationOffsets(
-    transformed,
-    selection.propRotationOffsets,
-    applyQtrFinalTransforms(base, selection),
-  )
-  const playback = applyVtgInitialTurnsPlayback(aligned, selection)
-  return playback && selection.scaleSettings
-    ? applyVtgScaleSettings(playback, selection.scaleSettings, selection.speedRatio)
-    : playback
+  return finalizeVtgAnimation(completed, base, selection, options)
 }
 
 export const createQtrPreviewAnimation = (

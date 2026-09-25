@@ -374,14 +374,12 @@ const playerSurfaceStyle = computed<CSSProperties>(() => ({
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
   const createdAnimation = createConceptPattern(ROOT.value, selection, {
     minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+    vtgProperties: conceptsStore.getVtgPropertySettings(),
   })
   if (createdAnimation) {
-    const animation =
-      isVtgPatternSelection(selection) ||
-      isQtrPatternSelection(selection) ||
-      isEightStepPatternSelection(selection)
-        ? conceptsStore.applyVtgPropertyControls(createdAnimation)
-        : createdAnimation
+    const animation = isEightStepPatternSelection(selection)
+      ? conceptsStore.applyVtgPropertyControls(createdAnimation)
+      : createdAnimation
     commitConceptAnimation(animation)
     playerStore.cameraReset = Symbol()
   }
@@ -394,22 +392,19 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
     selectedBuilderPreviewIndex.value !== undefined
       ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value, {
           minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+          properties: conceptsStore.getVtgPropertySettings(),
         })
       : createConceptPattern(ROOT.value, selection, {
           minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+          vtgProperties: conceptsStore.getVtgPropertySettings(),
         })
   if (!animation) return
 
-  const previewAnimation =
-    isVtgPatternSelection(selection) || isQtrPatternSelection(selection)
-      ? conceptsStore.applyVtgPropertyControls(animation)
-      : animation
-
   playerStore.startPlaybackPreview(
-    toVtgBuilderDisplayAnimation(previewAnimation, undefined, {
+    toVtgBuilderDisplayAnimation(animation, undefined, {
       maximumScale: Math.max(
         getVtgBuilderMaximumScale(ROOT.value),
-        getVtgBuilderMaximumScale(previewAnimation),
+        getVtgBuilderMaximumScale(animation),
       ),
     }),
   )

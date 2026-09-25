@@ -1,6 +1,12 @@
 import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { h } from 'vue'
+import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
+import { isVtgPatternSelection, type ConceptPatternSelection } from '@/features/concepts/types'
+import { applyVtgSwap } from '@/features/vtg/applyVtgSwap'
+import { readPatternScaleValues } from '@/features/vtg/scaleSettings'
+import { cloneVtgPropertySettings } from '@/features/vtg/propertySettings'
 
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { builderPatternPointerMoveEvent } from '@/features/builder/patternPointerDrag'
@@ -836,6 +842,87 @@ describe('VtgPane', () => {
       [{ reference: '3-4', speedRatio: '1:3' }],
       [{ reference: '3-4', speedRatio: '1:5' }],
     ])
+  })
+
+  it('preserves paths and control values through Swap, subsequent edits, and reload', async () => {
+    const store = useConceptsStore()
+    const properties = store.getVtgPropertySettings()
+    properties.thirdOrder.mirror = false
+    properties.thirdOrder.settings = [
+      { strength: 40, initial: 45 },
+      { strength: 80, initial: 90 },
+    ]
+    properties.twist.values = [{ '0.5': 90 }, { '0.5': -45 }]
+    const original = createDefaultVtgAnimation(
+      {
+        reference: '1-2',
+        speedRatio: '1:3',
+        propRotationOffsets: [90, 0],
+        spacing: 8,
+        scaleSettings: {
+          auto: false,
+          base: 0.8,
+          mode: 'advanced',
+          values: [{ '0': 0.6, '1': 0.7 }, { '0': 1.2 }],
+        },
+      },
+      { properties },
+    )!
+    const animation = shallowRef(original)
+    const wrapper = mount(
+      defineComponent({
+        setup: () => () =>
+          h(VtgPane, {
+            animation: animation.value,
+            onPatternSelect: (selection: ConceptPatternSelection) => {
+              if (!isVtgPatternSelection(selection)) throw new Error('Expected VTG selection')
+              animation.value = createDefaultVtgAnimation(selection, {
+                properties: store.getVtgPropertySettings(),
+              })!
+            },
+            onAnimationUpdate: (updated: RootDataFinal) => {
+              animation.value = updated
+            },
+          }),
+      }),
+    )
+    await vi.waitFor(() =>
+      expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBeDefined(),
+    )
+    const controls = () => wrapper.getComponent(PatternPropertyControls)
+    const beforeSettings = cloneVtgPropertySettings(store.getVtgPropertySettings())
+    const beforeScale = controls().props('scaleValues')
+    const beforeOffset = controls().props('offsetValues')
+    // Hydration does not infer Customize spacing from frame motion, so retain this authored value.
+    store.spacing = 8
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(true)
+    await flushPromises()
+    expect(animation.value.props.map(({ anim, motion }) => ({ anim, motion }))).toEqual(
+      original.props.map(({ anim, motion }) => ({ anim, motion })).reverse(),
+    )
+    expect(store.getVtgPropertySettings()).toEqual(beforeSettings)
+    expect(controls().props('scaleValues')).toEqual(beforeScale)
+    expect(controls().props('offsetValues')).toEqual(beforeOffset)
+    controls().vm.$emit('scaleUpdate', 0, 0, 0.9)
+    await nextTick()
+    controls().vm.$emit('thirdOrderStrengthUpdate', 0, 65)
+    await flushPromises()
+    expect(readPatternScaleValues(animation.value)[1]['0']).toBe(0.9)
+    expect(animation.value.props[1]?.anim[0]?.strength).toBe(650)
+    expect(animation.value.props[0]?.anim[0]?.strength).toBe(800)
+    const edited = animation.value
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-swap"]').setValue(false)
+    await flushPromises()
+    expect(animation.value.props).toEqual(applyVtgSwap(edited, true).props)
+    wrapper.unmount()
+    store.swapProps = true
+    const reopened = mount(VtgPane, { props: { animation: edited } })
+    await vi.waitFor(() =>
+      expect(
+        reopened.getComponent(PatternPropertyControls).props('thirdOrderSettings')?.[0]?.strength,
+      ).toBe(65),
+    )
+    expect(reopened.getComponent(PatternPropertyControls).props('scaleValues')?.[0]['0']).toBe(0.9)
   })
 
   it('offers Swap and 180-degree checkboxes that reapply the current pattern', async () => {
@@ -3776,7 +3863,8 @@ describe('VtgPane', () => {
     await wrapper.get('[data-role="vtg-property-offset-toggle"]').trigger('click')
     await wrapper.get<HTMLInputElement>('[data-role="vtg-offset-0-input"]').setValue(45)
     await settlePreviewRendering()
-    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(18)
+    // The offset stays with the authored first path when Swap is enabled.
+    expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(9)
     reportAllBlankDimensions(80, 76)
     await settlePreviewRendering()
 
@@ -3787,16 +3875,16 @@ describe('VtgPane', () => {
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-hands"]').setValue(true)
     await settlePreviewRendering()
-    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 18)
+    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 9)
 
     await wrapper.get<HTMLInputElement>('[data-role="vtg-arms"]').setValue(false)
     await settlePreviewRendering()
-    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 18)
+    expect(countWorkerMessages('data')).toBe(beforeRenderingControls + 9)
 
     const beforeResize = countWorkerMessages('data')
     reportAllBlankDimensions(84, 80)
     await settlePreviewRendering()
-    expect(countWorkerMessages('data')).toBe(beforeResize + 18)
+    expect(countWorkerMessages('data')).toBe(beforeResize + 9)
   })
 
   it('observes and refreshes every paired-ratio thumbnail after exiting Builder', async () => {

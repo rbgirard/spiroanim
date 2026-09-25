@@ -22,10 +22,11 @@ export const createVtgBuilderDropPreview = (
   options: VtgBuilderPatternOptions = {},
 ): RootDataFinal | undefined => {
   if (targetIndex === 0) {
+    const generationOptions = { minimumCycleCount: options.minimumCycleCount }
     const animation =
       'quarters' in selection
-        ? createDefaultQtrAnimation(selection)
-        : createDefaultVtgAnimation(selection, options)
+        ? createDefaultQtrAnimation(selection, generationOptions)
+        : createDefaultVtgAnimation(selection, generationOptions)
     return animation && options.properties
       ? applyVtgPropertySettings(animation, options.properties)
       : animation

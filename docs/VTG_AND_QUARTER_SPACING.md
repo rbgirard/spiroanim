@@ -250,6 +250,14 @@ producing the alternate face-on presentation with the opposite travel direction.
 90-degree symmetric, so `180°` keeps the base QTR orientation and applies only the plane reversal.
 Previews and compiled-geometry matching use the same order.
 
+VTG and QTR apply Offset, Scale, Fold, Twist, and Third Order before the final Swap.
+Swap assigns the opposite prop (including its color and visibility) to each complete path;
+the path geometry, spacing motion, and transition choice remain unchanged. Left/Right property
+controls continue to refer to the original authored paths, and toggling Swap never exchanges
+their values. The pane restores authored path order when reading or editing a swapped animation,
+then reapplies the final assignment. Individual property implementations do not need Swap logic.
+Builder edits retain their existing timeline prop-slot semantics.
+
 Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
 their source patterns. Diamond and Box therefore produce identical animation data for those cells
 in both VTG and Quarter Spacing.

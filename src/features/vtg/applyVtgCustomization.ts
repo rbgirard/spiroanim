@@ -47,7 +47,7 @@ export const applyVtgCustomization = (
         hands,
         arms,
         thick,
-        motion: createSpacingMotion(moves[index] ?? 0),
+        motion: createSpacingMotion(moves[selection.swapProps ? 1 - index : index] ?? 0),
       },
       visible,
     )

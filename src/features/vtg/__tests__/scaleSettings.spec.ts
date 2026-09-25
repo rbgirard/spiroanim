@@ -32,7 +32,7 @@ describe('VTG Scale settings', () => {
     }
   })
 
-  it('uses each manual prop value after VTG and QTR transforms, without ratio offsets', () => {
+  it('keeps each manual value with its authored path through VTG and QTR Swap', () => {
     const scaleSettings: VtgScaleSettings = {
       auto: false,
       base: 0.8,
@@ -52,8 +52,8 @@ describe('VTG Scale settings', () => {
       const qtr = createDefaultQtrAnimation({ ...selection, quarters: 1 })!
       for (const animation of [vtg, qtr]) {
         const values = readPatternScaleValues(animation, true)
-        expect(Object.values(values[0]).every((value) => value === 0)).toBe(true)
-        expect(Object.values(values[1]).every((value) => value === 1.2)).toBe(true)
+        expect(Object.values(values[0]).every((value) => value === 1.2)).toBe(true)
+        expect(Object.values(values[1]).every((value) => value === 0)).toBe(true)
         expect(animation.vtgScale?.auto).toBe(false)
       }
       expect(findVtgPatternMatch(stripVtgPropertySettings(vtg))).toBeDefined()

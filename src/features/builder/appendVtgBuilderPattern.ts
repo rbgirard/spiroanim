@@ -32,10 +32,12 @@ const createBuilderPatternAnimation = (
   selection: VtgBuilderPatternSelection,
   options: VtgBuilderPatternOptions = {},
 ): RootDataFinal | undefined => {
+  // Builder properties describe existing timeline prop slots, not authored VTG sides.
+  const generationOptions = { minimumCycleCount: options.minimumCycleCount }
   const animation =
     'quarters' in selection
-      ? createQtrAnimation(current, selection)
-      : createVtgAnimation(current, selection, options)
+      ? createQtrAnimation(current, selection, generationOptions)
+      : createVtgAnimation(current, selection, generationOptions)
   return animation && options.properties
     ? applyVtgPropertySettings(animation, options.properties)
     : animation

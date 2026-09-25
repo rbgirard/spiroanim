@@ -238,7 +238,7 @@ rendered automatic values. Manual Simple and Advanced controls match Builder: in
 and Right values, `0..1.4` in `0.1` steps, with Advanced supporting sparse per-beat values and
 inheritance. Manual values receive no ratio adjustment. Turning Auto back on reapplies automatic
 sizing; turning it off again starts from those new automatic values, not earlier manual edits.
-Reset returns to Auto. Manual Scale is applied after final VTG/QTR transforms and also feeds grid
+Reset returns to Auto. Manual Scale is applied to authored VTG/QTR paths before Swap and also feeds grid
 previews. Pattern matching normalizes manual Scale on a copy, including zero values.
 
 Scale intent and the automatic base travel with the animation, including shared URLs. Unmarked
