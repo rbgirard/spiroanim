@@ -1,0 +1,25 @@
+Hand: 1:2 Anti
+Prop: 1:3 Anti
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.07_.5JE-_i.......&x0=PW&m0=_1_mxqv__&p1=N__.07__98.5JE-ZU.......&x1=.____LQL_&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.05E.5JE-_i.......&x0=PW&m0=_1_mxqv__&p1=N__.05E.5JE-ZU.......&x1=.____LQL_&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mBE-ZU.5JE-_i.......&x0=PW&m0=_1_mxqv__&p1=N__.mBE_98.5JE-ZU.......&x1=____Oif_.____LQL_&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mD__98.5JE-_i.......&x0=PW&p1=N__.mD_.5JE-ZU.......&x1=____Oif_.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mBE_98.5JE-_i.......&x0=PW&p1=N__.mBE-ZU.5JE.......&x1=____Oif_.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.05E.5JE-_i.......&x0=PW&p1=N__.05E.5JE-ZU.......&x1=.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
+
+
+Hand: 1:2 Anti
+Prop: 1:3 Spin
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.07_.5L_-_i.......&x0=PW&m0=_1_mxqv__&p1=N__.07__98.5L__6k.......&x1=.____LQL_&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.05E.5JE-_i.......&x0=PW&p1=N__.05E.5JE_6k.......&x1=.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
+
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mD__98.5L_-_i.......&x0=PW&p1=N__.mD_.5L__6k.......&x1=____Oif_.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
+
