@@ -16,6 +16,16 @@ import type {
   VtgPatternSelection,
 } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type { ThirdOrderPatternMatch } from '@/features/third-order/types'
+
+export interface ThirdOrderPatternMatchRequest {
+  animation: RootDataFinal
+  preferred?: ThirdOrderPatternMatch
+}
+
+export type ThirdOrderPatternMatchResult =
+  | { status: 'unmatched' }
+  | { status: 'matched'; match: ThirdOrderPatternMatch }
 
 export interface VtgPatternMatchRequest {
   animation: RootDataFinal
@@ -72,6 +82,10 @@ export interface VtgPreviewCandidatesRequest {
 }
 
 export interface PatternMatchingBridgeMap {
+  matchThirdOrder: {
+    arg: ThirdOrderPatternMatchRequest
+    ret: ThirdOrderPatternMatchResult
+  }
   matchVtg: {
     arg: VtgPatternMatchRequest
     ret: VtgPatternMatchResult
@@ -95,6 +109,9 @@ export interface PatternMatchingBridgeMap {
 }
 
 export interface PatternMatchingClient {
+  matchThirdOrder?: (
+    request: ThirdOrderPatternMatchRequest,
+  ) => Promise<ThirdOrderPatternMatchResult>
   matchVtg: (request: VtgPatternMatchRequest) => Promise<VtgPatternMatchResult>
   matchEightStep: (request: EightStepPatternMatchRequest) => Promise<EightStepPatternMatchResult>
   matchQst: (request: QstPatternMatchRequest) => Promise<QstPatternMatchResult>

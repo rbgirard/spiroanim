@@ -22,5 +22,19 @@ export const createThirdOrderPreviewAnimation = (
   selection: ThirdOrderPatternSelection,
 ): RootDataFinal | undefined => {
   const animation = createThirdOrderAnimation(undefined, selection)
-  return animation ? toConceptPreviewAnimation(animation) : undefined
+  const recipe = getThirdOrderDefinitionRecipe(thirdOrderDefinitions, selection)
+  if (!animation || !recipe) return undefined
+  const inputDriver = recipe.reversed ? 1 : 0
+  const driver = recipe.swapProps ? 1 - inputDriver : inputDriver
+  const preview = toConceptPreviewAnimation(animation)
+  // Hide the small top-timing prop after preview defaults enable paths. Keep both tracks
+  // intact so the player data, timing, colors, and warped prop's identity remain unchanged.
+  return {
+    ...preview,
+    props: preview.props.map((prop, index) =>
+      index === driver
+        ? { ...prop, paths: false, hands: false, arms: false, visible: false }
+        : prop,
+    ),
+  }
 }

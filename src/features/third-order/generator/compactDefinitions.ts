@@ -15,6 +15,11 @@ interface DefinitionSource {
   cells: readonly GeneratedCell[]
 }
 
+export interface ThirdOrderPublicationOptions {
+  /** Include forms with the full-size warped prop on the Left color. Defaults to false. */
+  includeSwappedPropAssignments?: boolean
+}
+
 /** Keep the reviewed #1/#4 pair for the one four-result cell, published as Versions 1/2. */
 export const getPublishedThirdOrderVersions = (
   cell: GeneratedCell,
@@ -42,11 +47,30 @@ export const getPublishedThirdOrderVersions = (
   return retained.map((version, index) => ({ ...version, version: index + 1 }))
 }
 
+/** Keep the small driver on the Left color and the full-size warped prop on the Right color.
+ * Filter after both timing order and Swap: reversed + Swap still has the desired assignment.
+ * Discovery evidence retains the omitted alternatives so this publication policy is reversible.
+ */
+export const getPublishedThirdOrderDuplicates = (
+  version: GeneratedVersion,
+  options: ThirdOrderPublicationOptions = {},
+): readonly GeneratedVersion['representative'][] => {
+  const candidates = [version.representative, ...version.equivalentCandidates].filter(
+    ({ recipe }) => options.includeSwappedPropAssignments || recipe.driverIndex === 0,
+  )
+  if (!candidates.length)
+    throw new Error('No Third Order duplicate with the published prop assignment')
+  return candidates
+}
+
 /** Build interned recipes/version lists without depending on incidental generator cell order. */
 export const compactThirdOrderDefinitions = (
   source: DefinitionSource,
+  options: ThirdOrderPublicationOptions = {},
 ): ThirdOrderDefinitionCatalog => {
   const recipes: ThirdOrderDefinitionRecipe[] = []
+  const duplicateSets: number[][] = []
+  const duplicateSetIds = new Map<string, number>()
   const versionSets: number[][] = []
   const cells: number[] = []
   const recipeIds = new Map<string, number>()
@@ -67,21 +91,34 @@ export const compactThirdOrderDefinitions = (
             throw new Error(`Missing Third Order cell ${handRatio}/${propRatio}/${hand}/${prop}`)
           const versions = getPublishedThirdOrderVersions(cell).map((version, index) => {
             if (version.version !== index + 1) throw new Error('Nonsequential Third Order versions')
-            const { selection, timingOrder, thirdOrder } = version.representative.recipe
-            const recipe: ThirdOrderDefinitionRecipe = {
-              reference: selection.reference,
-              ...(selection.isAnti ? { isAnti: true } : {}),
-              ...(selection.reversePlane ? { reversePlane: true } : {}),
-              ...(selection.swapProps ? { swapProps: true } : {}),
-              ...(timingOrder === 'reversed' ? { reversed: true } : {}),
-              adjust: thirdOrder.initial,
-            }
-            const key = JSON.stringify(recipe)
-            let id = recipeIds.get(key)
+            const duplicates = getPublishedThirdOrderDuplicates(version, options).map(
+              (candidate) => {
+                const { selection, timingOrder, thirdOrder } = candidate.recipe
+                const recipe: ThirdOrderDefinitionRecipe = {
+                  reference: selection.reference,
+                  ...(selection.isAnti ? { isAnti: true } : {}),
+                  ...(selection.reversePlane ? { reversePlane: true } : {}),
+                  ...(selection.swapProps ? { swapProps: true } : {}),
+                  ...(timingOrder === 'reversed' ? { reversed: true } : {}),
+                  adjust: thirdOrder.initial,
+                  ...(selection.orientation ? { rotation: selection.orientation } : {}),
+                }
+                const key = JSON.stringify(recipe)
+                let id = recipeIds.get(key)
+                if (id === undefined) {
+                  id = recipes.length
+                  recipes.push(recipe)
+                  recipeIds.set(key, id)
+                }
+                return id
+              },
+            )
+            const key = JSON.stringify(duplicates)
+            let id = duplicateSetIds.get(key)
             if (id === undefined) {
-              id = recipes.length
-              recipes.push(recipe)
-              recipeIds.set(key, id)
+              id = duplicateSets.length
+              duplicateSets.push(duplicates)
+              duplicateSetIds.set(key, id)
             }
             return id
           })
@@ -96,27 +133,34 @@ export const compactThirdOrderDefinitions = (
         }
     }
   const catalog: ThirdOrderDefinitionCatalog = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     handRatios: source.scope.handRatios,
     propRatios: source.scope.propRatios,
     recipes,
+    duplicateSets,
     versionSets,
     cells,
   }
-  // Fail before writing if future generator changes add information not represented by schema 1.
+  // Fail before writing if future generator changes add information not represented by schema 2.
   // Compare complete animation data, not just visual equivalence: preserve authoring and controls.
   for (const cell of source.cells)
     for (const version of getPublishedThirdOrderVersions(cell)) {
-      const actual = createAnimationFromThirdOrderDefinition(catalog, {
-        handRatio: cell.handRatio,
-        propRatio: cell.propRatio,
-        handDirection: cell.hand,
-        propDirection: cell.prop,
-        version: version.version,
-      })
-      const expected = createGeneratedThirdOrderAnimation(version.representative.recipe)
-      if (JSON.stringify(actual) !== JSON.stringify(expected))
-        throw new Error('Compact Third Order recipe lost animation data')
+      for (const [index, candidate] of getPublishedThirdOrderDuplicates(
+        version,
+        options,
+      ).entries()) {
+        const actual = createAnimationFromThirdOrderDefinition(catalog, {
+          handRatio: cell.handRatio,
+          propRatio: cell.propRatio,
+          handDirection: cell.hand,
+          propDirection: cell.prop,
+          version: version.version,
+          duplicate: index + 1,
+        })
+        const expected = createGeneratedThirdOrderAnimation(candidate.recipe)
+        if (JSON.stringify(actual) !== JSON.stringify(expected))
+          throw new Error('Compact Third Order recipe lost animation data')
+      }
     }
   return catalog
 }
@@ -134,12 +178,13 @@ import type { ThirdOrderDefinitionCatalog } from '../definitionCatalog'
 
 // prettier-ignore
 export const thirdOrderDefinitions = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   handRatios: ${JSON.stringify(catalog.handRatios)},
   propRatios: ${JSON.stringify(catalog.propRatios)},
   recipes: [
 ${catalog.recipes.map((recipe) => `    ${JSON.stringify(recipe)},`).join('\n')}
   ],
+  duplicateSets: ${JSON.stringify(catalog.duplicateSets)},
   versionSets: ${JSON.stringify(catalog.versionSets)},
   // One row per top timing; each left timing contributes AA, AS, SA, SS.
   cells: [

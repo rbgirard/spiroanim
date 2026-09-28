@@ -30,6 +30,7 @@
   --color-border: var(--palette-neutral-300);
   --color-modal-backdrop: rgb(3 5 8 / 78%);
   --color-thumbnail-background: rgb(0 0 0 / 25%);
+  --color-thumbnail-header-background: rgb(0 0 0 / 75%);
   --color-editor-toolbar-background: color-mix(
     in srgb,
     var(--palette-neutral-200) 87%,

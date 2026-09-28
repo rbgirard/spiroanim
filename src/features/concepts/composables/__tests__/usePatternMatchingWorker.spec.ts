@@ -17,6 +17,7 @@ interface FakeWorkerMessage {
     | 'matchVtg'
     | 'matchEightStep'
     | 'matchQst'
+    | 'matchThirdOrder'
     | 'compareVtgCandidateLayout'
     | 'createVtgPreviewCandidates'
   data: unknown
@@ -109,6 +110,7 @@ describe('usePatternMatchingWorker', () => {
     expect(FakeWorker.instances[0]!.source).toContain('PatternMatchingWorker')
 
     await expect(client.matchEightStep({ animation })).resolves.toEqual({ status: 'unmatched' })
+    await expect(client.matchThirdOrder?.({ animation })).resolves.toEqual({ status: 'unmatched' })
     expect(FakeWorker.instances).toHaveLength(1)
     expect(FakeWorker.instances[0]!.terminated).toBe(false)
 

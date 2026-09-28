@@ -6,6 +6,14 @@ import type { VtgPatternSelection } from '@/features/vtg/types'
 
 export type ThirdOrderVersion = 1 | 2
 
+/** Catalog identity only; detecting a match must never regenerate the player's animation. */
+export interface ThirdOrderPatternMatch extends ThirdOrderCell {
+  handDirection: ThirdOrderDirection
+  propDirection: ThirdOrderDirection
+  version: ThirdOrderVersion
+  duplicate: number
+}
+
 export type ThirdOrderDisplaySettings = Pick<
   VtgPatternSelection,
   | 'bpm'
@@ -25,4 +33,5 @@ export interface ThirdOrderPatternSelection extends ThirdOrderCell, ThirdOrderDi
   handDirection: ThirdOrderDirection
   propDirection: ThirdOrderDirection
   version: ThirdOrderVersion
+  duplicate?: number
 }

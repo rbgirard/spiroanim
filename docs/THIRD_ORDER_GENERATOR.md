@@ -6,7 +6,7 @@ Third Order controls, and URL codec. It does not start a browser. Regenerating t
 catalog updates the definitions consumed by the Concepts page.
 
 The app-ready output is `src/features/third-order/data/generatedDefinitions.ts`. It stores
-only timing axes, shared minimal VTG recipes, shared version lists, and small lookup indices.
+only timing axes, shared minimal VTG recipes, shared duplicate/version lists, and small lookup indices.
 It contains no URLs, animation frames, duplicate evidence, signatures, or analysis statistics.
 
 Developer-only outputs are retained outside TODO under `docs/generated/third-order/`:
@@ -24,21 +24,34 @@ each timing/direction cell, not stable identifiers across changes to the rules.
 
 ## Runtime format
 
-Schema 1 stores each distinct recipe once: VTG cell reference, variant/180/Swap/reversed-order
-switches when true, and Adjust. Timing comes from the selected matrix coordinates; warp direction
-comes from Hand. Fixed schema rules supply orientation 0, spacing 0, scales 0.5/1, and default full
+Schema 2 stores each distinct recipe once: VTG cell reference, variant/180/Swap/reversed-order
+switches when true, Adjust, and an optional rotation in degrees (omitted when zero). Timing comes
+from the selected matrix coordinates; warp direction comes from Hand. Fixed schema rules supply
+spacing 0, scales 0.5/1, and default full
 warp strength. Input scale assignment and output warp target are derived from reversed-order and
 Swap, so redundant driver/follower indices are not shipped.
 
-`versionSets` contains ordered recipe indices; array position plus one is Version. `cells` contains
+`duplicateSets` contains ordered recipe indices. Publication filters equivalents before writing the
+minimal catalog, keeping the small driver on the Left color and the full-size warped prop on the
+Right color. This uses final driver assignment after timing order and Swap, not the Swap flag alone:
+reversed timing plus Swap can still be retained. D: 1 stays the existing representative, followed by
+the retained candidates in deterministic generator order. For 1:1 / 1:1 Anti / Anti V1, original
+duplicates 1, 2, 7, and 8 become D: 1 through 4; original 3-6 are omitted.
+
+Discovery evidence remains unfiltered. To restore all equivalents, run
+`npm run generate:third-order -- --include-swapped-props`. The generator's compaction API exposes
+the same opt-in as `includeSwappedPropAssignments`; it defaults to false. There is no runtime UI filter.
+
+`versionSets` contains duplicate-set indices; array position plus one is Version. `cells` contains
 version-set indices in top-timing, left-timing, AA/AS/SA/SS order. Empty version lists support future
 unsupported combinations without changing the format.
 
-`definitionCatalog.ts` exposes version-count and recipe lookups, plus
+`definitionCatalog.ts` exposes version-count, duplicate-count, and recipe lookups, plus
 `createAnimationFromThirdOrderDefinition(catalog, request, current?, display?)`. Reconstruction uses VTG and
 Third Order directly, without importing the offline generator, query codec, or analysis code.
 It deliberately preserves the current generator's output without the Concepts page exceptions.
 The optional current animation preserves playback speed through VTG's normal generation path.
+Requests accept an optional one-based `duplicate` (default 1); invalid indices return no definition.
 Optional display settings apply the shared Customize controls without overriding catalog-owned
 timing, scale, Swap, orientation, or warp settings.
 
@@ -48,7 +61,7 @@ and 2. Compaction verifies this exception explicitly and fails for review if tho
 change. The expanded review/evidence still retains all four original results. The runtime catalog
 therefore contains 1,088 entries, while the full discovery evidence contains 1,090.
 
-Before writing, the generator reconstructs every representative using only the compact catalog
+Before writing, the generator reconstructs every published representative and duplicate using only the compact catalog
 and compares the complete animation data against the expanded recipe. Generation fails if a new
 rule would lose data during compaction; extend the schema intentionally in that case.
 
@@ -71,9 +84,20 @@ The **final ordered tooltip spins after Swap** determine the Hand/Prop category.
 separate from physical scale/warp roles: a driver can be at output index 1. Consumers must use
 the saved role indices, not assume the first physical prop is always the driver.
 
-Candidates are built at orientation 0. None of the recent Concepts page rotation, base-cell,
-version, or Adjust exceptions are imported. The exported reconstruction function rebuilds from
-the saved VTG selection, then applies Third Order to the recorded follower.
+Candidates are discovered and deduplicated at orientation 0. Afterwards, each candidate is
+rotated to match the small top-timing prop's outline to the actual top header. The offline solver
+compares the two rotating-vector phases, allows a different cycle starting point and traversal
+direction for outline comparison only, and chooses the smallest global rotation among equivalent
+orientations. It does not shift or reverse playback. Circular Spin 1:1 outlines are left unchanged;
+rotation cannot change their radii or turn a collapsed point into the header's circle.
+
+Both props receive the same rotation. Generation verifies preserved canonical identity, header
+orientation, and complete runtime reconstruction. Only the rotation angle enters the compact
+recipe; no search or phase-matching code runs in the app. Review links include the aligned rotation;
+equivalent-candidate evidence includes these aligned orientations too. For plane-reversed recipes,
+the source orientation has the opposite sign because VTG applies it before reversing the plane. No former UI rotation,
+base-cell, version, or Adjust exceptions are imported. Reconstruction rebuilds the saved VTG
+selection with its rotation, then applies Third Order to the recorded follower.
 
 ## Alignment and equivalence
 

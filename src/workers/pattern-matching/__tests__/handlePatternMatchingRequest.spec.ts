@@ -16,9 +16,35 @@ import {
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
+  matchThirdOrderPatternRequest,
 } from '@/workers/pattern-matching/handlePatternMatchingRequest'
+import { createThirdOrderAnimation } from '@/features/third-order/createThirdOrderAnimation'
+import { applyPatternInitialArcRotation } from '@/features/concepts/applyPatternFinalTransforms'
 
 describe('handlePatternMatchingRequest', () => {
+  it('recognizes Third Order without returning a replacement animation', async () => {
+    const preferred = {
+      handRatio: '1:2',
+      propRatio: '1:7',
+      handDirection: 'spin',
+      propDirection: 'anti',
+      version: 2,
+      duplicate: 1,
+    } as const
+    const animation = applyPatternInitialArcRotation(
+      createThirdOrderAnimation(undefined, { concept: 'to', ...preferred })!,
+      45,
+    )
+    const before = structuredClone(animation)
+    await expect(matchThirdOrderPatternRequest({ animation, preferred })).resolves.toEqual({
+      status: 'matched',
+      match: preferred,
+    })
+    expect(animation).toEqual(before)
+    await expect(
+      matchThirdOrderPatternRequest({ animation: { ...animation, props: [] } }),
+    ).resolves.toEqual({ status: 'unmatched' })
+  })
   it('generates a batch of final VTG preview candidates', async () => {
     const candidates = await createVtgPreviewCandidatesRequest({
       selections: [

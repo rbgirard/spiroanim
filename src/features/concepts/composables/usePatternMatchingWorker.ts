@@ -12,6 +12,7 @@ import type {
   VtgPatternMatchResult,
   VtgCandidateLayoutRequest,
   VtgPreviewCandidatesRequest,
+  ThirdOrderPatternMatchRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 const patternMatchingWorkerIdleMs = 30_000
@@ -46,6 +47,12 @@ const matchQstWithoutWorker = async (
   const { matchQstPatternRequest } =
     await import('@/workers/pattern-matching/handlePatternMatchingRequest')
   return matchQstPatternRequest(request)
+}
+
+const matchThirdOrderWithoutWorker = async (request: ThirdOrderPatternMatchRequest) => {
+  const { matchThirdOrderPatternRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return matchThirdOrderPatternRequest(request)
 }
 
 const compareVtgCandidateLayoutWithoutWorker = async (
@@ -138,6 +145,12 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
       () => matchQstWithoutWorker(request),
     )
 
+  const matchThirdOrder = (request: ThirdOrderPatternMatchRequest) =>
+    callWorker(
+      (activeChannel) => activeChannel.call('matchThirdOrder', request),
+      () => matchThirdOrderWithoutWorker(request),
+    )
+
   const compareVtgCandidateLayout = (request: VtgCandidateLayoutRequest) =>
     callWorker(
       (activeChannel) => activeChannel.call('compareVtgCandidateLayout', request),
@@ -176,6 +189,7 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
       matchVtg,
       matchEightStep,
       matchQst,
+      matchThirdOrder,
       compareVtgCandidateLayout,
       createVtgPreviewCandidates,
     },

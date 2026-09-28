@@ -16,7 +16,8 @@ try {
   const result = await generateThirdOrderDefinitions({ onProgress: console.log })
   const { compactThirdOrderDefinitions, serializeThirdOrderDefinitions } =
     await server.ssrLoadModule('/src/features/third-order/generator/compactDefinitions.ts')
-  const runtimeDefinitions = compactThirdOrderDefinitions(result)
+  const includeSwappedPropAssignments = process.argv.includes('--include-swapped-props')
+  const runtimeDefinitions = compactThirdOrderDefinitions(result, { includeSwappedPropAssignments })
   const runtimeSource = serializeThirdOrderDefinitions(runtimeDefinitions)
   const definitions = {
     ...result,
@@ -53,6 +54,12 @@ try {
     'Hand/Prop labels follow the final ordered VTG tooltip spin classifier AFTER Swap. Recipes separately retain physical driver/follower indices after Swap, so scale/warp roles are not confused with tooltip ordering.',
     '',
     'Alignment uses ideal head radius 0.5 in hand-radius units. Actual head models use 0.48 and may have a small visual gap. Static presentation spacing and colors do not distinguish patterns.',
+    '',
+    'After deduplication, every representative and duplicate rotates both props together so the small top-timing prop matches the top header outline. Only the rotation angle is stored in the runtime recipe. Circular outlines remain unchanged; review links include the rotation. Published duplicates retain their discovery order after filtering.',
+    '',
+    includeSwappedPropAssignments
+      ? 'Publication includes swapped prop assignments (--include-swapped-props).'
+      : 'Before writing the minimal catalog, publication excludes candidates whose small driver is on the Right color, keeping the full-size warped prop on the Right color. Discovery evidence remains unfiltered. Use --include-swapped-props to restore those alternatives.',
     '',
     'Equivalence preserves simultaneous hand positions and prop directions, allowing global rotation, turning the plane over, prop exchange, and any cycle starting point. Independent prop rotations and time reversal are not allowed.',
     '',

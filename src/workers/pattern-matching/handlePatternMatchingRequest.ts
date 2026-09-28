@@ -9,6 +9,20 @@ import type {
   VtgPreviewCandidatesRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type {
+  ThirdOrderPatternMatchRequest,
+  ThirdOrderPatternMatchResult,
+} from './PatternMatchingWorkerTypes'
+
+export const matchThirdOrderPatternRequest = async ({
+  animation,
+  preferred,
+}: ThirdOrderPatternMatchRequest): Promise<ThirdOrderPatternMatchResult> => {
+  const { findThirdOrderPatternMatch } =
+    await import('@/features/third-order/matchThirdOrderAnimation')
+  const match = findThirdOrderPatternMatch(animation, preferred)
+  return match ? { status: 'matched', match } : { status: 'unmatched' }
+}
 
 export const createVtgPreviewCandidatesRequest = async ({
   selections,

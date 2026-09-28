@@ -5,6 +5,8 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { usePlayerStore } from '@/stores/usePlayerStore'
+import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
+import { applyPatternInitialArcRotation } from '@/features/concepts/applyPatternFinalTransforms'
 
 const AnimPlayerStub = {
   props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
@@ -68,7 +70,7 @@ describe('SpiroAnim view', () => {
     })
   })
 
-  it('applies Third Order cells and customization to the player without matching', async () => {
+  it('applies Third Order cells and preserves edited player data when returning from VTG', async () => {
     const pinia = createPinia().use(piniaPluginPersistedstate)
     setActivePinia(pinia)
     const router = createRouter({
@@ -96,7 +98,7 @@ describe('SpiroAnim view', () => {
     expect(root.value.props[1]?.anim[0]?.warp).toBe(0)
     expect(root.value.props[1]?.anim[1]?.warp).toBe(-135)
     const firstVersion = root.value
-    await wrapper.get('[data-role="to-version"]').setValue('2')
+    await wrapper.get('[data-role="to-version"][value="2"]').setValue(true)
     await flushPromises()
     expect(root.value).not.toEqual(firstVersion)
     await wrapper.get('[data-role="to-customize-toggle"]').trigger('click')
@@ -104,21 +106,36 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(root.value.props[1]?.color).toBe(0)
     const anti = root.value
-    await wrapper.get('[data-role="to-hand"]').setValue('spin')
+    await wrapper.get('[data-role="to-hand"][value="spin"]').setValue(true)
     await wrapper.get('[data-role="to-cell"]').trigger('click')
     await flushPromises()
     expect(root.value).not.toEqual(anti)
     expect(root.value.props[1]?.color).toBe(0)
-    await wrapper.get('[data-role="to-prop"]').setValue('spin')
+    await wrapper.get('[data-role="to-prop"][value="spin"]').setValue(true)
     await flushPromises()
     expect(root.value.props.map((prop) => prop.anim[0]?.scale)).toEqual([50, 100])
     expect(root.value.props[0]?.anim[0]?.warp).toBeUndefined()
     expect(root.value.props[1]?.anim[0]?.warp).toBe(0)
-    await wrapper.get('[data-role="to-version"]').setValue('1')
+    await wrapper.get('[data-role="to-version"][value="1"]').setValue(true)
     await flushPromises()
     expect(root.value.props.map((prop) => prop.anim[0]?.scale)).toEqual([50, 100])
     expect(root.value.props[0]?.anim[0]?.warp).toBeUndefined()
     expect(root.value.props[1]?.anim[0]?.warp).toBe(180)
-    expect(wrapper.findAll('[data-role="to-version"] option')).toHaveLength(2)
+    expect(wrapper.findAll('[data-role="to-version"]')).toHaveLength(2)
+    useConceptsStore().selectedConcept = 'vtg'
+    await flushPromises()
+    const edited = applyPatternInitialArcRotation(root.value, 45)
+    edited.props[0]!.anim[0]!.scale = 83
+    root.value = edited
+    await vi.dynamicImportSettled()
+    await flushPromises()
+    const beforeReturn = structuredClone(root.value)
+    useConceptsStore().selectedConcept = 'to'
+    await vi.dynamicImportSettled()
+    await flushPromises()
+    expect(
+      wrapper.get('[data-role="to-cell"][aria-pressed="true"]').attributes('data-hand-ratio'),
+    ).toBe('1:1')
+    expect(root.value).toEqual(beforeReturn)
   })
 })

@@ -18,15 +18,19 @@ export interface ThirdOrderDefinitionRecipe {
   swapProps?: true
   reversed?: true
   adjust: number
+  /** Global source-pattern rotation in degrees; omitted means zero. */
+  rotation?: number
 }
 
-/** Schema 1 fixes orientation 0, scales 0.5/1, full warp strength, and Hand-owned warp direction. */
+/** Schema 2 fixes scales 0.5/1, full warp strength, and Hand-owned warp direction. */
 export interface ThirdOrderDefinitionCatalog {
-  schemaVersion: 1
+  schemaVersion: 2
   handRatios: readonly VtgIndividualSpeedRatio[]
   propRatios: readonly VtgIndividualSpeedRatio[]
   recipes: readonly ThirdOrderDefinitionRecipe[]
-  /** Each list contains recipe indices in one-based Version order. */
+  /** Recipe indices in one-based Duplicate order; the representative is always first. */
+  duplicateSets: readonly (readonly number[])[]
+  /** Each list contains duplicate-set indices in one-based Version order. */
   versionSets: readonly (readonly number[])[]
   /** Version-set indices, flattened by top timing, left timing, then AA/AS/SA/SS. */
   cells: readonly number[]
@@ -38,6 +42,7 @@ export interface ThirdOrderDefinitionRequest {
   handDirection: ThirdOrderDirection
   propDirection: ThirdOrderDirection
   version: number
+  duplicate?: number
 }
 
 const getVersionSet = (
@@ -62,10 +67,25 @@ export const getThirdOrderDefinitionRecipe = (
   catalog: ThirdOrderDefinitionCatalog,
   request: ThirdOrderDefinitionRequest,
 ): ThirdOrderDefinitionRecipe | undefined => {
-  if (!Number.isInteger(request.version) || request.version < 1) return undefined
-  const index = getVersionSet(catalog, request)[request.version - 1]
+  const duplicate = request.duplicate ?? 1
+  if (!Number.isInteger(duplicate) || duplicate < 1) return undefined
+  const index = getDuplicateSet(catalog, request)[duplicate - 1]
   return index === undefined ? undefined : catalog.recipes[index]
 }
+
+const getDuplicateSet = (
+  catalog: ThirdOrderDefinitionCatalog,
+  request: ThirdOrderDefinitionRequest,
+): readonly number[] => {
+  if (!Number.isInteger(request.version) || request.version < 1) return []
+  const index = getVersionSet(catalog, request)[request.version - 1]
+  return index === undefined ? [] : (catalog.duplicateSets[index] ?? [])
+}
+
+export const getThirdOrderDefinitionDuplicateCount = (
+  catalog: ThirdOrderDefinitionCatalog,
+  request: ThirdOrderDefinitionRequest,
+): number => getDuplicateSet(catalog, request).length
 
 /** Runtime reconstruction imports no generator, signatures, reports, or URL codec. */
 export const createAnimationFromThirdOrderDefinition = (
@@ -86,7 +106,7 @@ export const createAnimationFromThirdOrderDefinition = (
     speedRatio: recipe.reversed
       ? formatVtgSpeedRatio(request.propRatio, request.handRatio)
       : formatVtgSpeedRatio(request.handRatio, request.propRatio),
-    orientation: 0,
+    orientation: recipe.rotation ?? 0,
     bpm: display.bpm,
     thick: display.thick,
     spacing: display.spacing ?? 0,

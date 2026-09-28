@@ -27,6 +27,7 @@ import {
 } from './planarPattern'
 import type { CanonicalPattern, PlanarPattern } from './planarPattern'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { getThirdOrderHeaderAlignment } from './alignToHeader'
 
 export const thirdOrderAdjustAngles = [0, 45, 90, 135, 180, 225, 270, 315] as const
 // Restrict generation to the nine odd-row/odd-column VTG cells.
@@ -220,7 +221,48 @@ export const generateThirdOrderDefinitions = async (options: GeneratorOptions = 
             )
           groups.sort((a, b) => a[0]!.canonical.key.localeCompare(b[0]!.canonical.key, 'en'))
           for (const group of groups) {
-            const representative = group[0]!
+            const aligned = group.map((original): AcceptedCandidate => {
+              const alignment = getThirdOrderHeaderAlignment(
+                createGeneratedThirdOrderAnimation(original.recipe),
+                original.recipe.driverIndex,
+                handRatio,
+                hand,
+              )
+              const recipe: GeneratorRecipe = {
+                ...original.recipe,
+                // VTG applies orientation before turning the plane over, which reverses its sign.
+                selection: {
+                  ...original.recipe.selection,
+                  orientation:
+                    alignment.rotation * (original.recipe.selection.reversePlane ? -1 : 1),
+                },
+              }
+              const representative: AcceptedCandidate = {
+                ...original,
+                recipe,
+                canonical: canonicalizePlanarPattern(
+                  roleOrder(
+                    extractPlanarPattern(createGeneratedThirdOrderAnimation(recipe)),
+                    recipe.driverIndex,
+                  ),
+                ),
+              }
+              if (representative.canonical.key !== original.canonical.key)
+                throw new Error('Header rotation changed the Third Order pattern')
+              if (
+                Math.abs(
+                  getThirdOrderHeaderAlignment(
+                    createGeneratedThirdOrderAnimation(recipe),
+                    recipe.driverIndex,
+                    handRatio,
+                    hand,
+                  ).rotation,
+                ) > alignmentTolerance
+              )
+                throw new Error('Rotated Third Order pattern does not match its header')
+              return representative
+            })
+            const representative = aligned[0]!
             const query = codec.encodeQS(
               createGeneratedThirdOrderAnimation(representative.recipe),
               false,
@@ -228,7 +270,7 @@ export const generateThirdOrderDefinitions = async (options: GeneratorOptions = 
             versions.push({
               version: versions.length + 1,
               representative,
-              equivalentCandidates: group.slice(1),
+              equivalentCandidates: aligned.slice(1),
               query: new URLSearchParams(
                 Object.entries(query).map(([key, value]) => [key, String(value)]),
               ).toString(),
@@ -251,6 +293,8 @@ export const generateThirdOrderDefinitions = async (options: GeneratorOptions = 
       propRatios,
       adjustAngles: thirdOrderAdjustAngles,
       orientation: 0,
+      representativeOrientation:
+        'Every representative and duplicate aligns its small top-timing prop to the header outline after deduplication',
       scales: [0.5, 1],
       strength: 1,
       alignmentTolerance,

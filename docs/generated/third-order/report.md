@@ -10,6 +10,10 @@ Hand/Prop labels follow the final ordered VTG tooltip spin classifier AFTER Swap
 
 Alignment uses ideal head radius 0.5 in hand-radius units. Actual head models use 0.48 and may have a small visual gap. Static presentation spacing and colors do not distinguish patterns.
 
+After deduplication, every representative and duplicate rotates both props together so the small top-timing prop matches the top header outline. Only the rotation angle is stored in the runtime recipe. Circular outlines remain unchanged; review links include the rotation. Published duplicates retain their discovery order after filtering.
+
+Before writing the minimal catalog, publication excludes candidates whose small driver is on the Right color, keeping the full-size warped prop on the Right color. Discovery evidence remains unfiltered. Use --include-swapped-props to restore those alternatives.
+
 Equivalence preserves simultaneous hand positions and prop directions, allowing global rotation, turning the plane over, prop exchange, and any cycle starting point. Independent prop rotations and time reversal are not allowed.
 
 The analytic comparison handles uniform planar periodic motion. Unsupported shapes fail generation rather than being silently accepted. No finite-sample equivalence heuristic is used.
@@ -585,6 +589,6 @@ Counts are per timing cell and direction combination, not a global count across 
 | 2:5 | 2:11 | spin | anti | 2 |
 | 2:5 | 2:11 | spin | spin | 2 |
 
-Runtime definitions: src/features/third-order/data/generatedDefinitions.ts (2704 bytes, 12 shared recipes, 29 shared version lists). Every runtime recipe was checked against the complete generated animation before export.
+Runtime definitions: src/features/third-order/data/generatedDefinitions.ts (28654 bytes, 240 shared recipes, 206 shared version lists). Every runtime recipe was checked against the complete generated animation before export.
 
 Open review.html for playable links. catalog-review.json contains expanded recipes and URLs for review only; evidence.json retains all equivalent candidates and canonical transforms. Neither belongs in the app bundle. Version numbers are local to a cell and may change when rules change.

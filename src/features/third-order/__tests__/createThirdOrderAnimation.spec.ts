@@ -45,6 +45,18 @@ describe('Third Order catalog patterns', () => {
           const recipe = getThirdOrderDefinitionRecipe(thirdOrderDefinitions, request)!
           const inputDriver = recipe.reversed ? 1 : 0
           const driver = recipe.swapProps ? 1 - inputDriver : inputDriver
+          const preview = createThirdOrderPreviewAnimation(request)!
+          expect(preview.props.map((prop) => prop.anim)).toEqual(
+            pattern.props.map((prop) => prop.anim),
+          )
+          expect(preview.props[driver]).toMatchObject({
+            paths: false,
+            hands: false,
+            arms: false,
+            visible: false,
+          })
+          expect(preview.props[1 - driver]?.paths).toBe(true)
+          expect(pattern.props.every((prop) => prop.paths !== false)).toBe(true)
           expect(pattern.props).toHaveLength(2)
           for (const [index, prop] of pattern.props.entries()) {
             const frames = resolveAnimationFrames(prop.anim)

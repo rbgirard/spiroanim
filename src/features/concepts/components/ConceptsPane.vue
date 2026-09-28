@@ -100,6 +100,8 @@
       v-else-if="selectedConcept === 'to'"
       :animation="animation"
       :animation-ready="animationReady"
+      :animation-revision="animationRevision"
+      :pattern-matcher="patternMatcher"
       @pattern-select="emit('patternSelect', $event)"
       @customize="emit('customize', $event)"
     />
@@ -156,7 +158,6 @@ const conceptsStore = useConceptsStore()
 const { quickSlotCount, selectedConcept } = storeToRefs(conceptsStore)
 const usesPatternMatching = computed(
   () =>
-    selectedConcept.value !== 'to' &&
     selectedConcept.value !== 'tka' &&
     (!props.builderActive ||
       (selectedConcept.value === 'vtg' && props.builderMatchAnimation !== undefined)),
