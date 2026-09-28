@@ -276,6 +276,14 @@ export function useMainRoute() {
   watch(
     () => route.fullPath.split('?', 2)[1]?.split('#', 1)[0],
     (animationQuery) => {
+      // Opening Builder preserves the editing slot. After a load-only click clears it,
+      // matching the timeline's URL must not silently reattach that save target.
+      if (
+        isPaneHijacked.value &&
+        selectedConcept.value === 'vtg' &&
+        selectedQuickSlot.value === null
+      )
+        return
       if (animationQuery && new URLSearchParams(animationQuery).has('r')) {
         conceptsStore.selectQuickSlotForPath(`?${animationQuery}`)
       }

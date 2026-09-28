@@ -8,7 +8,7 @@ import {
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { isVtgSpeedRatio, vtgDefaultSpeedRatio, vtgPatternOrientations } from '@/features/vtg/types'
-import type { VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
+import type { VtgBeat, VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { PropInd } from '@/types/AnimTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { COLORS, PROPSR } from '@/domain/animation/AnimStruct'
@@ -112,6 +112,7 @@ export const useConceptsStore = defineStore(
     const vtgThirdOrderSettings = ref<VtgThirdOrderSettings>(propertyDefaults.thirdOrder.settings)
     const vtgThirdOrderMirror = ref(propertyDefaults.thirdOrder.mirror)
     const vtgThirdOrderOpposed = ref(propertyDefaults.thirdOrder.opposed)
+    const vtgPropertyInitialBeat = ref<VtgBeat>(1)
     const vtgFoldValues = ref<VtgFoldValues>(propertyDefaults.fold.values)
     const vtgFoldValuesMaterialized = ref(propertyDefaults.fold.valuesMaterialized)
     const vtgFoldMode = ref<VtgFoldMode>(propertyDefaults.fold.mode)
@@ -165,6 +166,7 @@ export const useConceptsStore = defineStore(
     }
 
     const getVtgPropertySettings = (): VtgPropertySettings => ({
+      initialBeat: vtgPropertyInitialBeat.value,
       twist: { mode: vtgTwistMode.value, values: vtgTwistValues.value },
       thirdOrder: {
         settings: vtgThirdOrderSettings.value,
@@ -195,7 +197,12 @@ export const useConceptsStore = defineStore(
     const getVtgPropertyCycleCount = (): 1 | 2 =>
       getVtgPropertySettingsCycleCount(getVtgPropertySettings())
 
-    const hydrateVtgPropertyControls = (animation: RootDataFinal, firstEditableFrameIndex = 0) => {
+    const hydrateVtgPropertyControls = (
+      animation: RootDataFinal,
+      firstEditableFrameIndex = 0,
+      initialBeat: VtgBeat = 1,
+    ) => {
+      vtgPropertyInitialBeat.value = initialBeat
       const twistValues = extractVtgTwistValues(animation, firstEditableFrameIndex)
       vtgTwistValues.value = twistValues
       vtgTwistMode.value = detectVtgTwistMode(twistValues)
@@ -246,6 +253,7 @@ export const useConceptsStore = defineStore(
       vtgThirdOrderSettings.value = defaults.thirdOrder.settings
       vtgThirdOrderMirror.value = defaults.thirdOrder.mirror
       vtgThirdOrderOpposed.value = defaults.thirdOrder.opposed
+      vtgPropertyInitialBeat.value = 1
       vtgFoldValues.value = defaults.fold.values
       vtgFoldValuesMaterialized.value = defaults.fold.valuesMaterialized
       vtgFoldMode.value = defaults.fold.mode

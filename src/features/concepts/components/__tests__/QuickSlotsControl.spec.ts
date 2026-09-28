@@ -7,6 +7,31 @@ import QuickSlotsControl from '@/features/concepts/components/QuickSlotsControl.
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 
 describe('QuickSlotsControl', () => {
+  it('loads saved slots repeatedly without selecting or saving in apply-only mode', async () => {
+    const store = useConceptsStore()
+    store.quickSlotPaths[1] = '/play-8stp?r=stored&v=6'
+    store.selectedQuickSlot = 1
+    const wrapper = mount(QuickSlotsControl, { props: { applyOnly: true } })
+    const button = wrapper.get('[data-role="quick-slot-2"] button')
+    await button.trigger('click')
+    await button.trigger('click')
+    expect(store.selectedQuickSlot).toBe(1)
+    expect(wrapper.findAll('input[type="radio"]')).toHaveLength(0)
+    expect(wrapper.get('[data-role="quick-slot-1"] button').attributes('disabled')).toBeDefined()
+    expect(wrapper.emitted('apply')).toEqual([
+      ['/play-8stp?r=stored&v=6'],
+      ['/play-8stp?r=stored&v=6'],
+    ])
+    expect(wrapper.emitted('save')).toBeUndefined()
+    expect(store.quickSlotPaths[1]).toBe('/play-8stp?r=stored&v=6')
+    store.quickSlotPaths[0] = '/play-vtg?r=current&v=6'
+    await nextTick()
+    await wrapper.get('[data-role="quick-slot-1"] button').trigger('click')
+    expect(store.selectedQuickSlot).toBeNull()
+    await button.trigger('click')
+    expect(store.selectedQuickSlot).toBeNull()
+    wrapper.unmount()
+  })
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())

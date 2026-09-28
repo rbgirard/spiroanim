@@ -153,13 +153,21 @@ export const usePropertiesStore = (id: string) => {
             for (let index = 0; index < times.length; index++) {
               const time = times[index]!
               if (time < START.value || time > END.value) continue
-              CAMERAS.value.push(ROOT.value.camera[index]!)
-              CCOMPDS.value.push(COMPILED.value.camera[index]!)
+              const camera = ROOT.value.camera[index]
+              const compiledCamera = COMPILED.value.camera[index]
+              if (!camera || !compiledCamera) continue
+              CAMERAS.value.push(camera)
+              CCOMPDS.value.push(compiledCamera)
               CAMERA_IDENT.value.push(index)
             }
           }
 
           for (let i = 0; pFRAMES.value !== 'camera' && i < propTimes.length; i++) {
+            // A selection refresh can run before ROOT's queued recompilation after deletion.
+            // Old timing indices must not dereference removed props or publish missing frames.
+            const prop = ROOT.value.props[i]
+            const compiledProp = COMPILED.value.props[i]
+            if (!prop || !compiledProp) continue
             const pt = propTimes[i]!
             let add = false
             if (
@@ -175,11 +183,17 @@ export const usePropertiesStore = (id: string) => {
                 add = true
                 if (pSELECTED.value[i]) {
                   if (pFRAMES.value === 'animation') {
-                    ANIMS.value.push(ROOT.value.props[i]!.anim[j]!)
-                    CMPDS.value.push(COMPILED.value.props[i]!.anim[j]!)
+                    const frame = prop.anim[j]
+                    const compiledFrame = compiledProp.anim[j]
+                    if (!frame || !compiledFrame) continue
+                    ANIMS.value.push(frame)
+                    CMPDS.value.push(compiledFrame)
                   } else {
-                    MOTIONS.value.push(ROOT.value.props[i]!.motion[j]!)
-                    MCOMPDS.value.push(COMPILED.value.props[i]!.motion[j]!)
+                    const frame = prop.motion[j]
+                    const compiledFrame = compiledProp.motion[j]
+                    if (!frame || !compiledFrame) continue
+                    MOTIONS.value.push(frame)
+                    MCOMPDS.value.push(compiledFrame)
                   }
                   IDENT.value.push({
                     prop: i,
@@ -190,7 +204,7 @@ export const usePropertiesStore = (id: string) => {
             }
             if (add || EINDEX.value == 0) {
               ACTIVE.value.push(i)
-              if (pSELECTED.value[i]) PROPS.value.push(ROOT.value.props[i]!)
+              if (pSELECTED.value[i]) PROPS.value.push(prop)
             }
           }
           for (const i in pSELECTED.value)

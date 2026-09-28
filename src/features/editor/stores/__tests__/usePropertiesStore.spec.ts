@@ -78,6 +78,19 @@ describe('usePropertiesStore', () => {
     ])
   })
 
+  it('clears properties when the last prop is deleted before a queued properties refresh', async () => {
+    const { player, properties } = await createPopulatedStore('delete-last-prop')
+    // Builder selection changes can queue this watcher before ROOT's compilation watcher.
+    properties.pBOUND = false
+    player.raw().ROOT.value = { ...player.raw().ROOT.value, props: [] }
+    await nextTick()
+    expect(properties.ANIMS).toEqual([])
+    expect(properties.CMPDS).toEqual([])
+    expect(properties.IDENT).toEqual([])
+    expect(properties.PROPS).toEqual([])
+    expect(properties.ACTIVE).toEqual([])
+  })
+
   it('updates the selected animation through the editor composable', async () => {
     const { player } = await createPopulatedStore('editor-update')
     const editor = useProperties('editor-update')

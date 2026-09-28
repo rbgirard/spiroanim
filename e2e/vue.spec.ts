@@ -2,6 +2,155 @@ import { test, expect, devices } from '@playwright/test'
 
 const expectedCleanupMessages = new Set(['WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost'])
 
+test('shifts Third Order with Beats, including after reloading a shifted URL', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto(
+    '/play-vtg?r=Ew48uk11Y&p0=Q__.blE.5JE_98.......&x0=PW&m0=_1_mxqv__&p1=N__.blE.5JE-Rs.......&x1=QI__MUf_.____Oif_&c=_k_bhq&v=12&vs=m:100',
+  )
+  const grid = page.locator('[data-role="vtg-pane"]')
+  await expect(grid).toHaveAttribute('data-selected-cell', /^[1-6]-[1-6]$/)
+  await page
+    .locator('label')
+    .filter({ has: page.locator('[data-role="vtg-advanced"]') })
+    .click()
+  const beat = page.getByRole('slider', { name: 'Starting beat', exact: true })
+  // Load the app's codec/compiler inside Vite's browser boundary, not the separate Node E2E project.
+  const alignmentError = () =>
+    page.evaluate<number>(`(async () => {
+      const versionsPath = '/src/services/query/versions/index.ts'
+      const basePath = '/src/services/query/createBaseQS.ts'
+      const codecPath = '/src/composables/useSpiroAnimQS.ts'
+      const compilerPath = '/src/math/animation/AnimFunc.ts'
+      const versions = await import(versionsPath)
+      const base = await import(basePath)
+      const codecs = await import(codecPath)
+      const compiler = await import(compilerPath)
+      const version = await versions.loadSpiroAnimQSVersion(12)
+      const codec = await codecs.useSpiroAnimQS(
+        version.VDEF,
+        base.useBaseQS(version.VDEF, { charset: version.CHARSET }),
+        12,
+      )
+      const animation = codec.decodeQS(Object.fromEntries(new URLSearchParams(location.search)))
+      const compiled = compiler.rootCompile(animation)
+      return Math.max(
+        ...compiled.props[0].anim.flatMap((frame, index) =>
+          frame.rot.map((value, axis) =>
+            Math.abs(value - compiled.props[1].anim[index].warpPos[axis]),
+          ),
+        ),
+      )
+    })()`)
+  await expect.poll(alignmentError).toBeLessThan(1e-6)
+  const originalUrl = page.url()
+  await beat.fill('1.5')
+  await expect(beat).toHaveValue('1.5')
+  await expect.poll(() => page.url()).not.toBe(originalUrl)
+  await expect.poll(alignmentError).toBeLessThan(1e-6)
+  await page.locator('[data-role="vtg-property-third-order-toggle"]').click()
+  const shiftedUrl = page.url()
+  await page.getByRole('slider', { name: 'Right Third Order Strength', exact: true }).fill('90')
+  await expect.poll(() => page.url()).not.toBe(shiftedUrl)
+  await expect.poll(alignmentError).toBeLessThan(1e-6)
+  await page.reload()
+  await expect(grid).toHaveAttribute('data-selected-cell', /^[1-6]-[1-6]$/)
+  const reloadedUrl = page.url()
+  await beat.fill('2')
+  await expect(beat).toHaveValue('2')
+  await expect.poll(() => page.url()).not.toBe(reloadedUrl)
+  await expect.poll(alignmentError).toBeLessThan(1e-6)
+  const secondUrl = page.url()
+  await beat.fill('1')
+  await expect.poll(() => page.url()).not.toBe(secondUrl)
+  await expect.poll(alignmentError).toBeLessThan(1e-6)
+  expect(errors).toEqual([])
+})
+
+test('deletes the last Builder portion without stale property errors', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('console', (message) => {
+    if (message.text().includes('Unhandled error')) errors.push(message.text())
+  })
+  await page.goto(
+    '/play-vtg?r=Ew48uk11Y&p0=Q__.05E.5JE_98.......&x0=QI&m0=_1_mxqv__&p1=N__.05E.5JE-Rs.......&x1=QI__MUf_.____Oif_&c=_k_bhq&v=12&vs=m:100',
+  )
+  await expect(page.locator('[data-role="vtg-pane"]')).toHaveAttribute(
+    'data-selected-cell',
+    /^[1-6]-[1-6]$/,
+  )
+  await page
+    .locator('label')
+    .filter({ has: page.locator('[data-role="vtg-pattern-builder"]') })
+    .click()
+  await page.getByRole('button', { name: 'Preview pattern 1', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete pattern 1', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Preview pattern 1', exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-role="vtg-transition-preview-drop-target"]')).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+test('borrows Quick Slots into VTG without inserting into Pattern Builder', async ({ page }) => {
+  await page.goto('/play-vtg')
+  const grid = page.locator('[data-role="vtg-pane"]')
+  await expect(grid).toHaveAttribute('data-selected-cell', /^[1-6]-[1-6]$/)
+  await page.getByRole('button', { name: 'Create four Quick Slots' }).click()
+  await page.locator('[data-cell-reference="3-3"]').click()
+  const slot = page.locator('[data-role="quick-slot-1"]')
+  await expect(slot.locator('[data-role="quick-slot-saved-indicator"]')).toHaveCount(1)
+  const otherSlot = page.locator('[data-role="quick-slot-2"]')
+  await otherSlot.click()
+  await page.locator('[data-cell-reference="1-1"]').click()
+  await slot.click()
+  await expect(grid).toHaveAttribute('data-selected-cell', '3-3')
+  await page
+    .locator('label')
+    .filter({ has: page.locator('[data-role="vtg-pattern-builder"]') })
+    .click()
+  await expect(page.locator('[data-role="builder-pane-view"]')).toBeVisible()
+  await expect(slot.getByRole('button')).toHaveAttribute('aria-pressed', 'true')
+  const originalUrl = page.url()
+  const readSlots = () =>
+    page.evaluate(() => {
+      const state: { quickSlotPaths: (string | null)[]; selectedQuickSlot: number | null } =
+        JSON.parse(localStorage.getItem('sa-concepts') ?? '{}')
+      return { paths: state.quickSlotPaths, selected: state.selectedQuickSlot }
+    })
+  const savedSlots = (await readSlots()).paths
+  await otherSlot.getByRole('button').click()
+  await expect(grid).toHaveAttribute('data-selected-cell', '1-1')
+  await expect(slot.getByRole('button')).toHaveAttribute('aria-pressed', 'true')
+  await expect(otherSlot.getByRole('button')).toHaveAttribute('aria-pressed', 'false')
+  expect(await readSlots()).toEqual({ paths: savedSlots, selected: 1 })
+  for (const selectTarget of [
+    () => Promise.resolve(),
+    () => page.getByRole('button', { name: 'Preview pattern 1', exact: true }).click(),
+    () => page.locator('[data-role="vtg-transition-preview-drop-target"]').click(),
+  ]) {
+    await selectTarget()
+    const selected = await page
+      .locator('.vtg-transition-previews__item--selected')
+      .evaluateAll((items) => items.map((item) => item.getAttribute('data-preview-index')))
+    await slot.getByRole('button').click()
+    await expect(slot.getByRole('button')).toHaveAttribute('aria-pressed', 'false')
+    await expect(grid).toHaveAttribute('data-selected-cell', /^[1-6]-[1-6]$/)
+    await expect(page.getByRole('button', { name: 'Preview pattern 1', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Preview pattern 2', exact: true })).toHaveCount(
+      0,
+    )
+    expect(page.url()).toBe(originalUrl)
+    expect(
+      await page
+        .locator('.vtg-transition-previews__item--selected')
+        .evaluateAll((items) => items.map((item) => item.getAttribute('data-preview-index'))),
+    ).toEqual(selected)
+    const state = await readSlots()
+    expect(state.selected).toBeNull()
+    expect(state.paths).toEqual(savedSlots)
+  }
+})
+
 test('keeps QST Customize in view while changing settings on a touch viewport', async ({
   browser,
 }) => {

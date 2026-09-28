@@ -17,8 +17,11 @@ import {
   type VtgThirdOrderSettings,
 } from '@/features/vtg/thirdOrder'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type { VtgBeat } from '@/features/vtg/types'
 
 export interface VtgPropertySettings {
+  /** Beat at which hydrated property values were authored; runtime-only, not URL metadata. */
+  initialBeat?: VtgBeat
   twist: {
     mode: VtgTwistMode
     values: VtgTwistValues
@@ -59,6 +62,7 @@ export const createDefaultVtgPropertySettings = (): VtgPropertySettings => ({
 
 /** Creates a stable plain-data snapshot suitable for worker messages and deferred operations. */
 export const cloneVtgPropertySettings = (settings: VtgPropertySettings): VtgPropertySettings => ({
+  ...(settings.initialBeat === undefined ? {} : { initialBeat: settings.initialBeat }),
   twist: {
     mode: settings.twist.mode,
     values: settings.twist.values.map((side) => ({ ...side })) as VtgTwistValues,

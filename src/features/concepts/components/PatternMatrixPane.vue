@@ -1837,7 +1837,11 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   if (evaluateAutoBuilderOpen) markAutoBuilderOpenEvaluated(animation)
   if (result.status === 'unchanged') {
     if (!props.builderActive) {
-      conceptsStore.hydrateVtgPropertyControls(applyVtgSwap(animation, swapProps.value))
+      conceptsStore.hydrateVtgPropertyControls(
+        applyVtgSwap(animation, swapProps.value),
+        0,
+        beat.value,
+      )
     }
     previewsReady.value = true
     return
@@ -1868,7 +1872,11 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     isAnti.value = controls.isAnti ?? false
     swapProps.value = controls.swapProps === true
     if (!props.builderActive) {
-      conceptsStore.hydrateVtgPropertyControls(applyVtgSwap(animation, swapProps.value))
+      conceptsStore.hydrateVtgPropertyControls(
+        applyVtgSwap(animation, swapProps.value),
+        0,
+        controls.beat ?? 1,
+      )
     }
     reversePlane.value = controls.reversePlane === true
     beat.value = controls.beat ?? 1
@@ -2003,6 +2011,26 @@ const syncPatternControls = () => {
   previewsReady.value = false
   void hydratePatternControls(animation)
 }
+
+// Internally generated updates intentionally skip catalog matching. Still capture their shifted
+// property values, just as Scale does, so a subsequent edit cannot restore the previous start.
+watch(
+  [() => props.animation, () => props.animationRevision],
+  ([animation, revision], [, previousRevision]) => {
+    if (
+      !animation ||
+      props.builderActive ||
+      revision === undefined ||
+      revision !== previousRevision
+    )
+      return
+    conceptsStore.hydrateVtgPropertyControls(
+      applyVtgSwap(animation, swapProps.value),
+      0,
+      beat.value,
+    )
+  },
+)
 
 watch(
   [

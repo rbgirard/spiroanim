@@ -17,7 +17,10 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
-import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
+import {
+  shiftVtgStartingBeat,
+  shiftVtgStartingFrames,
+} from '@/features/vtg/math/shiftVtgStartingBeat'
 import {
   applyVtgInitialTurnsPlayback,
   withVtgInitialTurnsOffsetBeat,
@@ -46,6 +49,15 @@ export interface CreateVtgAnimationOptions {
   minimumCycleCount?: 1 | 2
   properties?: VtgPropertySettings
 }
+
+/** Hydrated properties describe the matched start, not necessarily catalog beat 1. */
+export const getVtgPropertyAuthoringBeat = (
+  selection: VtgPatternSelection,
+  options: CreateVtgAnimationOptions,
+) =>
+  options.properties || selection.scaleSettings
+    ? (options.properties?.initialBeat ?? selection.initialTurnsOffsetBeat ?? vtgDefaultBeat)
+    : (selection.beat ?? vtgDefaultBeat)
 
 export const applyVtgPropRotationOffsets = (
   animation: RootDataFinal,
@@ -162,6 +174,18 @@ export const createVtgAnimation = (
   selection: VtgPatternSelection,
   options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
+  const authoringBeat = getVtgPropertyAuthoringBeat(selection, options)
+  const requestedBeat = selection.beat ?? vtgDefaultBeat
+  if (requestedBeat !== authoringBeat) {
+    const configured = createVtgAnimation(current, { ...selection, beat: authoringBeat }, options)
+    return (
+      configured &&
+      shiftVtgStartingFrames(configured, (requestedBeat - authoringBeat) * 2, {
+        allowEndpointMismatch: true,
+        preserveFinalOutgoing: true,
+      })
+    )
+  }
   const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
 

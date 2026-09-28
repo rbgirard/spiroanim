@@ -17,6 +17,7 @@
 
     <QuickSlotsControl
       v-if="quickSlotCount > 0"
+      :apply-only="builderActive && selectedConcept === 'vtg'"
       @apply="emit('quickSlotApply', $event)"
       @save="emit('quickSlotSave', $event)"
     />
@@ -166,7 +167,8 @@ const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 
 const createQuickSlots = () => {
   conceptsStore.restoreQuickSlots()
-  conceptsStore.selectedQuickSlot = 1
+  conceptsStore.selectedQuickSlot =
+    props.builderActive && selectedConcept.value === 'vtg' ? null : 1
 }
 
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()

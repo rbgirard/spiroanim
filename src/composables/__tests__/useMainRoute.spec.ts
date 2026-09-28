@@ -309,6 +309,38 @@ describe('useMainRoute', () => {
     expect(conceptsStore.selectedQuickSlot).toBeNull()
   })
 
+  it('keeps editing the current Quick Slot on Builder entry, but does not reselect a borrowed slot', async () => {
+    const animation = createLoadedAnimation()
+    const { router, paneStore, conceptsStore, playerStore } = await mountRoute(
+      '/play-vtg',
+      animation,
+    )
+    await flushPromises()
+    const query = useQSMainStore().encodeQS(animation, false)
+    const saved = router.resolve({ path: '/play-vtg', query }).fullPath
+    conceptsStore.restoreQuickSlots()
+    conceptsStore.quickSlotPaths[0] = saved
+    conceptsStore.selectedQuickSlot = 1
+    paneStore.setViewInPane('concepts', 'right')
+    expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+    await flushPromises()
+    expect(conceptsStore.selectedQuickSlot).toBe(1)
+    playerStore.raw().ROOT.value = { ...animation, bpm: animation.bpm + 1 }
+    await flushPromises()
+    expect(conceptsStore.selectedQuickSlot).toBe(1)
+    expect(conceptsStore.quickSlotPaths[0]).not.toBe(saved)
+    const editedPath = conceptsStore.quickSlotPaths[0]
+    // Clicking a slot for preview clears the editing target, not opening Builder itself.
+    conceptsStore.selectedQuickSlot = null
+    expect(conceptsStore.selectedQuickSlot).toBeNull()
+    await router.replace({ path: '/play-vtg', query })
+    await flushPromises()
+    expect(conceptsStore.selectedQuickSlot).toBeNull()
+    playerStore.raw().ROOT.value = { ...animation, bpm: animation.bpm + 2 }
+    await flushPromises()
+    expect(conceptsStore.quickSlotPaths[0]).toBe(editedPath)
+  })
+
   it('does not rewrite a selected Quick Slot when only the pane route changes', async () => {
     const animation = createLoadedAnimation()
     const { conceptsStore, playerStore, router } = await mountRoute('/play-time', animation)

@@ -251,6 +251,13 @@ producing the alternate face-on presentation with the opposite travel direction.
 Previews and compiled-geometry matching use the same order.
 
 VTG and QTR apply Offset, Scale, Fold, Twist, and Third Order before the final Swap.
+When properties or manual Scale are present, Beats reconstructs the pattern at its property
+authoring beat, applies the complete configuration, and then uses the editor's shared Shift
+reconstruction to move to the requested beat. This transports every property with the path,
+including Third Order's initial warp, rather than reapplying properties after shifting the base.
+As in editor Shift, non-closing property combinations are supported and final outgoing values
+are retained. Hydrated controls remember their matched authoring beat in runtime state, preventing
+a saved shifted URL from receiving the same offset twice; no URL format change is required.
 Swap assigns the opposite prop (including its color and visibility) to each complete path;
 the path geometry, spacing motion, and transition choice remain unchanged. Left/Right property
 controls continue to refer to the original authored paths, and toggling Swap never exchanges

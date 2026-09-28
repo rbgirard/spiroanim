@@ -1118,6 +1118,112 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
+  it.each([undefined, 0, 1])(
+    'borrows a Quick Slot in Builder at target %s without switching or saving it',
+    async (targetIndex) => {
+      const pinia = createViewTestPinia()
+      setActivePinia(pinia)
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+      })
+      await router.push('/play-vtg')
+      await router.isReady()
+      const playerStore = usePlayerStore('main')
+      const playerRoot = playerStore.raw().ROOT
+      playerRoot.value = createVtgAnimation(playerRoot.value, {
+        reference: '1-1',
+        speedRatio: '1:3',
+      })!
+      const target = createVtgAnimation(playerRoot.value, {
+        reference: '3-3',
+        speedRatio: '1:3',
+        isAnti: true,
+      })!
+      const qsStore = useQSMainStore()
+      const path = router.resolve({
+        path: '/time-8stp',
+        query: qsStore.encodeQS(target, false),
+      }).fullPath
+      setActivePinia(pinia)
+      const conceptsStore = useConceptsStore(pinia)
+      conceptsStore.restoreQuickSlots()
+      conceptsStore.quickSlotPaths[1] = path
+      const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+      const wrapper = mount(SpiroAnim, {
+        attachTo: document.body,
+        global: {
+          plugins: [pinia, router],
+          stubs: { Player: AnimPlayerStub, AnimTimeline: AnimTimelineStub },
+        },
+      })
+      await flushPromises()
+      const paneStore = useMainPaneStore()
+      paneStore.exitPaneHijack()
+      await flushPromises()
+      paneStore.setViewInPane('concepts', 'right')
+      conceptsStore.selectedQuickSlot = 2
+      expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+      await flushPromises()
+      expect(conceptsStore.selectedQuickSlot).toBe(2)
+      expect(wrapper.get('[data-role="quick-slot-2"] button').attributes('aria-pressed')).toBe(
+        'true',
+      )
+      if (targetIndex !== undefined) {
+        await wrapper
+          .get(
+            targetIndex === 0
+              ? 'button[aria-label="Preview pattern 1"]'
+              : '[data-role="vtg-transition-preview-drop-target"]',
+          )
+          .trigger('click')
+        await flushPromises()
+      }
+      const before = structuredClone(toRaw(playerRoot.value))
+      const layout = structuredClone(toRaw(paneStore.parents))
+      conceptsStore.quickSlotPaths[2] = path
+      await nextTick()
+      const storedPaths = [...conceptsStore.quickSlotPaths]
+      await wrapper.get('[data-role="quick-slot-3"] button').trigger('click')
+      await vi.waitFor(() => expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true))
+      await flushPromises()
+      expect(conceptsStore.selectedQuickSlot).toBe(2)
+      expect(wrapper.get('[data-role="quick-slot-2"] button').attributes('aria-pressed')).toBe(
+        'true',
+      )
+      expect(conceptsStore.quickSlotPaths).toEqual(storedPaths)
+      await wrapper.get('[data-role="quick-slot-2"] button').trigger('click')
+      await vi.waitFor(() => {
+        expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toMatch(
+          /^[1-6]-[1-6]$/,
+        )
+        expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+      })
+      await flushPromises()
+      expect(conceptsStore.selectedConcept).toBe('vtg')
+      expect(paneStore.isPaneHijacked).toBe(true)
+      expect(paneStore.parents).toEqual(layout)
+      expect(conceptsStore.selectedQuickSlot).toBeNull()
+      expect(conceptsStore.quickSlotPaths).toEqual(storedPaths)
+      expect(playerRoot.value).toEqual(before)
+      expect(
+        wrapper
+          .findAll('.vtg-transition-previews__item--selected')
+          .map((item) => item.attributes('data-preview-index')),
+      ).toEqual(targetIndex === undefined ? [] : [String(targetIndex)])
+      // A second activation still previews; it never toggles a slot into save mode.
+      await wrapper.get('[data-role="quick-slot-2"] button').trigger('click')
+      await flushPromises()
+      expect(conceptsStore.selectedQuickSlot).toBeNull()
+      expect(conceptsStore.quickSlotPaths).toEqual(storedPaths)
+      expect(playerRoot.value).toEqual(before)
+      playerRoot.value = before
+      paneStore.exitPaneHijack()
+      wrapper.unmount()
+    },
+    15000,
+  )
+
   it('applies a stored Quick Slot without changing the pane layout', async () => {
     const pinia = createViewTestPinia()
     setActivePinia(pinia)

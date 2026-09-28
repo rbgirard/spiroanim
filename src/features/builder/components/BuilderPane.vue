@@ -343,6 +343,8 @@ import { resolveVtgBuilderPatternMatchAnimation } from '@/features/builder/resol
 import { usePatternPropertyControls } from '@/features/concepts/composables/usePatternPropertyControls'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { materializeVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
+import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
+import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 
 const props = withDefaults(
   defineProps<{
@@ -809,6 +811,48 @@ const acceptPatternDrop = (drop: BuilderPatternDrop) => {
     emit('previewSelectionChange', nextSelectedIndex)
   }
 }
+let quickSlotLoadVersion = 0
+watch(
+  [ROOT, selectedPreviewIndex],
+  () => {
+    quickSlotLoadVersion++
+  },
+  { flush: 'sync' },
+)
+onBeforeUnmount(() => {
+  quickSlotLoadVersion++
+})
+
+const loadQuickSlotAnimation = async (animation: RootDataFinal) => {
+  if (!structureEditingEnabled.value) return
+  const version = ++quickSlotLoadVersion
+  const targetIndex = selectedPreviewIndex.value
+  const result = await patternMatcher.matchVtg({
+    animation: stripVtgPropertySettings(animation),
+    preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+  })
+  if (version !== quickSlotLoadVersion || !structureEditingEnabled.value) return
+  conceptsStore.hydrateVtgPropertyControls(animation)
+  const preview =
+    targetIndex !== undefined && result.status === 'matched'
+      ? (createVtgBuilderDropPreview(ROOT.value, result.match, targetIndex, {
+          minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+          properties: conceptsStore.getVtgPropertySettings(),
+        }) ?? animation)
+      : animation
+  playerStore.startPlaybackPreview(
+    toVtgBuilderDisplayAnimation(preview, undefined, {
+      maximumScale: Math.max(
+        getVtgBuilderMaximumScale(ROOT.value),
+        getVtgBuilderMaximumScale(preview),
+      ),
+    }),
+  )
+  // Hydrate VTG from the borrowed pattern without changing the Builder timeline or selection.
+  emit('patternMatchAnimationChange', animation)
+}
+defineExpose({ loadQuickSlotAnimation })
+
 const updatePreviewBeatCount = (index: number, beatCount: number) => {
   const updated = resizeVtgTransitionPatternPreview(preparedPattern.value.pattern, index, beatCount)
   if (updated !== undefined) applyBuilderPatternUpdate(updated, undefined, true)

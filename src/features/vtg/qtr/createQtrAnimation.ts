@@ -1,6 +1,7 @@
 import {
   applyVtgPlaybackControls,
   finalizeVtgAnimation,
+  getVtgPropertyAuthoringBeat,
   type CreateVtgAnimationOptions,
   createDefaultVtgAnimation,
   createVtgAnimation,
@@ -10,6 +11,7 @@ import type { QtrMode, QtrPatternSelection } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { withVtgInitialTurnsOffsetBeat } from '@/features/vtg/math/applyVtgInitialTurnsOffset'
+import { shiftVtgStartingFrames } from '@/features/vtg/math/shiftVtgStartingBeat'
 
 const normalizeArc = (arc: number): number => ((arc % 360) + 360) % 360
 const propIndices = [0, 1] as const
@@ -100,6 +102,18 @@ export const createQtrAnimation = (
   selection: QtrPatternSelection,
   options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
+  const authoringBeat = getVtgPropertyAuthoringBeat(selection, options)
+  const requestedBeat = selection.beat ?? 1
+  if (requestedBeat !== authoringBeat) {
+    const configured = createQtrAnimation(current, { ...selection, beat: authoringBeat }, options)
+    return (
+      configured &&
+      shiftVtgStartingFrames(configured, (requestedBeat - authoringBeat) * 2, {
+        allowEndpointMismatch: true,
+        preserveFinalOutgoing: true,
+      })
+    )
+  }
   const animation = createVtgAnimation(
     current,
     {
@@ -124,6 +138,18 @@ export const createDefaultQtrAnimation = (
   selection: QtrPatternSelection,
   options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
+  const authoringBeat = getVtgPropertyAuthoringBeat(selection, options)
+  const requestedBeat = selection.beat ?? 1
+  if (requestedBeat !== authoringBeat) {
+    const configured = createDefaultQtrAnimation({ ...selection, beat: authoringBeat }, options)
+    return (
+      configured &&
+      shiftVtgStartingFrames(configured, (requestedBeat - authoringBeat) * 2, {
+        allowEndpointMismatch: true,
+        preserveFinalOutgoing: true,
+      })
+    )
+  }
   const base = createDefaultQtrBaseAnimation(selection, options)
   if (!base) return undefined
 
