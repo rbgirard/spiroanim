@@ -13,6 +13,8 @@ same animation-data transform as VTG. Preview presentation follows the other con
 Clicking a header preserves the opposite coordinate of the selected cell. With no selection,
 the opposite coordinate is chosen randomly. The corner shuffle button selects any of the 136
 cells. Selection, direction, and Version state are local to the page.
+The selected cell has an orange border and inset outline, distinct from its blue/cyan row and
+column highlights. Its thumbnail background stays unchanged.
 
 Headers show their Hand/Prop timing and Anti/Spin direction in shared VTG-style pattern tooltips.
 Cell tooltips show both timings/directions and the selected Version. They support hover, keyboard
@@ -22,7 +24,7 @@ tooltips. Opening a tooltip does not change selection; tapping a tile still sele
 All four Hand / Prop combinations have two versions at every timing pair (1,088 entries).
 Cells use only `data/generatedDefinitions.ts`, the compact output of the offline
 [definition generator](THIRD_ORDER_GENERATOR.md). No generation searches, URLs, or review evidence
-are imported by the page. In the 1:1 / 1:1 Spin / Spin case, the reviewed #3 and #4 are published
+are imported by the page. In the 1:1 / 1:1 Spin / Spin case, the reviewed #1 and #4 are published
 as Versions 1 and 2; the other two discoveries remain in the offline review evidence.
 
 The catalog supplies the VTG reference, variant, timing order, Swap, plane reversal, and Adjust.

@@ -49,7 +49,7 @@ describe('compact Third Order definitions', () => {
     )
   })
 
-  it('publishes reviewed Spin / Spin versions 3 and 4 as versions 1 and 2', () => {
+  it('publishes reviewed Spin / Spin versions 1 and 4 as versions 1 and 2', () => {
     const cell = source.cells.find(
       (cell) =>
         cell.handRatio === '1:1' &&
@@ -59,10 +59,21 @@ describe('compact Third Order definitions', () => {
     )!
     expect(cell.versions).toHaveLength(4)
     const published = getPublishedThirdOrderVersions(cell)
-    expect(published.map((version) => version.representative)).toEqual(
-      cell.versions.slice(2).map((version) => version.representative),
-    )
+    expect(published.map((version) => version.representative)).toEqual([
+      cell.versions[0]!.representative,
+      cell.versions[3]!.representative,
+    ])
     expect(published.map((version) => version.version)).toEqual([1, 2])
+    expect(
+      published.map(({ representative: { recipe } }) => ({
+        reference: recipe.selection.reference,
+        adjust: recipe.thirdOrder.initial,
+        timingOrder: recipe.timingOrder,
+      })),
+    ).toEqual([
+      { reference: '3-3', adjust: 180, timingOrder: 'direct' },
+      { reference: '1-1', adjust: 0, timingOrder: 'direct' },
+    ])
     expect(
       getThirdOrderDefinitionVersionCount(thirdOrderDefinitions, {
         handRatio: '1:1',

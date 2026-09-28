@@ -15,7 +15,7 @@ interface DefinitionSource {
   cells: readonly GeneratedCell[]
 }
 
-/** Keep the reviewed #3/#4 pair for the one four-result cell, published as Versions 1/2. */
+/** Keep the reviewed #1/#4 pair for the one four-result cell, published as Versions 1/2. */
 export const getPublishedThirdOrderVersions = (
   cell: GeneratedCell,
 ): readonly GeneratedVersion[] => {
@@ -26,16 +26,16 @@ export const getPublishedThirdOrderVersions = (
     cell.prop !== 'spin'
   )
     return cell.versions
-  const retained = cell.versions.slice(2, 4)
+  const retained = cell.versions.filter((_, index) => index === 0 || index === 3)
   if (
     cell.versions.length !== 4 ||
-    retained[0]?.representative.recipe.selection.reference !== '5-5' ||
+    retained[0]?.representative.recipe.selection.reference !== '3-3' ||
+    retained[0]?.representative.recipe.thirdOrder.initial !== 180 ||
     retained[1]?.representative.recipe.selection.reference !== '1-1' ||
+    retained[1]?.representative.recipe.thirdOrder.initial !== 0 ||
     retained.some(
       ({ representative: { recipe } }) =>
-        recipe.thirdOrder.initial !== 0 ||
-        recipe.selection.swapProps ||
-        recipe.timingOrder !== 'direct',
+        recipe.timingOrder !== 'direct' || recipe.selection.swapProps,
     )
   )
     throw new Error('Review the curated 1:1 Spin / Spin versions after generator changes')

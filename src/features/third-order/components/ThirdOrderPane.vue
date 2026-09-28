@@ -358,13 +358,15 @@ const selectRow = (propRatio: ThirdOrderCell['propRatio']) => {
   border-style: solid;
 }
 
-.third-order-cell--selected {
-  outline: 2px solid var(--color-action-primary);
-  outline-offset: -3px;
-}
-
 .third-order-tile:hover {
   border-color: var(--color-action-primary);
+}
+
+.third-order-cell--selected,
+.third-order-cell--selected:hover {
+  border-color: var(--color-selection-border);
+  outline: 2px solid var(--color-selection-border);
+  outline-offset: -3px;
 }
 
 .third-order-tile:focus-visible,

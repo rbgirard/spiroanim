@@ -38,6 +38,7 @@
   --color-workspace-boundary: var(--palette-purple-600);
   --color-workspace-separator: var(--palette-violet-500);
   --color-action-primary: var(--palette-blue-600);
+  --color-selection-border: var(--palette-orange-700);
   --color-on-action-primary: var(--palette-neutral-0);
   --color-status-success: var(--palette-green-700);
   --color-status-error: var(--palette-red-800);

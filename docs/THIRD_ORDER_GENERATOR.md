@@ -43,7 +43,7 @@ Optional display settings apply the shared Customize controls without overriding
 timing, scale, Swap, orientation, or warp settings.
 
 Publication retains two versions per cell. The one four-result discovery, 1:1 / 1:1 Spin / Spin,
-uses the reviewed #3 (5-5, Adjust 0, direct) and #4 (1-1, Adjust 0, direct) as runtime Versions 1
+uses the reviewed #1 (3-3, Adjust 180, direct) and #4 (1-1, Adjust 0, direct) as runtime Versions 1
 and 2. Compaction verifies this exception explicitly and fails for review if those discoveries
 change. The expanded review/evidence still retains all four original results. The runtime catalog
 therefore contains 1,088 entries, while the full discovery evidence contains 1,090.
