@@ -32,24 +32,24 @@ describe('Third Order VTG settings', () => {
     expect(getVtgThirdOrderCycleCount([{}, { timing: '2:5-pro' }], true)).toBe(1)
   })
 
-  it('offers every established timing in Anti then Pro order', () => {
+  it('offers every established timing in Anti then Spin order', () => {
     expect(vtgThirdOrderTimingOptions.map(({ label }) => label)).toEqual([
       '1:1 Anti',
-      '1:1 Pro',
-      '2:1 Anti',
-      '2:1 Pro',
+      '1:1 Spin',
       '1:2 Anti',
-      '1:2 Pro',
+      '1:2 Spin',
+      '2:1 Anti',
+      '2:1 Spin',
       '1:3 Anti',
-      '1:3 Pro',
+      '1:3 Spin',
       '2:3 Anti',
-      '2:3 Pro',
+      '2:3 Spin',
       '1:4 Anti',
-      '1:4 Pro',
+      '1:4 Spin',
       '1:5 Anti',
-      '1:5 Pro',
+      '1:5 Spin',
       '2:5 Anti',
-      '2:5 Pro',
+      '2:5 Spin',
     ])
   })
 
@@ -117,7 +117,7 @@ describe('Third Order VTG settings', () => {
     }
   })
 
-  it('mirrors Left onto Right and swaps Anti with Pro when Opposed', () => {
+  it('mirrors Left onto Right and swaps Anti with Spin when Opposed', () => {
     const source = createAnimation()
     const resolvedRight = resolveAnimationFrames(source.props[1]!.anim)
     const applied = applyVtgThirdOrderSettings(

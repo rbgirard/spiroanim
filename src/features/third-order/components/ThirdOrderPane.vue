@@ -39,73 +39,100 @@
             </button>
           </td>
           <th v-for="(ratio, index) in thirdOrderHandRatios" :key="ratio" scope="col">
-            <button
-              type="button"
-              class="third-order-tile third-order-header"
-              :class="{ 'third-order-tile--accent': selectedCell?.handRatio === ratio }"
-              :aria-label="`Hand ${ratio} ${handDirection === 'anti' ? 'Anti' : 'Spin'}`"
-              :aria-pressed="selectedCell?.handRatio === ratio"
-              data-role="to-column-header"
-              :data-ratio="ratio"
-              @click="selectColumn(ratio)"
+            <BaseTooltip
+              class="third-order-tooltip"
+              :text="`Hand: ${ratio} ${handDirection === 'anti' ? 'Anti' : 'Spin'}`"
             >
-              <img v-if="previewUrls[index]" :src="previewUrls[index]" alt="" />
-              <span>{{ ratio }}</span>
-            </button>
+              <template #activator="{ props: activatorProps }">
+                <button
+                  v-bind="activatorProps"
+                  type="button"
+                  class="third-order-tile third-order-header"
+                  :class="{ 'third-order-tile--accent': selectedCell?.handRatio === ratio }"
+                  :aria-label="`Hand ${ratio} ${handDirection === 'anti' ? 'Anti' : 'Spin'}`"
+                  :aria-pressed="selectedCell?.handRatio === ratio"
+                  data-role="to-column-header"
+                  :data-ratio="ratio"
+                  @click="selectColumn(ratio)"
+                >
+                  <img v-if="previewUrls[index]" :src="previewUrls[index]" alt="" />
+                  <span>{{ ratio }}</span>
+                </button>
+              </template>
+            </BaseTooltip>
           </th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(propRatio, rowIndex) in thirdOrderPropRatios" :key="propRatio">
           <th scope="row">
-            <button
-              type="button"
-              class="third-order-tile third-order-header"
-              :class="{ 'third-order-tile--accent': selectedCell?.propRatio === propRatio }"
-              :aria-label="`Prop ${propRatio} ${propDirection === 'anti' ? 'Anti' : 'Spin'}`"
-              :aria-pressed="selectedCell?.propRatio === propRatio"
-              data-role="to-row-header"
-              :data-ratio="propRatio"
-              @click="selectRow(propRatio)"
+            <BaseTooltip
+              class="third-order-tooltip"
+              :text="`Prop: ${propRatio} ${propDirection === 'anti' ? 'Anti' : 'Spin'}`"
             >
-              <img
-                v-if="previewUrls[thirdOrderHandRatios.length + rowIndex]"
-                :src="previewUrls[thirdOrderHandRatios.length + rowIndex]"
-                alt=""
-              />
-              <span>{{ propRatio }}</span>
-            </button>
+              <template #activator="{ props: activatorProps }">
+                <button
+                  v-bind="activatorProps"
+                  type="button"
+                  class="third-order-tile third-order-header"
+                  :class="{ 'third-order-tile--accent': selectedCell?.propRatio === propRatio }"
+                  :aria-label="`Prop ${propRatio} ${propDirection === 'anti' ? 'Anti' : 'Spin'}`"
+                  :aria-pressed="selectedCell?.propRatio === propRatio"
+                  data-role="to-row-header"
+                  :data-ratio="propRatio"
+                  @click="selectRow(propRatio)"
+                >
+                  <img
+                    v-if="previewUrls[thirdOrderHandRatios.length + rowIndex]"
+                    :src="previewUrls[thirdOrderHandRatios.length + rowIndex]"
+                    alt=""
+                  />
+                  <span>{{ propRatio }}</span>
+                </button>
+              </template>
+            </BaseTooltip>
           </th>
           <td v-for="(handRatio, columnIndex) in thirdOrderHandRatios" :key="handRatio">
-            <button
-              type="button"
-              class="third-order-tile third-order-cell"
-              :class="{
-                'third-order-tile--accent':
-                  selectedCell?.handRatio === handRatio || selectedCell?.propRatio === propRatio,
-                'third-order-cell--selected':
-                  selectedCell?.handRatio === handRatio && selectedCell?.propRatio === propRatio,
-              }"
-              :aria-label="`Hand ${handRatio}, Prop ${propRatio}`"
-              :aria-pressed="
-                selectedCell?.handRatio === handRatio && selectedCell?.propRatio === propRatio
-              "
-              :data-hand-ratio="handRatio"
-              :data-prop-ratio="propRatio"
-              data-role="to-cell"
-              @click="selectCell({ handRatio, propRatio })"
+            <BaseTooltip
+              class="third-order-tooltip"
+              :text="getCellDescription(handRatio, propRatio)"
             >
-              <img
-                v-if="
-                  supported && cellPreviewUrls[rowIndex * thirdOrderHandRatios.length + columnIndex]
-                "
-                :src="cellPreviewUrls[rowIndex * thirdOrderHandRatios.length + columnIndex]"
-                class="third-order-cell__preview"
-                data-role="to-cell-preview"
-                alt=""
-              />
-              <span v-else class="third-order-cell__preview" aria-hidden="true" />
-            </button>
+              <template #activator="{ props: activatorProps }">
+                <button
+                  v-bind="activatorProps"
+                  type="button"
+                  class="third-order-tile third-order-cell"
+                  :class="{
+                    'third-order-tile--accent':
+                      selectedCell?.handRatio === handRatio ||
+                      selectedCell?.propRatio === propRatio,
+                    'third-order-cell--selected':
+                      selectedCell?.handRatio === handRatio &&
+                      selectedCell?.propRatio === propRatio,
+                  }"
+                  :aria-label="`Hand ${handRatio}, Prop ${propRatio}`"
+                  :aria-pressed="
+                    selectedCell?.handRatio === handRatio && selectedCell?.propRatio === propRatio
+                  "
+                  :data-hand-ratio="handRatio"
+                  :data-prop-ratio="propRatio"
+                  data-role="to-cell"
+                  @click="selectCell({ handRatio, propRatio })"
+                >
+                  <img
+                    v-if="
+                      supported[rowIndex * thirdOrderHandRatios.length + columnIndex] &&
+                      cellPreviewUrls[rowIndex * thirdOrderHandRatios.length + columnIndex]
+                    "
+                    :src="cellPreviewUrls[rowIndex * thirdOrderHandRatios.length + columnIndex]"
+                    class="third-order-cell__preview"
+                    data-role="to-cell-preview"
+                    alt=""
+                  />
+                  <span v-else class="third-order-cell__preview" aria-hidden="true" />
+                </button>
+              </template>
+            </BaseTooltip>
           </td>
         </tr>
       </tbody>
@@ -118,11 +145,13 @@
 <script setup lang="ts">
 import { mdiShuffleVariant } from '@mdi/js'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
+import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import { useThirdOrderHeaderPreviews } from '@/features/third-order/composables/useThirdOrderHeaderPreviews'
 import { useThirdOrderCellPreviews } from '@/features/third-order/composables/useThirdOrderCellPreviews'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import type { ThirdOrderPatternSelection, ThirdOrderVersion } from '@/features/third-order/types'
+import { isThirdOrderSelectionSupported } from '@/features/third-order/createThirdOrderAnimation'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import {
   thirdOrderCells,
@@ -190,10 +219,17 @@ const { supported, previewUrls: cellPreviewUrls } = useThirdOrderCellPreviews(
   width,
 )
 
-const currentSelection = (): ThirdOrderPatternSelection | undefined =>
-  supported.value && selectedCell.value && props.animationReady !== false
-    ? { ...patternSettings.value, ...displaySettings.value, ...selectedCell.value }
-    : undefined
+const getCellDescription = (
+  handRatio: ThirdOrderCell['handRatio'],
+  propRatio: ThirdOrderCell['propRatio'],
+): string =>
+  `Hand: ${handRatio} ${handDirection.value === 'anti' ? 'Anti' : 'Spin'}\nProp: ${propRatio} ${propDirection.value === 'anti' ? 'Anti' : 'Spin'}\nVersion: ${version.value}`
+
+const currentSelection = (): ThirdOrderPatternSelection | undefined => {
+  if (!selectedCell.value || !props.animationReady) return undefined
+  const selection = { ...patternSettings.value, ...displaySettings.value, ...selectedCell.value }
+  return isThirdOrderSelectionSupported(selection) ? selection : undefined
+}
 
 const selectCell = (cell: ThirdOrderCell) => {
   selectedCell.value = cell
@@ -210,19 +246,24 @@ watch(displaySettings, () => {
   if (selection) emit('customize', selection)
 })
 
-const randomCell = (): ThirdOrderCell =>
-  thirdOrderCells[Math.floor(Math.random() * thirdOrderCells.length)]!
+const randomCell = (): ThirdOrderCell | undefined => {
+  const cells = thirdOrderCells.filter((_, index) => supported.value[index])
+  return cells[Math.floor(Math.random() * cells.length)]
+}
 
 const selectRandomCell = () => {
-  selectCell(randomCell())
+  const cell = randomCell()
+  if (cell) selectCell(cell)
 }
 
 const selectColumn = (handRatio: ThirdOrderCell['handRatio']) => {
-  selectCell({ handRatio, propRatio: (selectedCell.value ?? randomCell()).propRatio })
+  const cell = selectedCell.value ?? randomCell()
+  if (cell) selectCell({ handRatio, propRatio: cell.propRatio })
 }
 
 const selectRow = (propRatio: ThirdOrderCell['propRatio']) => {
-  selectCell({ handRatio: (selectedCell.value ?? randomCell()).handRatio, propRatio })
+  const cell = selectedCell.value ?? randomCell()
+  if (cell) selectCell({ handRatio: cell.handRatio, propRatio })
 }
 </script>
 
@@ -259,6 +300,12 @@ const selectRow = (propRatio: ThirdOrderCell['propRatio']) => {
 .third-order-board th,
 .third-order-board td {
   padding: 0;
+}
+
+.third-order-tooltip {
+  display: flex;
+  width: 100%;
+  min-width: 0;
 }
 
 .third-order-tile {

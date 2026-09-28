@@ -1,5 +1,5 @@
-import { createPinia, setActivePinia } from 'pinia'
-import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, disposePinia, getActivePinia, setActivePinia } from 'pinia'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
@@ -124,10 +124,19 @@ describe('EightStepPane', () => {
     vi.stubGlobal('Worker', FakeWorker)
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
+  enableAutoUnmount((unmount) => {
+    afterEach(() => {
+      try {
+        unmount()
+      } finally {
+        const pinia = getActivePinia()
+        if (pinia) disposePinia(pinia)
+        setActivePinia(undefined)
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+        vi.useRealTimers()
+      }
+    })
   })
 
   it('uses shared tooltips for row relationships and cell descriptions', async () => {
@@ -757,9 +766,7 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Third Order')
 
     await wrapper.get('[data-role="eight-step-property-third-order-toggle"]').trigger('click')
-    const ratio = wrapper.get<HTMLSelectElement>(
-      '[data-role="eight-step-third-order-timing-0"]',
-    )
+    const ratio = wrapper.get<HTMLSelectElement>('[data-role="eight-step-third-order-timing-0"]')
     await ratio.setValue('1:1-pro')
     expect(ratio.element.value).toBe('1:1-pro')
     await wrapper

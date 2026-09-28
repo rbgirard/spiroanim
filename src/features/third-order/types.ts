@@ -6,22 +6,21 @@ import type { VtgPatternSelection } from '@/features/vtg/types'
 
 export type ThirdOrderVersion = 1 | 2
 
-export interface ThirdOrderPatternSelection
-  extends
-    ThirdOrderCell,
-    Pick<
-      VtgPatternSelection,
-      | 'bpm'
-      | 'thick'
-      | 'spacing'
-      | 'paths'
-      | 'hands'
-      | 'arms'
-      | 'left'
-      | 'right'
-      | 'propColors'
-      | 'prop'
-    > {
+export type ThirdOrderDisplaySettings = Pick<
+  VtgPatternSelection,
+  | 'bpm'
+  | 'thick'
+  | 'spacing'
+  | 'paths'
+  | 'hands'
+  | 'arms'
+  | 'left'
+  | 'right'
+  | 'propColors'
+  | 'prop'
+>
+
+export interface ThirdOrderPatternSelection extends ThirdOrderCell, ThirdOrderDisplaySettings {
   concept: 'to'
   handDirection: ThirdOrderDirection
   propDirection: ThirdOrderDirection

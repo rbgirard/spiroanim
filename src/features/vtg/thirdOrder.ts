@@ -44,7 +44,8 @@ export const getVtgThirdOrderCycleCount = (
 
 export const vtgThirdOrderTimingOptions = vtgRatioPickerRatios.flatMap((ratio) => [
   { value: `${ratio}-anti` as const, label: `${ratio} Anti` },
-  { value: `${ratio}-pro` as const, label: `${ratio} Pro` },
+  // Keep the existing value for saved settings and query-string compatibility.
+  { value: `${ratio}-pro` as const, label: `${ratio} Spin` },
 ])
 
 export const createVtgThirdOrderWarp = (arc: number, timing: VtgThirdOrderTiming): number => {
@@ -297,11 +298,7 @@ export const materializeVtgThirdOrderSettings = (
   firstEditableFrameIndex = 0,
 ): VtgThirdOrderSettings => {
   const authored = extractVtgThirdOrderSettings(animation, firstEditableFrameIndex)
-  const display = getVtgThirdOrderDisplaySettings(
-    animation,
-    authored,
-    firstEditableFrameIndex,
-  )
+  const display = getVtgThirdOrderDisplaySettings(animation, authored, firstEditableFrameIndex)
   return ([0, 1] as const).map((propIndex) => ({
     ...(firstEditableFrameIndex !== 0 || display.initial[propIndex] === undefined
       ? undefined

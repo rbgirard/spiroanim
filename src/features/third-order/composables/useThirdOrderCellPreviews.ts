@@ -10,13 +10,18 @@ export const useThirdOrderCellPreviews = (
   selection: Readonly<Ref<Omit<ThirdOrderPatternSelection, 'handRatio' | 'propRatio'>>>,
   width: Readonly<Ref<number>>,
 ) => {
-  const supported = computed(() => isThirdOrderSelectionSupported(selection.value))
+  const supported = computed(() =>
+    thirdOrderCells.map((cell) => isThirdOrderSelectionSupported({ ...selection.value, ...cell })),
+  )
+  const activeIndexes = computed(() =>
+    supported.value.flatMap((available, index) => (available ? [index] : [])),
+  )
   const dimensions = reactive(thirdOrderCells.map(() => ({ width: 0, height: 0 })))
   const renderer = useConceptPreviewRenderer({
     label: 'Third Order cells',
     dimensions,
     references: thirdOrderCells.map((_, index) => String(index)),
-    active: supported,
+    activeIndexes,
     createAnimation: (reference) => {
       const cell = thirdOrderCells[Number(reference)]
       return cell ? createThirdOrderPreviewAnimation({ ...selection.value, ...cell }) : undefined

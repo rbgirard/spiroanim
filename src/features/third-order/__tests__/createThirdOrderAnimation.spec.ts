@@ -3,7 +3,14 @@ import { applyConceptPattern } from '@/features/concepts/applyConceptPattern'
 import {
   createThirdOrderAnimation,
   createThirdOrderPreviewAnimation,
+  isThirdOrderSelectionSupported,
 } from '@/features/third-order/createThirdOrderAnimation'
+import { thirdOrderDefinitions } from '@/features/third-order/data/generatedDefinitions'
+import { thirdOrderCells } from '@/features/third-order/data/thirdOrderMatrix'
+import {
+  createAnimationFromThirdOrderDefinition,
+  getThirdOrderDefinitionRecipe,
+} from '@/features/third-order/definitionCatalog'
 import type { ThirdOrderPatternSelection } from '@/features/third-order/types'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createVtgThirdOrderWarp } from '@/features/vtg/thirdOrder'
@@ -18,51 +25,45 @@ const selection: ThirdOrderPatternSelection = {
   version: 1,
 }
 
-describe('Third Order Anti / Anti patterns', () => {
+describe('Third Order catalog patterns', () => {
   it.each([
-    ['1:1', '1-3'],
-    ['1:2', '1-3'],
-    ['2:1', '1-3'],
-    ['1:3', '3-3'],
-    ['2:3', '3-3'],
-    ['1:4', '3-3'],
-    ['1:5', '1-3'],
-    ['2:5', '1-3'],
+    ['anti', 'anti'],
+    ['anti', 'spin'],
+    ['spin', 'anti'],
+    ['spin', 'spin'],
   ] as const)(
-    'uses the correct VTG definitions for first timing %s in both versions',
-    (handRatio, versionTwoReference) => {
-      for (const version of [1, 2] as const) {
-        const pattern = createThirdOrderAnimation(undefined, {
-          ...selection,
-          handRatio,
-          propRatio: '2:11',
-          version,
-        })!
-        const base = createDefaultVtgAnimation({
-          reference: version === 1 ? '5-5' : versionTwoReference,
-          isAnti: true,
-          speedRatio: `${handRatio}v2:11`,
-          orientation: version === 1 || handRatio === '1:4' ? 90 : -90,
-        })!
-        expect(pattern.props).toHaveLength(2)
-        for (const [index, prop] of pattern.props.entries()) {
-          const frames = resolveAnimationFrames(prop.anim)
-          const baseFrames = resolveAnimationFrames(base.props[index]!.anim)
-          expect(frames).toHaveLength(17)
-          expect(frames.map(({ plane, arc, turns }) => ({ plane, arc, turns }))).toEqual(
-            baseFrames.map(({ plane, arc, turns }) => ({ plane, arc, turns })),
+    'reconstructs every %s / %s cell from the catalog without provisional overrides',
+    (handDirection, propDirection) => {
+      for (const cell of thirdOrderCells)
+        for (const version of [1, 2] as const) {
+          const request = { ...selection, ...cell, handDirection, propDirection, version }
+          const pattern = createThirdOrderAnimation(undefined, request)!
+          expect(isThirdOrderSelectionSupported(request)).toBe(true)
+          expect(pattern).toEqual(
+            createAnimationFromThirdOrderDefinition(thirdOrderDefinitions, request),
           )
-          expect(frames.every((frame) => frame.scale === (index === 0 ? 50 : 100))).toBe(true)
-          expect(frames[0]?.warp).toBe(
-            index === 1 && version === 2 && versionTwoReference === '3-3' ? 180 : 0,
-          )
-          for (const frame of frames.slice(1)) {
-            expect(frame.warp).toBe(
-              index === 0 ? 0 : createVtgThirdOrderWarp(frame.arc, `${handRatio}-anti`),
+          const recipe = getThirdOrderDefinitionRecipe(thirdOrderDefinitions, request)!
+          const inputDriver = recipe.reversed ? 1 : 0
+          const driver = recipe.swapProps ? 1 - inputDriver : inputDriver
+          expect(pattern.props).toHaveLength(2)
+          for (const [index, prop] of pattern.props.entries()) {
+            const frames = resolveAnimationFrames(prop.anim)
+            expect(frames.every((frame) => frame.scale === (index === driver ? 50 : 100))).toBe(
+              true,
             )
+            expect(frames[0]?.warp).toBe(index === driver ? 0 : recipe.adjust)
+            for (const frame of frames.slice(1)) {
+              expect(frame.warp).toBe(
+                index === driver
+                  ? 0
+                  : createVtgThirdOrderWarp(
+                      frame.arc,
+                      `${cell.handRatio}-${handDirection === 'anti' ? 'anti' : 'pro'}`,
+                    ),
+              )
+            }
           }
         }
-      }
     },
   )
 
@@ -94,16 +95,41 @@ describe('Third Order Anti / Anti patterns', () => {
     expect(preview.props.map((prop) => prop.anim)).toEqual(animation.props.map((prop) => prop.anim))
   })
 
-  it.each([
-    ['anti', 'spin'],
-    ['spin', 'anti'],
-    ['spin', 'spin'],
-  ] as const)(
-    'does not generate unsupported %s / %s selections',
-    (handDirection, propDirection) => {
-      const unsupported = { ...selection, handDirection, propDirection }
-      expect(createThirdOrderAnimation(undefined, unsupported)).toBeUndefined()
-      expect(createThirdOrderPreviewAnimation(unsupported)).toBeUndefined()
-    },
-  )
+  it('identifies unknown timing selections as unsupported', () => {
+    const unsupported = { ...selection, handRatio: '1:99' as const }
+    expect(isThirdOrderSelectionSupported(unsupported)).toBe(false)
+  })
+
+  it('preserves Customize prop identities through swapped, reversed recipes', () => {
+    const request = {
+      ...selection,
+      propDirection: 'spin' as const,
+      propRatio: '2:5' as const,
+      version: 2 as const,
+    }
+    expect(getThirdOrderDefinitionRecipe(thirdOrderDefinitions, request)).toMatchObject({
+      swapProps: true,
+      reversed: true,
+    })
+    const animation = createThirdOrderAnimation(undefined, {
+      ...request,
+      left: false,
+      propColors: ['Red', 'Blue'],
+      spacing: 0.2,
+    })!
+    expect(animation.props.map((prop) => prop.color)).toEqual([0, 2])
+    expect(animation.props[0]).toMatchObject({
+      visible: false,
+      paths: false,
+      hands: false,
+      arms: false,
+    })
+    expect(animation.props[1]?.visible).not.toBe(false)
+    const preview = createThirdOrderPreviewAnimation({
+      ...request,
+      propColors: ['Red', 'Blue'],
+      spacing: 0.2,
+    })!
+    expect(preview.props.map((prop) => prop.anim)).toEqual(animation.props.map((prop) => prop.anim))
+  })
 })

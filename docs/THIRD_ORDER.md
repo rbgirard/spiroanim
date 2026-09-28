@@ -14,19 +14,28 @@ Clicking a header preserves the opposite coordinate of the selected cell. With n
 the opposite coordinate is chosen randomly. The corner shuffle button selects any of the 136
 cells. Selection, direction, and Version state are local to the page.
 
-Anti / Anti is supported for both versions. The top timing is the first prop's timing and the
-left timing is the second prop's timing, combined using VTG's More timing rules. Version 1 uses
-VTG cell 5-5's Anti variant. Version 2 uses cell 3-3 for the 1:3 definition family and cell 1-3
-otherwise. Family selection uses the same helper as VTG, based on the first prop's timing.
-The first and second prop scales are fixed at 0.5 and 1.0. The second prop's continuing Third
-Order warp uses the top timing in Anti direction. Adjust (initial warp) is 180 only for
-Version 2 patterns in the 1:3 definition family; it is 0 for all other supported patterns.
-Cell animations use a +90-degree rotation for Version 1. Version 2 uses -90 degrees except
-for the top-header 1:4 column, which uses +90 degrees. Header animations remain at -90 degrees.
+Headers show their Hand/Prop timing and Anti/Spin direction in shared VTG-style pattern tooltips.
+Cell tooltips show both timings/directions and the selected Version. They support hover, keyboard
+focus, and touch taps with the shared dismissal behavior, independently of optional general-control
+tooltips. Opening a tooltip does not change selection; tapping a tile still selects it normally.
+
+All four Hand / Prop combinations have two versions at every timing pair (1,088 entries).
+Cells use only `data/generatedDefinitions.ts`, the compact output of the offline
+[definition generator](THIRD_ORDER_GENERATOR.md). No generation searches, URLs, or review evidence
+are imported by the page. In the 1:1 / 1:1 Spin / Spin case, the reviewed #3 and #4 are published
+as Versions 1 and 2; the other two discoveries remain in the offline review evidence.
+
+The catalog supplies the VTG reference, variant, timing order, Swap, plane reversal, and Adjust.
+The top timing drives the scale-0.5 prop; the scale-1 prop receives Third Order warp using that
+timing. Roles follow reversed timing order and Swap rather than assuming fixed physical indices.
+Warp direction follows Hand (Anti uses Anti; Spin uses Pro). Cell orientation is 0, with none of
+the former hardcoded base-cell, Adjust, or version/column rotation exceptions. Headers remain
+independent and retain their -90-degree orientation.
 
 Cell thumbnails and player selections share one generator. Clicking a supported cell updates
 the player through the normal Concepts event path. Version changes reapply the selected cell.
-Unsupported direction pairs hide all cell thumbnails and never emit a replacement animation.
+Missing definitions leave individual cells blank and never emit a replacement animation.
+Shuffle chooses only populated cells.
 No pattern is automatically selected on mount, and pattern matching remains disabled.
 
 Customize reuses the shared Concepts controls and preferences. Spacing, colors, prop type, BPM,

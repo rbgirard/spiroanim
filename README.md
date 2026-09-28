@@ -47,6 +47,17 @@ npm run build
 npm run test:unit
 ```
 
+Use `npm run test:unit -- --run` for a single full unit-test run. Unit tests default to at most
+two workers to reduce CPU/memory contention between jsdom and pattern-matching tests. Use
+`--maxWorkers=1` for diagnosis on a busy machine, and avoid running the full suite alongside
+browser tests or a build. Existing test timeouts and assertions still apply.
+
+Component tests should arrange unmounting in `afterEach` (Vue Test Utils' `enableAutoUnmount`),
+before restoring browser stubs. Dispose test-owned Pinia instances after unmounting so failed
+tests do not leave components or store watchers running into later tests. The multi-test SpiroAnim
+view suite defers Pinia disposal to `afterAll`: its module-scoped URL codec retains actions bound
+to the first Pinia. Component unmounting still runs after every test.
+
 ### Run End-to-End Tests with [Playwright](https://playwright.dev)
 
 ```sh

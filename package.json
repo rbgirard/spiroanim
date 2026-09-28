@@ -27,7 +27,8 @@
     "lint:eslint": "eslint . --fix --cache",
     "format": "prettier --write --experimental-cli src/",
     "generate:pwa-assets": "pwa-assets-generator",
-    "generate:vtg3-art": "node scripts/export-vtg3-pattern-art.mjs"
+    "generate:vtg3-art": "node scripts/export-vtg3-pattern-art.mjs",
+    "generate:third-order": "node scripts/generate-third-order.mjs"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",

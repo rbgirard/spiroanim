@@ -1,6 +1,6 @@
-import { createPinia, disposePinia, setActivePinia } from 'pinia'
+import { createPinia, disposePinia, getActivePinia, setActivePinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-import { flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -48,13 +48,24 @@ describe('SpiroAnim view', () => {
     })
   })
 
-  afterEach(() => {
-    document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
-    Object.defineProperty(window, 'visualViewport', {
-      configurable: true,
-      value: undefined,
+  enableAutoUnmount((unmount) => {
+    afterEach(() => {
+      try {
+        unmount()
+      } finally {
+        const pinia = getActivePinia()
+        if (pinia) disposePinia(pinia)
+        setActivePinia(undefined)
+        document.body.replaceChildren()
+        document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
+        Object.defineProperty(window, 'visualViewport', {
+          configurable: true,
+          value: undefined,
+        })
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+      }
     })
-    vi.unstubAllGlobals()
   })
 
   it('applies Third Order cells and customization to the player without matching', async () => {
@@ -92,12 +103,15 @@ describe('SpiroAnim view', () => {
     await wrapper.get('[data-role="to-right-color"]').setValue('Red')
     await flushPromises()
     expect(root.value.props[1]?.color).toBe(0)
-    const supported = root.value
+    const anti = root.value
     await wrapper.get('[data-role="to-hand"]').setValue('spin')
     await wrapper.get('[data-role="to-cell"]').trigger('click')
     await flushPromises()
-    expect(root.value).toBe(supported)
-    wrapper.unmount()
-    disposePinia(pinia)
+    expect(root.value).not.toEqual(anti)
+    expect(root.value.props[1]?.color).toBe(0)
+    await wrapper.get('[data-role="to-prop"]').setValue('spin')
+    await flushPromises()
+    expect(root.value.props[1]?.anim[0]?.warp).toBe(0)
+    expect(wrapper.findAll('[data-role="to-version"] option')).toHaveLength(2)
   })
 })

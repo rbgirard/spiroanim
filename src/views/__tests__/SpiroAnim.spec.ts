@@ -1,9 +1,9 @@
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-import { flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
@@ -21,6 +21,21 @@ import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilder
 import type { QtrPatternSelection } from '@/features/vtg/types'
 import { createCompiledVtgPatternSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 
+// The module-scoped URL codec retains actions bound to the first Pinia in this suite.
+// Keep these roots alive until afterAll; components are still unmounted after every test.
+const testPinias = new Set<ReturnType<typeof createPinia>>()
+const createViewTestPinia = () => {
+  const pinia = createPinia().use(piniaPluginPersistedstate)
+  testPinias.add(pinia)
+  return pinia
+}
+
+afterAll(() => {
+  testPinias.forEach(disposePinia)
+  testPinias.clear()
+  setActivePinia(undefined)
+})
+
 const AnimPlayerStub = {
   props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
   template:
@@ -35,7 +50,7 @@ const AnimTimelineStub = {
 }
 
 const mountEightStepView = async () => {
-  const pinia = createPinia().use(piniaPluginPersistedstate)
+  const pinia = createViewTestPinia()
   setActivePinia(pinia)
   const router = createRouter({
     history: createMemoryHistory(),
@@ -99,17 +114,27 @@ describe('SpiroAnim view', () => {
     })
   })
 
-  afterEach(() => {
-    document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
-    Object.defineProperty(window, 'visualViewport', {
-      configurable: true,
-      value: undefined,
+  enableAutoUnmount((unmount) => {
+    afterEach(() => {
+      // Unmount before restoring browser stubs, including when an assertion or test times out.
+      try {
+        unmount()
+      } finally {
+        setActivePinia(undefined)
+        document.body.replaceChildren()
+        document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
+        Object.defineProperty(window, 'visualViewport', {
+          configurable: true,
+          value: undefined,
+        })
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+      }
     })
-    vi.unstubAllGlobals()
   })
 
   it('composes pane controls and the requested placeholder views', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -744,7 +769,7 @@ describe('SpiroAnim view', () => {
   }, 15_000)
 
   it('drops Quarter patterns into Builder with and without a selected portion', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -832,7 +857,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('automatically opens and reconstructs Builder after unmatched Rotate', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1020,7 +1045,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('does not save a Quick Slot when animation data is loaded from a URL', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1064,7 +1089,7 @@ describe('SpiroAnim view', () => {
         quickSlotPaths: [null, null, null, null],
       }),
     )
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1094,7 +1119,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('applies a stored Quick Slot without changing the pane layout', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1154,7 +1179,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('replaces the Concepts pane with the Timeline targeted by a Quick Slot', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1200,7 +1225,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('replaces the Timeline pane with Concepts when targeted by a Quick Slot', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1260,7 +1285,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('keeps the Editor pane when its embedded Timeline loads a Timeline target', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1313,7 +1338,7 @@ describe('SpiroAnim view', () => {
 
   it('does not auto-select a Concepts pattern for unsupported animation data', async () => {
     const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
