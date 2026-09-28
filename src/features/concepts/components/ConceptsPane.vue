@@ -96,7 +96,13 @@
       @pattern-select="emit('patternSelect', $event)"
       @customize="emit('customize', $event)"
     />
-    <ThirdOrderPane v-else-if="selectedConcept === 'to'" />
+    <ThirdOrderPane
+      v-else-if="selectedConcept === 'to'"
+      :animation="animation"
+      :animation-ready="animationReady"
+      @pattern-select="emit('patternSelect', $event)"
+      @customize="emit('customize', $event)"
+    />
     <KineticAlphabetPane v-else />
   </section>
 </template>

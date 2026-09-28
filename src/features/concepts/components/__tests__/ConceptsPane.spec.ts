@@ -389,7 +389,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
-  it('shows the Third Order placeholder immediately before The Kinetic Alphabet', async () => {
+  it('shows the Third Order matrix immediately before The Kinetic Alphabet', async () => {
     const wrapper = mount(ConceptsPane)
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
     const options = selector.findAll('option')
@@ -397,10 +397,8 @@ describe('ConceptsPane', () => {
     expect(options.map((option) => option.element.value).slice(-2)).toEqual(['to', 'tka'])
     await selector.setValue('to')
 
-    expect(wrapper.get('[data-role="to-pane"]').text()).toContain('Third Order')
-    expect(wrapper.get('[data-role="to-development-note"]').text()).toBe(
-      'The Rock is in the kitchen and is COOKING something...',
-    )
+    expect(wrapper.findAll('[data-role="to-cell"]')).toHaveLength(136)
+    expect(wrapper.find('[data-role="to-development-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="tka-pane"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })

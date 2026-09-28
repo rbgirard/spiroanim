@@ -1,9 +1,11 @@
 import { createEightStepAnimation } from '@/features/eight-step/createEightStepAnimation'
 import { createQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
+import { createThirdOrderAnimation } from '@/features/third-order/createThirdOrderAnimation'
 import {
   isEightStepPatternSelection,
   isQstPatternSelection,
   isQtrPatternSelection,
+  isThirdOrderPatternSelection,
 } from '@/features/concepts/types'
 import type { ConceptPatternSelection } from '@/features/concepts/types'
 import { createQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
@@ -21,16 +23,18 @@ export const applyConceptPattern = (
   selection: ConceptPatternSelection,
   options: ApplyConceptPatternOptions = {},
 ): RootDataFinal | undefined =>
-  isEightStepPatternSelection(selection)
-    ? createEightStepAnimation(root, selection)
-    : isQstPatternSelection(selection)
-      ? createQstAnimation(root, selection)
-      : isQtrPatternSelection(selection)
-        ? createQtrAnimation(root, selection, {
-            minimumCycleCount: options.minimumVtgCycleCount,
-            properties: options.vtgProperties,
-          })
-        : createVtgAnimation(root, selection, {
-            minimumCycleCount: options.minimumVtgCycleCount,
-            properties: options.vtgProperties,
-          })
+  isThirdOrderPatternSelection(selection)
+    ? createThirdOrderAnimation(root, selection)
+    : isEightStepPatternSelection(selection)
+      ? createEightStepAnimation(root, selection)
+      : isQstPatternSelection(selection)
+        ? createQstAnimation(root, selection)
+        : isQtrPatternSelection(selection)
+          ? createQtrAnimation(root, selection, {
+              minimumCycleCount: options.minimumVtgCycleCount,
+              properties: options.vtgProperties,
+            })
+          : createVtgAnimation(root, selection, {
+              minimumCycleCount: options.minimumVtgCycleCount,
+              properties: options.vtgProperties,
+            })

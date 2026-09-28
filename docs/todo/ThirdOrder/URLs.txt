@@ -11,7 +11,7 @@ http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mD__98.5JE-_i.......&x0=PW&p1=
 
 http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mBE_98.5JE-_i.......&x0=PW&p1=N__.mBE-ZU.5JE.......&x1=____Oif_.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
 
-http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.05E.5JE-_i.......&x0=PW&p1=N__.05E.5JE-ZU.......&x1=.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
+http://localhost:8080/play-vtg?r=Ew496k11Y&p0=Q__.mBE.5JE-_i.......&x0=PW&p1=N__.mBE.5JE-ZU.......&x1=.____LQL_&m1=_1_mxqv__&c=_k_bhq&v=12&vs=m:80
 
 
 Hand: 1:2 Anti

@@ -76,7 +76,9 @@ const createContinuationFrame = (
   return compactVtgDefinitionFrame(frame, resolveReadableAnimationFrames([start])[0])
 }
 
-const getDefinitionSpeedRatio = (speedRatio: VtgIndividualSpeedRatio): VtgIndividualSpeedRatio => {
+export const getVtgDefinitionSpeedRatio = (
+  speedRatio: VtgIndividualSpeedRatio,
+): VtgIndividualSpeedRatio => {
   const ratio = parseVtgIndividualSpeedRatio(speedRatio)
   if (!ratio) return '1:3'
 
@@ -99,7 +101,7 @@ const createPattern = (
   speedRatio: VtgSpeedRatio,
 ): VtgReadableAnimation => {
   const speedRatios = getVtgPropSpeedRatios(speedRatio)
-  const definitionSpeedRatio = getDefinitionSpeedRatio(speedRatios[0])
+  const definitionSpeedRatio = getVtgDefinitionSpeedRatio(speedRatios[0])
   const sourceIndexes = row.swapProps ? ([1, 0] as const) : ([0, 1] as const)
   const createProp = (outputIndex: 0 | 1) => {
     const sourceIndex = sourceIndexes[outputIndex]

@@ -1,5 +1,6 @@
 import type { EightStepPatternSelection } from '@/features/eight-step/types'
 import type { QstPatternSelection } from '@/features/quarter-space-tech/types'
+import type { ThirdOrderPatternSelection } from '@/features/third-order/types'
 import type { QtrPatternSelection, VtgPatternSelection } from '@/features/vtg/types'
 
 export const conceptKeys = ['vtg', '8stp', 'qst', 'to', 'tka'] as const
@@ -10,6 +11,7 @@ export type ConceptPatternSelection =
   | QtrPatternSelection
   | EightStepPatternSelection
   | QstPatternSelection
+  | ThirdOrderPatternSelection
 
 export const isVtgPatternSelection = (
   selection: ConceptPatternSelection,
@@ -26,3 +28,7 @@ export const isEightStepPatternSelection = (
 export const isQstPatternSelection = (
   selection: ConceptPatternSelection,
 ): selection is QstPatternSelection => 'concept' in selection && selection.concept === 'qst'
+
+export const isThirdOrderPatternSelection = (
+  selection: ConceptPatternSelection,
+): selection is ThirdOrderPatternSelection => 'concept' in selection && selection.concept === 'to'
