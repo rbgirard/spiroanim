@@ -3,56 +3,68 @@ import { test, expect, devices } from '@playwright/test'
 const expectedCleanupMessages = new Set(['WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost'])
 
 for (const hasTouch of [false, true]) {
-  test(`resizes Builder thumbnails when changing columns (touch=${hasTouch})`, async ({
+  test(`updates Builder height from a saved single column without reopening (touch=${hasTouch})`, async ({
     browser,
   }) => {
     const context = await browser.newContext({
-      viewport: { width: 1024, height: 1366 },
+      viewport: { width: 1024, height: 768 },
       hasTouch,
       deviceScaleFactor: 2,
     })
     const page = await context.newPage()
     try {
+      await page.addInitScript(() => {
+        localStorage.setItem('sa-builder-settings-v1', JSON.stringify({ columns: 1 }))
+      })
       await page.goto(
         '/play-vtg?r=Ew496k11Y&p0=Q__.blE.5JE-ZU..._ZE_6k........_ZE-ZU....&x0=Qo&m0=_1_mxqv__&p1=N__.bn_.5JE-ZU......._ZE_6k........_ZE-ZU&x1=Qo&c=_i_bhq&v=12&vs=a:80',
       )
-      await page
-        .locator('label')
-        .filter({ has: page.locator('[data-role="vtg-pattern-builder"]') })
-        .click()
+      const openBuilder = () =>
+        page
+          .locator('label')
+          .filter({ has: page.locator('[data-role="vtg-pattern-builder"]') })
+          .click()
+      await openBuilder()
       const preview = page.getByRole('button', { name: 'Preview pattern 1', exact: true })
-      const image = preview.locator('img')
-      await expect(image).toHaveAttribute('src', /^blob:/)
+      await expect(preview.locator('img')).toHaveAttribute('src', /^blob:/)
       const controls = page.getByRole('group', { name: 'Builder Columns' })
-      for (const direction of [
-        'Increase',
-        'Increase',
-        'Decrease',
-        'Decrease',
-        'Decrease',
-        'Decrease',
-        'Decrease',
-        'Increase',
-        'Increase',
-        'Increase',
-      ]) {
-        const previousWidth = (await preview.boundingBox())?.width
-        expect(previousWidth).toBeGreaterThan(0)
-        await controls.getByRole('button', { name: `${direction} Builder Columns` }).click()
-        await expect.poll(async () => (await preview.boundingBox())?.width).not.toBe(previousWidth)
+      await expect(controls.locator('output')).toHaveText('1')
+      await preview.click()
+      const readSize = () =>
+        preview.evaluate((element) => {
+          const { width, height } = element.getBoundingClientRect()
+          return { width, height }
+        })
+      const original = await readSize()
+      const unchangedPatternUrl = page.url()
+      for (const columns of [2, 3, 4, 5, 6]) {
+        const previous = await readSize()
+        await controls.getByRole('button', { name: 'Increase Builder Columns' }).click()
+        await expect(controls.locator('output')).toHaveText(String(columns))
+        await expect.poll(async () => (await readSize()).width).toBeLessThan(previous.width)
+        await expect.poll(async () => (await readSize()).height).toBeLessThan(previous.height)
         await expect
           .poll(async () => {
-            const bounds = await preview.boundingBox()
-            const imageBounds = await image.boundingBox()
-            if (!bounds || !imageBounds) throw new Error('Missing Builder thumbnail image')
-            return Math.max(
-              Math.abs(bounds.width - bounds.height),
-              Math.abs(imageBounds.width - imageBounds.height),
-              Math.abs(imageBounds.height - (bounds.height - 4)),
-            )
+            const { width, height } = await readSize()
+            return Math.abs(width - height)
           })
           .toBeLessThan(1)
+        await expect(preview).toHaveAttribute('aria-pressed', 'true')
       }
+      const liveSize = await readSize()
+      await page.getByRole('button', { name: 'Exit Pattern Builder', exact: true }).click()
+      await openBuilder()
+      await expect
+        .poll(async () => Math.abs((await readSize()).height - liveSize.height))
+        .toBeLessThan(1)
+      for (const columns of [5, 4, 3, 2, 1]) {
+        await controls.getByRole('button', { name: 'Decrease Builder Columns' }).click()
+        await expect(controls.locator('output')).toHaveText(String(columns))
+      }
+      await expect
+        .poll(async () => Math.abs((await readSize()).height - original.height))
+        .toBeLessThan(1)
+      expect(page.url()).toBe(unchangedPatternUrl)
     } finally {
       await context.close()
     }

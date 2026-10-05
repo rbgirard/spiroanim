@@ -8,7 +8,10 @@
       'vtg-transition-previews--touch-sliders': protectTouchScrolling,
     }"
     data-role="vtg-transition-previews"
-    :style="{ '--vtg-transition-preview-columns': String(columns) }"
+    :style="{
+      '--vtg-transition-preview-columns': String(columns),
+      '--vtg-transition-preview-grid-width': width > 0 ? `${width}px` : undefined,
+    }"
   >
     <template v-for="(url, index) in previewUrls" :key="index">
       <div
@@ -621,6 +624,14 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   box-sizing: border-box;
   display: block;
   width: 100%;
+  /* Explicitly update height too: WebKit can retain an old aspect-ratio height on grid/flex resize. */
+  height: calc(
+    (
+        var(--vtg-transition-preview-grid-width) - (var(--vtg-transition-preview-columns) - 1) *
+          var(--space-1)
+      ) /
+      var(--vtg-transition-preview-columns)
+  );
   padding: 0;
   overflow: hidden;
   aspect-ratio: 1;
@@ -796,13 +807,10 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 }
 
 .vtg-transition-previews__image {
-  /* The square button owns sizing; the bitmap must not contribute an intrinsic height. */
-  position: absolute;
-  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 .vtg-transition-previews__beats {
