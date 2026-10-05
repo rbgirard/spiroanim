@@ -2,6 +2,63 @@ import { test, expect, devices } from '@playwright/test'
 
 const expectedCleanupMessages = new Set(['WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost'])
 
+for (const hasTouch of [false, true]) {
+  test(`resizes Builder thumbnails when changing columns (touch=${hasTouch})`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      viewport: { width: 1024, height: 1366 },
+      hasTouch,
+      deviceScaleFactor: 2,
+    })
+    const page = await context.newPage()
+    try {
+      await page.goto(
+        '/play-vtg?r=Ew496k11Y&p0=Q__.blE.5JE-ZU..._ZE_6k........_ZE-ZU....&x0=Qo&m0=_1_mxqv__&p1=N__.bn_.5JE-ZU......._ZE_6k........_ZE-ZU&x1=Qo&c=_i_bhq&v=12&vs=a:80',
+      )
+      await page
+        .locator('label')
+        .filter({ has: page.locator('[data-role="vtg-pattern-builder"]') })
+        .click()
+      const preview = page.getByRole('button', { name: 'Preview pattern 1', exact: true })
+      const image = preview.locator('img')
+      await expect(image).toHaveAttribute('src', /^blob:/)
+      const controls = page.getByRole('group', { name: 'Builder Columns' })
+      for (const direction of [
+        'Increase',
+        'Increase',
+        'Decrease',
+        'Decrease',
+        'Decrease',
+        'Decrease',
+        'Decrease',
+        'Increase',
+        'Increase',
+        'Increase',
+      ]) {
+        const previousWidth = (await preview.boundingBox())?.width
+        expect(previousWidth).toBeGreaterThan(0)
+        await controls.getByRole('button', { name: `${direction} Builder Columns` }).click()
+        await expect.poll(async () => (await preview.boundingBox())?.width).not.toBe(previousWidth)
+        await expect
+          .poll(async () => {
+            const bounds = await preview.boundingBox()
+            const imageBounds = await image.boundingBox()
+            if (!bounds || !imageBounds) throw new Error('Missing Builder thumbnail image')
+            return Math.max(
+              Math.abs(bounds.width - bounds.height),
+              Math.abs(imageBounds.width - imageBounds.height),
+              Math.abs(imageBounds.height - (bounds.height - 4)),
+            )
+          })
+          .toBeLessThan(1)
+      }
+    } finally {
+      await context.close()
+    }
+  })
+}
+
 test('shifts Third Order with Beats, including after reloading a shifted URL', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))

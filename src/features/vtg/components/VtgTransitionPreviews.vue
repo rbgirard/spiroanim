@@ -796,10 +796,13 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 }
 
 .vtg-transition-previews__image {
+  /* The square button owns sizing; the bitmap must not contribute an intrinsic height. */
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .vtg-transition-previews__beats {
