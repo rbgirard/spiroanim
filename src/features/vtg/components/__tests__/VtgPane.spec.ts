@@ -49,6 +49,10 @@ import type {
   PatternMatchingClient,
   VtgPatternMatchResult,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+import {
+  compareVtgCandidateLayoutRequest,
+  createVtgPreviewCandidatesRequest,
+} from '@/workers/pattern-matching/handlePatternMatchingRequest'
 
 const createDeferred = <Value>() => {
   let resolve!: (value: Value) => void
@@ -1461,6 +1465,69 @@ describe('VtgPane', () => {
       .slice(-9)
     expect(compiledPreviews).toHaveLength(9)
     expect(getCompiledVtgBuilderMotion(compiledPreviews[7]!, 1).spins).toEqual(['A', 'I'])
+  })
+
+  it.each([
+    { qtr: false, worker: false },
+    { qtr: true, worker: false },
+    { qtr: false, worker: true },
+    { qtr: true, worker: true },
+  ])('keeps catalog thumbnails independent of Trans/45 with %j', async ({ qtr, worker }) => {
+    const store = useConceptsStore()
+    store.qtrEnabled = qtr
+    store.hands = true
+    store.scale = 1.1
+    store.setVtgThirdOrderTiming(0, '2:3-anti')
+    const compareVtgCandidateLayout = vi.fn<typeof compareVtgCandidateLayoutRequest>(
+      compareVtgCandidateLayoutRequest,
+    )
+    const createVtgPreviewCandidates = vi.fn<typeof createVtgPreviewCandidatesRequest>(
+      createVtgPreviewCandidatesRequest,
+    )
+    const patternMatcher: PatternMatchingClient = {
+      matchVtg: async () => ({ status: 'unmatched' }),
+      matchEightStep: async () => ({ status: 'unmatched' }),
+      matchQst: async () => ({ status: 'unmatched' }),
+      compareVtgCandidateLayout,
+      ...(worker ? { createVtgPreviewCandidates } : {}),
+    }
+    const wrapper = mount(VtgPane, { props: { patternMatcher } })
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+    await settlePreviewRendering()
+    reportAllBlankDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const previewAnimations = () =>
+      FakeWorker.instances[0]?.messages
+        .filter(({ type }) => type === 'loadFinalData')
+        .map(({ data }) => data as RootDataFinal) ?? []
+    const thumbnailCount = wrapper.findAll('[data-role="vtg-blank"]').length
+    const basePreviews = previewAnimations().slice(-thumbnailCount)
+    const baseComparison = compareVtgCandidateLayout.mock.calls.at(-1)?.[0]
+    expect(basePreviews).toHaveLength(thumbnailCount)
+    expect(basePreviews[0]?.hands).toBe(true)
+    expect(rootCompile(basePreviews[0]!).props[0]?.anim).toHaveLength(17)
+
+    for (const mode of ['vtg-transition', 'vtg-transition-45'] as const) {
+      const before = previewAnimations().length
+      await wrapper.get(`[data-role="${mode}"]`).trigger('click')
+      await settlePreviewRendering()
+      expect(wrapper.findAll('[data-role="vtg-blank"]')).toHaveLength(thumbnailCount)
+      expect(previewAnimations().length).toBeGreaterThan(before)
+      expect(previewAnimations().slice(-thumbnailCount)).toEqual(basePreviews)
+      expect(compareVtgCandidateLayout.mock.calls.at(-1)?.[0]).toEqual(baseComparison)
+      const selection = wrapper.emitted<VtgPatternSelection[]>('patternSelect')?.at(-1)?.[0]
+      expect(selection).toMatchObject({
+        transition: true,
+        ...(mode === 'vtg-transition' ? { transitionAfterBeat: true } : {}),
+      })
+      if (!selection) throw new Error('Expected a selected pattern')
+      const playerAnimation = qtr
+        ? createDefaultQtrAnimation({ ...selection, quarters: 1 })
+        : createDefaultVtgAnimation(selection)
+      expect(playerAnimation!.props[0]!.anim.length).toBeGreaterThan(17)
+    }
+    expect(createVtgPreviewCandidates.mock.calls.length > 0).toBe(worker)
   })
 
   it('renders Hands and Third Order timing in VTG thumbnails', async () => {

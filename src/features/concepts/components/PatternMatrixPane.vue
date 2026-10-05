@@ -821,6 +821,17 @@ const createPreviewSelection = (reference: VtgCellReference) =>
   props.builderActive
     ? createBuilderPreviewSelection(reference)
     : createVtgPreviewSelection(reference)
+const createThumbnailSelection = (reference: VtgCellReference) => {
+  const selection = createPreviewSelection(reference)
+  if (props.builderActive) return selection
+
+  // Catalog thumbnails show the base cycle with its current properties. Trans/45 expands player
+  // playback only; retained initial Turns offsets still belong to the extracted pattern geometry.
+  const thumbnail = { ...selection }
+  delete thumbnail.transition
+  delete thumbnail.transitionAfterBeat
+  return thumbnail
+}
 const previewScale = computed(() => (props.builderActive ? vtgScaleControl.default : scale.value))
 const appliesPropertiesToPreviews = computed(
   () => !props.builderActive || props.builderMatchAnimation !== undefined,
@@ -901,7 +912,7 @@ watch(
     layoutComparisonTimer = setTimeout(() => {
       layoutComparisonTimer = undefined
       const request = {
-        selections: [createPreviewSelection('1-6'), createPreviewSelection('2-6')],
+        selections: [createThumbnailSelection('1-6'), createThumbnailSelection('2-6')],
         options: {
           properties,
           ...(previewBuilderContext.value
@@ -2310,7 +2321,7 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
   active: computed(() => previewsReady.value && !layoutComparisonPending.value),
-  createSelection: createPreviewSelection,
+  createSelection: createThumbnailSelection,
   previewContext: computed(() => [
     props.builderActive ? undefined : scaleSettings.value,
     props.builderInsertionIndex,
