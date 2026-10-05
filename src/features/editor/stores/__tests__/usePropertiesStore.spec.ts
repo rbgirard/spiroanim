@@ -112,12 +112,10 @@ describe('usePropertiesStore', () => {
     expect(editor.animGet('twist')).toEqual([100, true, '100°', false])
   })
 
-  it('retains Editor Scale edits as manual VTG intent', async () => {
+  it('writes Editor Scale edits directly to the animation frames', async () => {
     const { player } = await createPopulatedStore('editor-vtg-scale')
-    player.raw().ROOT.value.vtgScale = { auto: true, base: 0.9, mode: 'simple' }
     player.PLAYING = false
     useProperties('editor-vtg-scale').animSet('scale', 65)
-    expect(player.raw().ROOT.value.vtgScale).toEqual({ auto: false, base: 0.9, mode: 'advanced' })
     expect(player.raw().ROOT.value.props[0]!.anim[0]!.scale).toBe(65)
   })
 

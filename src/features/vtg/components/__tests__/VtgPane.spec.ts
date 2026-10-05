@@ -1281,7 +1281,6 @@ describe('VtgPane', () => {
       reversePlane: true,
       propRotationOffsets: [90, 0],
       scale: 0.7,
-      scaleSettings: expect.objectContaining({ auto: false }),
     })
   })
 
@@ -1406,7 +1405,6 @@ describe('VtgPane', () => {
       reference: '1-6',
       speedRatio: '1:3',
       quarters: 1,
-      scaleSettings: expect.objectContaining({ auto: false }),
     })
 
     const regenerated = selection ? createQtrAnimation(animation, selection) : undefined

@@ -1,4 +1,5 @@
 // Auto-load types that may be used frequently throughout the app
+import type { Eruda } from 'eruda'
 
 import type {
   CSSProperties as VueCSSProperties,
@@ -27,12 +28,7 @@ declare global {
   > = PiniaDefineStore<Id, State, Getters, Actions>
   */
   interface Window {
-    eruda?: {
-      init: () => void
-      show: () => void
-      hide: () => void
-      // Add more methods if needed
-    }
+    eruda?: Eruda
   }
 }
 

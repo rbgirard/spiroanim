@@ -39,7 +39,6 @@ const mergeWithCurrentAnimation = (
   pattern: EightStepReadableAnimation,
 ): RootReadable => ({
   ...encodeReadable(current),
-  vtgScale: undefined,
   ...pattern,
   props: pattern.props,
 })

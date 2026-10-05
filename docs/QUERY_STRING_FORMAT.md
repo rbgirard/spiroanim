@@ -258,12 +258,10 @@ alignment and trailing empty-frame removal follow the same rules as the other op
 
 ## Version 12 Turns, Warp, Strength, and Scale layout
 
-VTG authoring intent optionally uses a separate `vs` query parameter: `a:80` for Auto,
-`m:80` for manual Simple, or `d:80` for manual Advanced. The number is the automatic base Scale
-in hundredths (`50..140`), retained even in manual mode. Actual rendered scales always remain
-in the normal frame channels, so readers that ignore `vs` still render the same animation.
-Missing or malformed intent leaves the animation unmarked; VTG opens it in manual mode without
-rewriting its frames. This optional metadata does not change the Version 12 packed layout.
+Scale is stored only in the frame channels. VTG detects Auto and manual Scale controls from that
+data and the matched timing ratio; control state is not serialized separately. The former `vs`
+parameter is ignored if present in an existing URL and is never emitted. This does not change
+the Version 12 packed layout or require a new query-string version.
 
 Version 12 adds inherited `warp` and `strength`, changes Scale's internal unit from tenths to
 hundredths, and gives Turns and Warp the VTG-derived range and half-degree precision. Its locked

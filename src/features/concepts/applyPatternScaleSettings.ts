@@ -10,7 +10,6 @@ export const applyPatternScaleSettings = (
   firstEditableFrameIndex = 0,
 ): RootDataFinal => ({
   ...animation,
-  ...(animation.vtgScale ? { vtgScale: { ...animation.vtgScale, auto: false, mode } } : undefined),
   props: animation.props.map((prop, propIndex) => {
     let beat = 0
     return {

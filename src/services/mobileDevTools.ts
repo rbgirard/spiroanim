@@ -1,13 +1,14 @@
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { isTouchDevice } from '@/utils/device'
+import erudaScriptSource from 'eruda/eruda.js?url'
+import type { Eruda } from 'eruda'
 
 const ERUDA_SCRIPT_ID = 'spiroanim-eruda'
-const ERUDA_SCRIPT_SOURCE = 'https://cdn.jsdelivr.net/npm/eruda'
 
 interface MobileDevToolsWindow {
   location: Pick<Location, 'hostname'>
   navigator: Pick<Navigator, 'maxTouchPoints' | 'userAgent'>
-  eruda?: Window['eruda']
+  eruda?: Pick<Eruda, 'init'>
 }
 
 export function loadMobileDevTools(
@@ -30,7 +31,8 @@ export function loadMobileDevTools(
 
   const script = sourceDocument.createElement('script')
   script.id = ERUDA_SCRIPT_ID
-  script.src = ERUDA_SCRIPT_SOURCE
+  // Emit a local asset so the existing PWA precache includes the full suite for offline use.
+  script.src = erudaScriptSource
   script.onload = () => sourceWindow.eruda?.init()
   sourceDocument.body.appendChild(script)
 }

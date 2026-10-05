@@ -4,7 +4,6 @@ import {
   vtgDefaultProp,
   vtgPlayerSettings,
   vtgPropSettings,
-  vtgScaleControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import {
@@ -251,14 +250,7 @@ export const finalizeVtgAnimation = (
   if (!playback) return undefined
   const scaled = selection.scaleSettings
     ? applyVtgScaleSettings(playback, selection.scaleSettings, selection.speedRatio)
-    : {
-        ...playback,
-        vtgScale: {
-          auto: true,
-          base: selection.scale ?? vtgScaleControl.default,
-          mode: 'simple' as const,
-        },
-      }
+    : playback
   const configured = options.properties
     ? applyVtgPropertySettings(scaled, options.properties)
     : scaled

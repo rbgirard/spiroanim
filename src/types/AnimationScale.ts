@@ -2,13 +2,10 @@
 export type PatternScaleMode = 'simple' | 'advanced'
 export type PatternScaleValues = [Record<string, number>, Record<string, number>]
 
-/** Optional authoring intent; rendered Scale remains stored in the animation frames. */
-export interface VtgScaleIntent {
+/** Live VTG controls; only the resulting frame scales are stored in animations. */
+export interface VtgScaleSettings {
   auto: boolean
   base: number
   mode: PatternScaleMode
-}
-
-export interface VtgScaleSettings extends VtgScaleIntent {
   values: PatternScaleValues
 }

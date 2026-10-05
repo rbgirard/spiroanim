@@ -1,4 +1,8 @@
-import { applyVtgScaleSettings, readPatternScaleValues } from '@/features/vtg/scaleSettings'
+import {
+  applyVtgScaleSettings,
+  detectVtgAutoScale,
+  readPatternScaleValues,
+} from '@/features/vtg/scaleSettings'
 import { vtgScaleControl } from '@/features/vtg/data/vtgPlayerSettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternScaleMode, PatternScaleValues, VtgScaleSettings } from '@/types/AnimationScale'
@@ -40,7 +44,9 @@ export const useVtgScaleControls = ({
     values: [{ ...values.value[0] }, { ...values.value[1] }],
   }))
 
-  const hydrate = () => {
+  let preserveEditingMode = false
+  let lastApplied: RootDataFinal | undefined
+  const hydrate = (preserveMode: boolean) => {
     if (!enabled.value) return
     const current = animation.value
     if (!current || current.props.length === 0) {
@@ -49,23 +55,50 @@ export const useVtgScaleControls = ({
       values.value = [{}, {}]
       return
     }
-    // Unmarked legacy links retain their authored scales; never infer Auto from matching numbers.
-    auto.value = current.vtgScale?.auto ?? false
-    hydrating.value = true
-    if (current.vtgScale) base.value = current.vtgScale.base
-    hydrating.value = false
     values.value = readPatternScaleValues(current)
-    mode.value =
-      current.vtgScale?.mode ??
-      (values.value.some((side) => Object.keys(side).some((beat) => beat !== '0'))
-        ? 'advanced'
-        : 'simple')
+    if (preserveMode) return
+    const detectedBase = detectVtgAutoScale(current, ratio.value)
+    auto.value = detectedBase !== undefined
+    hydrating.value = true
+    base.value = detectedBase ?? vtgScaleControl.default
+    hydrating.value = false
+    mode.value = values.value.some((side) => Object.keys(side).some((beat) => beat !== '0'))
+      ? 'advanced'
+      : 'simple'
   }
-  watch([animation, enabled, () => revision?.value], hydrate, { immediate: true })
+  watch(
+    [animation, enabled, () => revision?.value],
+    ([current, active, currentRevision], [previous, wasActive, previousRevision]) => {
+      // The pane's revision changes only for external edits. Standalone consumers can also
+      // recognize their own emitted tracks, including a final Swap and its inverse.
+      const ownUpdate =
+        lastApplied !== undefined &&
+        current?.props.length === lastApplied.props.length &&
+        current.props.every((prop, index) => prop.anim === lastApplied?.props[index]?.anim)
+      const external =
+        !previous ||
+        !wasActive ||
+        currentRevision !== previousRevision ||
+        (currentRevision === undefined && current !== previous && !ownUpdate)
+      if (external) {
+        preserveEditingMode = false
+        lastApplied = undefined
+      } else if (current !== previous) preserveEditingMode = true
+      if (!active) {
+        preserveEditingMode = false
+        lastApplied = undefined
+        return
+      }
+      hydrate(preserveEditingMode)
+    },
+    { immediate: true },
+  )
 
   const apply = () => {
     if (!enabled.value || !animation.value) return
-    onAnimationUpdate(applyVtgScaleSettings(animation.value, settings.value, ratio.value))
+    preserveEditingMode = true
+    lastApplied = applyVtgScaleSettings(animation.value, settings.value, ratio.value)
+    onAnimationUpdate(lastApplied)
   }
   const updateAuto = (nextAuto: boolean) => {
     if (!enabled.value || nextAuto === auto.value) return
@@ -97,6 +130,8 @@ export const useVtgScaleControls = ({
     apply()
   }
   const reset = () => {
+    preserveEditingMode = false
+    lastApplied = undefined
     auto.value = true
     mode.value = 'simple'
     values.value = [{}, {}]
@@ -108,6 +143,7 @@ export const useVtgScaleControls = ({
     displayValues,
     settings,
     hydrating,
+    hydrate: () => hydrate(preserveEditingMode),
     updateAuto,
     updateValue,
     updateMode,

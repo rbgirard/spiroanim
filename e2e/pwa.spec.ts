@@ -3,6 +3,60 @@ import { readdir } from 'node:fs/promises'
 
 import { stagePwaBuildTransition } from './support/pwaBuildTransition.js'
 
+test.describe('offline mobile development console', () => {
+  test.use({
+    hasTouch: true,
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/17.0 Safari/605.1.15',
+  })
+
+  test('precaches the full local Eruda suite and captures errors after an offline reload', async ({
+    context,
+    page,
+  }) => {
+    const erudaRequests: string[] = []
+    page.on('request', (request) => {
+      if (request.url().includes('eruda')) erudaRequests.push(request.url())
+    })
+    // Playwright's generic touch emulation exposes one point; desktop-identifying iPads expose more.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 5 })
+    })
+    await page.goto('/')
+    const entry = page.locator('#eruda .eruda-entry-btn')
+    await expect(entry).toBeVisible()
+    const scriptSource = await page.locator('#spiroanim-eruda').getAttribute('src')
+    expect(scriptSource).toMatch(/^\/assets\/eruda-[^/]+\.js$/)
+    await page.evaluate(async () => navigator.serviceWorker.ready)
+    await expect
+      .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+      .toBe(true)
+    expect(
+      await page.evaluate(
+        async (source) => Boolean(source && (await caches.match(source, { ignoreSearch: true }))),
+        scriptSource,
+      ),
+    ).toBe(true)
+    await context.setOffline(true)
+    try {
+      await page.reload()
+      await expect(entry).toBeVisible()
+      await page.addScriptTag({ content: "console.error('Offline Eruda regression message')" })
+      await entry.tap()
+      const consolePanel = page.locator('#eruda')
+      await expect(consolePanel.getByText('Offline Eruda regression message')).toBeVisible()
+      await expect(consolePanel.getByText('elements', { exact: true })).toBeVisible()
+      await expect(consolePanel.getByText('network', { exact: true })).toBeVisible()
+      expect(erudaRequests.length).toBeGreaterThanOrEqual(2)
+      expect(erudaRequests.every((url) => new URL(url).origin === new URL(page.url()).origin)).toBe(
+        true,
+      )
+    } finally {
+      await context.setOffline(false)
+    }
+  })
+})
+
 function requireResponse(response: Response | null): Response {
   if (!response) throw new Error('The browser did not return a navigation response.')
   return response

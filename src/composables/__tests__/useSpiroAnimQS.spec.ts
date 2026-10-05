@@ -59,27 +59,26 @@ const createRoot = (): RootDataFinal & { distance: number } => ({
 })
 
 describe('useSpiroAnimQS', () => {
-  it.each([
-    { auto: true, base: 1.4, mode: 'simple' as const },
-    { auto: false, base: 0.8, mode: 'simple' as const },
-    { auto: false, base: 0.9, mode: 'advanced' as const },
-  ])('round-trips VTG Scale intent independently of authored frames: %j', async (intent) => {
-    const codec = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
-    const root = createRoot()
-    root.vtgScale = intent
-    root.props[0]!.anim = [{ scale: 65 }, { scale: 120 }]
-    const encoded = codec.encodeQS(root, false)
-    const decoded = codec.decodeQS(encoded)
-    expect(decoded.vtgScale).toEqual(intent)
-    expect(decoded.props[0]!.anim.map((frame) => frame.scale)).toEqual([65, 120])
-    expect(codec.encodeQS(decoded, false)).toEqual(encoded)
-    const legacy = { ...encoded }
-    delete legacy.vs
-    expect(codec.decodeQS(legacy).vtgScale).toBeUndefined()
-    for (const invalid of ['a:49', 'm:141', 'a:NaN', 'x:80', 'd:-50']) {
-      expect(codec.decodeQS({ ...encoded, vs: invalid }).vtgScale).toBeUndefined()
-    }
-  })
+  it.each(['a:140', 'm:80', 'd:90', 'a:49', 'x:80'])(
+    'ignores obsolete Scale metadata %s while preserving frame data and version',
+    async (value) => {
+      const codec = await useSpiroAnimQS(
+        VDEF_V12,
+        useBaseQS(VDEF_V12, { charset: CHARSET_V12 }),
+        12,
+      )
+      const root = createRoot()
+      root.props[0]!.anim = [{ scale: 65 }, { scale: 120 }]
+      const encoded = codec.encodeQS(root, false)
+      const decoded = codec.decodeQS({ ...encoded, vs: value })
+      expect(decoded).not.toHaveProperty('vtgScale')
+      expect(encoded).not.toHaveProperty('vs')
+      expect(encoded.v).toBe('12')
+      expect(decoded.props[0]!.anim.map((frame) => frame.scale)).toEqual([65, 120])
+      expect(codec.encodeQS(decoded, false)).toEqual(encoded)
+      expect(decoded).toEqual(codec.decodeQS(encoded))
+    },
+  )
 
   it('preserves the version-1 query representation', async () => {
     const query = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)

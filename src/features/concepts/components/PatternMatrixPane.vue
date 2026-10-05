@@ -644,6 +644,7 @@ const {
   displayValues: scaleDisplayValues,
   settings: scaleSettings,
   hydrating: scaleHydrating,
+  hydrate: hydrateScaleControls,
   reset: resetScaleControls,
   updateAuto: updateScaleAuto,
   updateMode: updateScaleMode,
@@ -1794,7 +1795,9 @@ const hydrateSharedCustomizationControls = (animation: RootDataFinal) => {
 
 const hydrateVtgCustomizationControls = (animation: RootDataFinal, match: VtgPatternMatch) => {
   bpm.value = match.bpm
-  scale.value = animation.vtgScale?.base ?? match.scale
+  // Scale controls infer their base from the original frames and matched ratio, not the
+  // scale-normalized copy used for pattern recognition.
+  hydrateScaleControls()
   hydrateSharedCustomizationControls(animation)
 }
 

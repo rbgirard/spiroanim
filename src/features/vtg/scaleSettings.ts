@@ -1,10 +1,47 @@
 import { toDisplayScale } from '@/domain/animation/scale'
 import { resolveAnimationFrames } from '@/math/animation/frameSemantics'
 import { applyPatternScaleSettings } from '@/features/concepts/applyPatternScaleSettings'
-import { getAdjustedVtgScale, getVtgDistanceForScale } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  getAdjustedVtgScale,
+  getVtgDistanceForScale,
+  getVtgScaleControlValue,
+  vtgScaleControl,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { PatternScaleValues, VtgScaleSettings } from '@/types/AnimationScale'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
+
+/** Includes inherited/default Scale and every frame, not just the first authored values. */
+export const readUniformPatternScale = (animation: RootDataFinal): number | undefined => {
+  if (animation.props.length !== 2) return undefined
+  let scale: number | undefined
+  for (const prop of animation.props) {
+    if (prop.anim.length === 0) return undefined
+    for (const frame of resolveAnimationFrames(prop.anim)) {
+      if (!Number.isFinite(frame.scale)) return undefined
+      scale ??= frame.scale
+      if (frame.scale !== scale) return undefined
+    }
+  }
+  return scale === undefined ? undefined : toDisplayScale(scale)
+}
+
+/** Recognizes Auto by reproducing the data, without changing frames or remembering authoring intent.
+ * At clamped boundaries the existing inverse selects a deterministic equivalent base.
+ */
+export const detectVtgAutoScale = (
+  animation: RootDataFinal,
+  ratio: VtgSpeedRatio,
+): number | undefined => {
+  const scale = readUniformPatternScale(animation)
+  if (scale === undefined) return undefined
+  const base = getVtgScaleControlValue(scale, ratio)
+  return base >= vtgScaleControl.min &&
+    base <= vtgScaleControl.max &&
+    getAdjustedVtgScale(base, ratio) === scale
+    ? base
+    : undefined
+}
 
 export const readPatternScaleValues = (
   animation: RootDataFinal,
@@ -40,7 +77,6 @@ export const applyVtgScaleSettings = (
   const maximum = Math.max(0, ...effectiveValues.flatMap((side) => Object.values(side)))
   return {
     ...scaled,
-    vtgScale: { auto: settings.auto, base: settings.base, mode: settings.mode },
     camera: scaled.camera.map((frame, index) =>
       index === 0
         ? { ...frame, orbit: { ...frame.orbit, distance: getVtgDistanceForScale(maximum) } }

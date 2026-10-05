@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
-import { applyVtgScaleSettings, readPatternScaleValues } from '@/features/vtg/scaleSettings'
+import {
+  applyVtgScaleSettings,
+  detectVtgAutoScale,
+  readPatternScaleValues,
+} from '@/features/vtg/scaleSettings'
 import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
 import { findVtgPatternMatch } from '@/features/vtg/matchVtgAnimation'
 import { findQtrPatternMatch } from '@/features/vtg/qtr/matchQtrAnimation'
@@ -9,6 +13,74 @@ import type { VtgScaleSettings } from '@/types/AnimationScale'
 import type { VtgSpeedRatio } from '@/features/vtg/types'
 
 describe('VTG Scale settings', () => {
+  it.each<[VtgSpeedRatio, number, number]>([
+    ['1:3', 0.5, 0.5],
+    ['1:3', 1.4, 1.4],
+    ['1:5', 0.9, 0.9],
+    ['1:5', 1.4, 1.2],
+    ['1:2', 0.5, 0.7],
+    ['1:3v2', 1.1, 1.1],
+  ])(
+    'detects an equivalent Auto base for %s at %s without rewriting frames',
+    (speedRatio, base, expected) => {
+      for (const animation of [
+        createDefaultVtgAnimation({ reference: '1-1', speedRatio, scale: base, swapProps: true })!,
+        createDefaultQtrAnimation({ reference: '1-1', speedRatio, scale: base, quarters: 1 })!,
+      ]) {
+        const before = JSON.stringify(animation)
+        expect(detectVtgAutoScale(animation, speedRatio)).toBe(expected)
+        expect(JSON.stringify(animation)).toBe(before)
+      }
+    },
+  )
+
+  it('recognizes default, inherited, and repeated equal scales from all frames', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })!
+    for (const prop of animation.props) {
+      for (const frame of prop.anim) delete frame.scale
+      prop.anim[2]!.scale = 100
+    }
+    expect(detectVtgAutoScale(animation, '1:3')).toBe(1)
+    animation.props[1]!.anim[3]!.scale = 90
+    expect(detectVtgAutoScale(animation, '1:3')).toBeUndefined()
+  })
+
+  it.each([0, -0.5, 0.4, 1.5])(
+    'keeps uniform %s manual and recognizes its underlying pattern',
+    (scale) => {
+      const source = createDefaultVtgAnimation({ reference: '1-2', speedRatio: '1:3' })!
+      const manual = applyVtgScaleSettings(
+        source,
+        {
+          auto: false,
+          base: 0.8,
+          mode: 'simple',
+          values: [{ 0: scale }, { 0: scale }],
+        },
+        '1:3',
+      )
+      const before = JSON.stringify(manual)
+      expect(detectVtgAutoScale(manual, '1:3')).toBeUndefined()
+      expect(findVtgPatternMatch(stripVtgPropertySettings(manual))).toBeDefined()
+      expect(JSON.stringify(manual)).toBe(before)
+    },
+  )
+
+  it('rejects equal scales that the current ratio cannot generate with a valid base', () => {
+    const animation = createDefaultVtgAnimation({
+      reference: '1-1',
+      speedRatio: '1:3',
+      scale: 0.5,
+    })!
+    expect(detectVtgAutoScale(animation, '1:5')).toBeUndefined()
+  })
+
+  it('does not classify a rounded approximation as Auto', () => {
+    const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })!
+    for (const prop of animation.props) prop.anim[0]!.scale = 65.5
+    expect(detectVtgAutoScale(animation, '1:3')).toBeUndefined()
+  })
+
   it.each<[VtgSpeedRatio, number]>([
     ['1:1', 0.9],
     ['1:2', 0.6],
@@ -24,7 +96,7 @@ describe('VTG Scale settings', () => {
       createDefaultQtrAnimation({ reference: '1-1', speedRatio, quarters: 1 }),
     ]) {
       expect(animation).toBeDefined()
-      expect(animation!.vtgScale).toEqual({ auto: true, base: 0.8, mode: 'simple' })
+      expect(detectVtgAutoScale(animation!, speedRatio)).toBe(0.8)
       expect(readPatternScaleValues(animation!, true).map((side) => side['0'])).toEqual([
         expected,
         expected,
@@ -54,7 +126,7 @@ describe('VTG Scale settings', () => {
         const values = readPatternScaleValues(animation, true)
         expect(Object.values(values[0]).every((value) => value === 1.2)).toBe(true)
         expect(Object.values(values[1]).every((value) => value === 0)).toBe(true)
-        expect(animation.vtgScale?.auto).toBe(false)
+        expect(detectVtgAutoScale(animation, speedRatio)).toBeUndefined()
       }
       expect(findVtgPatternMatch(stripVtgPropertySettings(vtg))).toBeDefined()
       expect(findQtrPatternMatch(stripVtgPropertySettings(qtr))).toBeDefined()
@@ -79,6 +151,6 @@ describe('VTG Scale settings', () => {
       '1:5',
     )
     expect(readPatternScaleValues(auto)).toEqual([{ 0: 1.4 }, { 0: 1.4 }])
-    expect(auto.vtgScale?.base).toBe(1.4)
+    expect(detectVtgAutoScale(auto, '1:5')).toBe(1.2)
   })
 })

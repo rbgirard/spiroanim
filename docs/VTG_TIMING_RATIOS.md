@@ -239,13 +239,18 @@ and Right values, `0..1.4` in `0.1` steps, with Advanced supporting sparse per-b
 inheritance. Manual values receive no ratio adjustment. Turning Auto back on reapplies automatic
 sizing; turning it off again starts from those new automatic values, not earlier manual edits.
 Reset returns to Auto. Manual Scale is applied to authored VTG/QTR paths before Swap and also feeds grid
-previews. Pattern matching normalizes manual Scale on a copy, including zero values.
+previews. Pattern matching normalizes unequal, varying, or nonpositive Scale on a copy; original
+frames remain authoritative for rendering and controls.
 
-Scale intent and the automatic base travel with the animation, including shared URLs. Unmarked
-older animations open in manual mode without modifying their authored Scale. Builder, QST, and
-Eight Step do not expose this Auto toggle.
-Explicit Scale edits in Builder or Editor switch existing VTG intent to manual so those authored
-values remain editable when returning to VTG.
+On load and after external edits, Auto is detected when both props have the same effective Scale
+throughout every frame and a valid base in `0.5..1.4`, with the matched ratio adjustment, reproduces
+that Scale. Detection includes inherited and default values and never rewrites frames. At clamped
+boundaries the inverse adjustment selects a deterministic equivalent base; the historical base is
+not retained. Manual Simple/Advanced is inferred from authored Scale tracks. An explicit mode choice
+is retained during local editing, so turning Auto off or selecting Advanced does not immediately
+undo itself. Reloads and Builder/Editor changes re-detect from data, even if it was manually authored.
+For a manual animation with no detectable automatic base, Customize's base starts at `0.8` for the
+next explicit Auto activation. Builder, QST, and Eight Step do not expose this Auto toggle.
 
 ## Pattern Builder Arc conversion
 

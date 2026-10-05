@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { loadMobileDevTools } from '@/services/mobileDevTools'
+import erudaScriptSource from 'eruda/eruda.js?url'
+import type { Eruda } from 'eruda'
 
 const mobileNavigator = {
   userAgent: 'Android',
@@ -10,22 +12,21 @@ const mobileNavigator = {
 describe('mobile development tools', () => {
   it('loads Eruda on mobile devices away from the production hostname', () => {
     const sourceDocument = document.implementation.createHTMLDocument()
-    const init = vi.fn<() => void>()
+    const init = vi.fn<Eruda['init']>()
     const sourceWindow = {
       location: { hostname: 'preview.example.test' },
       navigator: mobileNavigator,
-      eruda: undefined as Window['eruda'],
+      eruda: undefined as Pick<Eruda, 'init'> | undefined,
     }
 
     loadMobileDevTools(sourceWindow, sourceDocument)
 
     const script = sourceDocument.getElementById('spiroanim-eruda') as HTMLScriptElement
-    expect(script.src).toBe('https://cdn.jsdelivr.net/npm/eruda')
+    expect(script.getAttribute('src')).toBe(erudaScriptSource)
+    expect(script.src).not.toContain('cdn.jsdelivr.net')
 
     sourceWindow.eruda = {
       init,
-      show: vi.fn<() => void>(),
-      hide: vi.fn<() => void>(),
     }
     script.onload?.(new Event('load'))
     expect(init).toHaveBeenCalledOnce()
@@ -65,5 +66,30 @@ describe('mobile development tools', () => {
     loadMobileDevTools(sourceWindow, sourceDocument)
 
     expect(sourceDocument.scripts).toHaveLength(1)
+  })
+
+  it('loads the local suite on desktop-identifying iPads', () => {
+    const sourceDocument = document.implementation.createHTMLDocument()
+    loadMobileDevTools(
+      {
+        location: { hostname: 'preview.example.test' },
+        navigator: { userAgent: 'Macintosh', maxTouchPoints: 5 },
+      },
+      sourceDocument,
+    )
+    expect(sourceDocument.getElementById('spiroanim-eruda')?.getAttribute('src')).toBe(
+      erudaScriptSource,
+    )
+  })
+
+  it('reuses an existing Eruda instance without appending another script', () => {
+    const sourceDocument = document.implementation.createHTMLDocument()
+    const init = vi.fn<Eruda['init']>()
+    loadMobileDevTools(
+      { location: { hostname: 'localhost' }, navigator: mobileNavigator, eruda: { init } },
+      sourceDocument,
+    )
+    expect(init).toHaveBeenCalledOnce()
+    expect(sourceDocument.scripts).toHaveLength(0)
   })
 })

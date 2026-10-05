@@ -63,6 +63,16 @@ cache rules, and Cloudflare Pages configuration are documented in [`HOSTING.md`]
   application code has not started yet. Correct HTML revalidation, real asset 404 responses, and a
   consistent deployment are therefore required parts of startup reliability.
 
+## Mobile development console
+
+The full Eruda suite is installed from npm at a pinned version and emitted as a separate local
+JavaScript asset. It is included in the production-build precache even when not activated, so an
+offline reload does not depend on a CDN or on having opened the console previously.
+Activation is unchanged: after the app mounts, Eruda starts automatically on touch devices outside
+`spiroanim.com`, including iPads using a desktop-class user agent. It remains disabled on the
+production hostname and on desktop devices. It does not capture errors from before initialization
+or replace browser-level service-worker debugging.
+
 ## Validation
 
 The PWA test builds the production application, starts Vite preview, validates the generated
