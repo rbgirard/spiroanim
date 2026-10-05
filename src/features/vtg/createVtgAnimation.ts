@@ -35,7 +35,11 @@ import {
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 import { applyVtgScaleSettings } from '@/features/vtg/scaleSettings'
 import { applyVtgSwap } from '@/features/vtg/applyVtgSwap'
-import { applyVtgPropertySettings, type VtgPropertySettings } from '@/features/vtg/propertySettings'
+import {
+  applyVtgPropertySettings,
+  hasVtgPropertySettings,
+  type VtgPropertySettings,
+} from '@/features/vtg/propertySettings'
 
 const axesPointInSameDirection = (first: readonly number[], second: readonly number[]) =>
   (first[0] ?? 0) * (second[0] ?? 0) +
@@ -55,7 +59,7 @@ export const getVtgPropertyAuthoringBeat = (
   selection: VtgPatternSelection,
   options: CreateVtgAnimationOptions,
 ) =>
-  options.properties || selection.scaleSettings
+  (options.properties && hasVtgPropertySettings(options.properties)) || selection.scaleSettings
     ? (options.properties?.initialBeat ?? selection.initialTurnsOffsetBeat ?? vtgDefaultBeat)
     : (selection.beat ?? vtgDefaultBeat)
 
