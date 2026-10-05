@@ -3975,6 +3975,51 @@ describe('VtgPane', () => {
     expect(countWorkerMessages('data')).toBe(22)
   })
 
+  it.each([
+    { mode: 'vtg-transition', fullCatalog: false },
+    { mode: 'vtg-transition-45', fullCatalog: false },
+    { mode: 'vtg-transition', fullCatalog: true },
+    { mode: 'vtg-transition-45', fullCatalog: true },
+  ])('excludes Trans/45 expansion when entering Builder with %j', async ({ mode, fullCatalog }) => {
+    const wrapper = mount(VtgPane)
+    await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+    await wrapper.get(`[data-role="${mode}"]`).trigger('click')
+    const sourceSelection = wrapper.emitted<VtgPatternSelection[]>('patternSelect')?.at(-1)?.[0]
+    if (!sourceSelection) throw new Error('Expected a transition selection')
+    const animation = createDefaultVtgAnimation(sourceSelection)
+    if (!animation) throw new Error('Expected a transition animation')
+    const original = JSON.stringify(animation)
+    expect(animation.props[0]!.anim.length).toBeGreaterThan(9)
+
+    await wrapper.setProps({
+      animation,
+      builderActive: true,
+      builderFullCatalog: fullCatalog,
+      builderInsertionIndex: 0,
+    })
+    for (const builderInsertionIndex of [0, 1]) {
+      await wrapper.setProps({ builderInsertionIndex })
+      await settlePreviewRendering()
+      reportAllBlankDimensions(72, 68)
+      await settlePreviewRendering()
+      await wrapper.get('[data-cell-reference="1-1"]').trigger('click')
+      const selection = wrapper.emitted<VtgPatternSelection[]>('patternPreview')?.at(-1)?.[0]
+      expect(selection).not.toHaveProperty('transition')
+      if (!selection) throw new Error('Expected a Builder selection')
+      const expected = fullCatalog
+        ? createDefaultVtgAnimation(selection)
+        : createVtgBuilderDropPreview(animation, selection, builderInsertionIndex)
+      if (!expected) throw new Error('Expected a Builder candidate')
+      const thumbnailCount = wrapper.findAll('[data-role="vtg-blank"]').length
+      const preview = FakeWorker.instances[0]?.messages
+        .filter(({ type }) => type === 'loadFinalData')
+        .map(({ data }) => data as RootDataFinal)
+        .at(-thumbnailCount)
+      expect(preview?.props.map(({ anim }) => anim)).toEqual(expected.props.map(({ anim }) => anim))
+    }
+    expect(JSON.stringify(animation)).toBe(original)
+  })
+
   it('keeps Builder table controls non-mutating while exposing cells as drag sources', async () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!animation) throw new Error('Expected a supported VTG animation')

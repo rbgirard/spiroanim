@@ -407,10 +407,11 @@ ignore starting point, direction, and repeated visits without rotating the path 
 hand position. Samples between authored frames distinguish curves with shared endpoints. Thumbnail
 rendering waits for the current comparison to finish, avoiding a redundant batch for the old layout.
 
-Outside Builder, catalog thumbnails and their layout comparison exclude the Trans/45 sequence
-expansion. They show the base VTG/QTR cycle with the current property settings, including retained
-initial Turns offsets from extracted patterns. Trans/45 still applies to the selected player
-animation. Builder contextual candidates and portion previews retain their existing behavior.
+Catalog thumbnails and their layout comparison exclude the Trans/45 sequence expansion, including
+when entering compact or full-catalog Builder with either mode enabled. They show the base VTG/QTR
+cycle with the current property settings, retained initial Turns offsets, and Builder insertion
+context. Trans/45 still applies to the selected player animation; authored Builder portion previews
+retain their existing behavior.
 
 In Pattern Builder, selecting the empty Drop target clears the effective per-portion Third Order
 preview context. Full Grid then compares unmodified candidate paths: equivalent paths share nine

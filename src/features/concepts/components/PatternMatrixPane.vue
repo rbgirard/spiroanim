@@ -823,7 +823,6 @@ const createPreviewSelection = (reference: VtgCellReference) =>
     : createVtgPreviewSelection(reference)
 const createThumbnailSelection = (reference: VtgCellReference) => {
   const selection = createPreviewSelection(reference)
-  if (props.builderActive) return selection
 
   // Catalog thumbnails show the base cycle with its current properties. Trans/45 expands player
   // playback only; retained initial Turns offsets still belong to the extracted pattern geometry.
