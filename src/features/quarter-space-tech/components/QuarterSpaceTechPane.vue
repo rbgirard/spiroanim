@@ -507,12 +507,19 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       const matchedPageIndex = pages.findIndex((page) =>
         page.patterns.some((pattern) => pattern.reference === displayPattern.reference),
       )
+      const nextPageIndex = Math.max(0, matchedPageIndex)
+      const selectionChanged =
+        selectedCollection.value?.key !== location.collection.key ||
+        selectedDisplayPattern.value?.reference !== displayPattern.reference ||
+        pageIndex.value !== nextPageIndex
       selectedCollection.value = location.collection
       selectedPattern.value = normalized.pattern
-      pageIndex.value = Math.max(0, matchedPageIndex)
+      pageIndex.value = nextPageIndex
       pageIndexByCollection[location.collection.key] = pageIndex.value
       swapProps.value = normalized.swapProps
-      void scrollSelectedPatternIntoView()
+      // Customize rebuilds and rematches the current animation. Keep the user's scroll position
+      // while editing its controls; only reveal a card when the displayed selection changes.
+      if (selectionChanged) void scrollSelectedPatternIntoView()
     } else {
       swapProps.value = result.match.swapProps
     }

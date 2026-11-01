@@ -201,6 +201,42 @@ describe('ShiftFrames', () => {
     expect(player.SELECTED).toEqual([1, 3])
   })
 
+  it('preserves a partial range Warp seam and materializes following inheritance', async () => {
+    const storeId = 'shift-range-warp'
+    const player = usePlayerStore(storeId)
+    const { ROOT, COMPILED } = player.raw()
+    const frames = rangedFrames()
+    frames[1]!.warp = 0
+    frames[2]!.warp = 180
+    frames[3]!.warp = -180
+    ROOT.value = createRoot([frames])
+    player.PLAYING = false
+
+    const properties = usePropertiesStore(storeId)
+    properties.pSELECTED = { 0: true }
+    await nextTick()
+
+    const original = structuredClone(COMPILED.value.props[0]!.anim)
+    expect(ROOT.value.props[0]!.anim[4]!.warp).toBeUndefined()
+    player.SELECTION = true
+    player.SELECTED = [1, 3]
+    await nextTick()
+
+    const wrapper = mount(ShiftFrames, {
+      global: { provide: { store: ref(storeId) } },
+    })
+    await openShiftForm(wrapper)
+    await applyShift(wrapper)
+    await nextTick()
+
+    const result = COMPILED.value.props[0]!.anim
+    expectVectorClose(result[1]!.warpPos, original[2]!.warpPos)
+    expectVectorClose(result[3]!.warpPos, original[2]!.warpPos)
+    expect(result[3]!.warp).toBe(180)
+    expect(ROOT.value.props[0]!.anim[4]!.warp).toBe(-180)
+    expect(result[4]!.warp).toBe(original[4]!.warp)
+  })
+
   it('shifts an entirely selected pattern and retains its final frame properties', async () => {
     const storeId = 'shift-entire-selection'
     const player = usePlayerStore(storeId)

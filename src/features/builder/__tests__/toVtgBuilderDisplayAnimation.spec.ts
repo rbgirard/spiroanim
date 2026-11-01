@@ -17,13 +17,13 @@ describe('toVtgBuilderDisplayAnimation', () => {
       scale: 0.8,
     })
     if (!animation) throw new Error('Expected a supported VTG pattern')
-    animation.props[0]!.anim[3] = { ...animation.props[0]!.anim[3], scale: 13 }
-    animation.props[1]!.anim[5] = { ...animation.props[1]!.anim[5], scale: 11 }
+    animation.props[0]!.anim[3] = { ...animation.props[0]!.anim[3], scale: 130 }
+    animation.props[1]!.anim[5] = { ...animation.props[1]!.anim[5], scale: 110 }
     const original = structuredClone(animation)
 
     const display = toVtgBuilderDisplayAnimation(animation)
 
-    expect(getVtgBuilderMaximumScale(animation)).toBe(13)
+    expect(getVtgBuilderMaximumScale(animation)).toBe(130)
     expect(display.props).toEqual(animation.props)
     expect(display.camera[0]?.orbit?.distance).toBe(getVtgDistanceForScale(1.3))
     expect(animation).toEqual(original)
@@ -143,7 +143,7 @@ describe('toVtgBuilderDisplayAnimation', () => {
     const animation = createDefaultVtgAnimation({ reference: '1-1', speedRatio: '1:3' })
     if (!animation) throw new Error('Expected a supported VTG pattern')
 
-    const display = toVtgBuilderDisplayAnimation(animation, undefined, { maximumScale: 14 })
+    const display = toVtgBuilderDisplayAnimation(animation, undefined, { maximumScale: 140 })
 
     expect(display.camera[0]?.orbit?.distance).toBe(getVtgDistanceForScale(1.4))
     expect(display.props).toEqual(animation.props)

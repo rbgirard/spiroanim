@@ -93,7 +93,7 @@ describe('prepareVtg45TransitionPattern', () => {
     expect(prepared.pattern.props[0]?.anim[1]?.turns).toBe(-112.5)
   })
 
-  it('does not halve Turns beyond the query format tenths precision', () => {
+  it('does not halve Turns beyond the query format half-degree precision', () => {
     const source = createPattern()
     source.props.forEach((prop) => {
       prop.anim = [{ ...prop.anim[0] }, { arc: 90, turns: -112.5 }, {}]

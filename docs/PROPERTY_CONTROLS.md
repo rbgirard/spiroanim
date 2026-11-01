@@ -43,9 +43,10 @@ The commonly used metadata fields are:
 | `float: 1`   | Whole numbers, truncated toward negative infinity                             |
 | `float: 10`  | One decimal place                                                             |
 | `float: 100` | Two decimal places                                                            |
+| `float: 2`   | Half-unit steps                                                               |
 
-Because the implementation uses `Math.floor`, `float` is not nearest-value rounding. For example,
-with `float: 1`, `2.9` becomes `2` and `-2.1` becomes `-3`.
+The implementation uses `Math.round`, so `float` snaps to the nearest permitted increment. For
+example, with `float: 2`, `2.2` becomes `2` and `2.3` becomes `2.5`.
 
 ### Decimal sliders are relative controls
 
@@ -105,6 +106,59 @@ Motion, Camera Orbit, and Camera Center expose the shared inheritable Precision 
 to Disabled and renders authored Move and Distance at one tenth scale without changing their raw
 editor or query values.
 
+### VTG, Eight Step, and Builder/Viewer Third Order controls
+
+The shared pattern Properties panel ends with a `Third Order` tab in VTG, Eight Step, and the
+selected Builder/Viewer portion controls. It has independent Left and Right columns and the
+description `Hand path manipulations`. It does not use Simple and Advanced modes.
+
+Each Initial and Timing dropdown offers `Undefined`, followed by Anti and Spin choices for `1:1`,
+`1:2`, `2:1`, `1:3`, `2:3`, `1:4`, `1:5`, and `2:5`. Spin is the in-spin relationship; stored timing
+values retain their `-pro` suffix for compatibility. These choices are timing definitions. Timing
+Warp is calculated from each continuation frame's resolved Arc:
+
+```text
+Anti Warp = -Arc * (p + q) / p
+Spin Warp =  Arc * (q - p) / p
+```
+
+Consequently, `1:1 Spin` generates explicit Warp `0`; no separate zero option is needed. Clearing a
+control deletes its authored animation field, after which the panel displays the effective inherited
+or default value.
+
+When Timing is undefined, its dropdown displays the Initial timing as its inherited value. This does
+not author continuation Warp: frame zero's numeric Warp inherits normally until an explicit Timing
+overrides it. An inherited `2:*` value still requires the complete two-cycle duration.
+
+Initial controls frame zero, which is a starting pose rather than a movement interval. Its dropdown
+therefore uses the established canonical 45-degree VTG timing values instead of deriving Warp from
+frame zero's Arc. Mirrored props receive the same Initial value unless Opposed swaps Anti and Spin.
+Once Timing is authored, Initial changes to a 0-360 degree slider in 5-degree increments. A later
+Builder/Viewer portion does not own frame zero, so it does not show Initial. Strength is a 0-100
+percent slider in 5-percent increments and is stored in the animation's tenths-of-a-percent units.
+Timing writes the Arc-derived Warp to the editable continuation frames.
+Builder/Viewer edits preserve the effective Warp and Strength of the following portion by using the
+same minimal successor-guard behavior as other inherited properties.
+
+Timing storage is sparse like VTG Turns storage: it authors Warp on the first editable continuation
+frame, then only when a later frame's resolved Arc changes the required Warp. Intervening frames
+inherit the prior value, so compact and fully repeated forms render identically.
+
+The continuing Timing also participates in cycle length. If either active Third Order side uses a
+`2:*` timing while the grid props use only `1:*` timings, VTG generates the same complete two-cycle
+duration as a native `2:*` prop pattern. This applies to ordinary patterns, reciprocal Trans
+playback, thumbnail rendering, and Builder/Viewer 45-degree portions. Matching continues to ignore
+Third Order channels and is not extended to identify these otherwise doubled `1:*` selections.
+
+Mirror is enabled by default and hides the Right column. In this mode, Left authors both sides.
+Opposed is available only while Mirror is enabled; it swaps Anti and Spin for the Right side while
+keeping Strength and a numeric Initial phase unchanged. Disabling Mirror materializes the generated
+Right settings before exposing its column. Loaded animation data automatically detects ordinary
+mirroring, opposed mirroring, or independent sides when those controls can reproduce it exactly.
+
+The implementation is shared by `src/features/vtg/thirdOrder.ts`,
+`src/components/pattern/PatternPropertyControls.vue`, and the VTG and Builder property composables.
+
 ## Property getters, selection, and inheritance display
 
 `usePropertiesStore.ts` derives the currently active raw frames, compiled frames, and props from
@@ -143,7 +197,7 @@ All three normal property setters call `constraints(key, value)` before writing:
 - `animSet` writes or deletes the field on every selected frame, except for calculated geometry
   controls.
 
-`constraints()` reads the current version 1 `VDEF` entry and clamps numeric values to its declared
+`constraints()` reads the active query version's `VDEF` entry and clamps numeric values to its declared
 minimum and maximum. For `move`, it clamps each coordinate and mutates the passed array. Booleans
 are not numerically clamped. Keys absent from `VDEF` pass through unchanged.
 
@@ -165,8 +219,10 @@ Before changing a slider, answer these questions in order:
 1. **What value is the user controlling?** Is it the stored property itself, a relative delta, or
    a feature-level input that derives several stored properties?
 2. **Which UI owns it?** Editor property controls and concept controls use different pipelines.
-3. **What are the stored units?** Scale and Depth are displayed as tenths but stored as integers;
-   angles are stored in degrees. Twist is restricted to 45-degree increments.
+3. **What are the stored units?** Scale is displayed in ordinary units but stored as integer
+   hundredths; Strength and Depth support one displayed decimal place but are stored as integers.
+   Strength stores tenths of a percent, Depth stores tenths of a distance unit, and angles are
+   stored in degrees.
 4. **Should the control round, floor, or preserve fractions?** Make this explicit before the query
    boundary.
 5. **Does the active query version encode the field and scope?** A root field and a same-named prop

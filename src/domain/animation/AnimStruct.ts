@@ -16,10 +16,10 @@ import { Vector3, Spherical } from 'three'
 
 // NOTE: The two following can and probably will differ slightly when more models are added
 // Text displayed in the UI
-export const PTEXT = ['POI', 'Staff', 'Juggling Clubs', 'Fans'] as const
+export const PTEXT = ['POI', 'Staff', 'Juggling Clubs', 'Fans', 'Triads'] as const
 
 // Name of the model / object (No spaces, etc. so its separate from the text)
-export const PROPSR = ['POI', 'STAFF', 'CLUBS', 'FANS'] as const
+export const PROPSR = ['POI', 'STAFF', 'CLUBS', 'FANS', 'TRIADS'] as const
 
 export const COLORS = ['Red', 'Green', 'Blue', 'Yellow', 'Cyan', 'Magenta', 'Orange'] as const
 
@@ -199,6 +199,7 @@ export const CMDMAN = MANCMD.reduce(
 
 export const RADIUS = 5
 export const ORIGRADIUS = 5 // For calculating a multiplier, if/when changing Radius
+export const PROP_PATH_RADIUS = 2.4
 
 // Cartesian Points, converted to Spherical for PHI/THETA, and resulting 1 is discarded.
 export const POINTS: [PointTypes, number, number, number][] = [

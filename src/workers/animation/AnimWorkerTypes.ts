@@ -1,6 +1,6 @@
 // src\workers\AnimWorker\AnimWorkerTypes.ts
 
-import type { CameraPose, RootDataCompiled } from '@/types/AnimTypes'
+import type { CameraPose, RootDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 import type { ImageExportSettings } from '@/types/ImageExportTypes'
 import type { VideoExportProgress, VideoExportSettings } from '@/types/VideoExportTypes'
 
@@ -70,6 +70,12 @@ export interface AnimBridgeMap {
   // Sends full animation data
   data: {
     arg: RootDataCompiled
+  }
+
+  // Compiles and loads final animation data inside the worker.
+  loadFinalData: {
+    arg: RootDataFinal
+    ret: number
   }
 
   // ========== Playback Control ==========

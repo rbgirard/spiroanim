@@ -7,6 +7,8 @@ export default mergeConfig(
   defineConfig({
     test: {
       environment: 'jsdom',
+      // Bound CPU/memory contention between jsdom and the pattern-matching suites.
+      maxWorkers: 2,
       exclude: [
         ...configDefaults.exclude,
         'e2e/**',

@@ -14,6 +14,7 @@ import type {
   VtgTransitionInitialTurnsOffset,
 } from '@/features/vtg/types'
 import type { PatternPropColor } from '@/features/concepts/patternPropColors'
+import { isQtrPatternSelection } from '@/features/concepts/types'
 import type { PropInd, RootDataFinal } from '@/types/AnimTypes'
 
 interface UseVtgPreviewsOptions {
@@ -25,6 +26,7 @@ interface UseVtgPreviewsOptions {
   beat: Ref<VtgBeat>
   scale: Ref<number>
   spacing: Ref<number>
+  hands: Ref<boolean>
   quarters: Ref<QtrMode | false>
   leftPropColor: Ref<PatternPropColor>
   rightPropColor: Ref<PatternPropColor>
@@ -39,6 +41,10 @@ interface UseVtgPreviewsOptions {
   createVtgPreview?: (
     selection: VtgPatternSelection | QtrPatternSelection,
   ) => RootDataFinal | undefined
+  createVtgPreviews?: (
+    selections: readonly (VtgPatternSelection | QtrPatternSelection)[],
+  ) => Promise<readonly (RootDataFinal | undefined)[]>
+  createSelection?: (reference: VtgCellReference) => VtgPatternSelection | QtrPatternSelection
 }
 
 export const pairedPatternPreviewReferences = [1, 2, 3, 4, 5, 6].flatMap((row) =>
@@ -57,6 +63,17 @@ export const builderPatternPreviewReferences = [
   '6-3',
 ] as const satisfies readonly VtgCellReference[]
 
+export const builderPatternCellReferences = [
+  '1-1',
+  '1-2',
+  '1-3',
+  '1-4',
+  '6-1',
+  '6-2',
+  '6-3',
+  '6-4',
+] as const satisfies readonly VtgCellReference[]
+
 const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 const spinPreviewIndexes = pairedPatternPreviewReferences.flatMap((reference, index) =>
   spinToggleCells.has(reference) ? [index] : [],
@@ -71,6 +88,7 @@ export const usePatternPreviews = ({
   beat,
   scale,
   spacing,
+  hands,
   quarters,
   leftPropColor,
   rightPropColor,
@@ -83,6 +101,8 @@ export const usePatternPreviews = ({
   active,
   previewContext,
   createVtgPreview,
+  createVtgPreviews,
+  createSelection,
 }: UseVtgPreviewsOptions) => {
   const activePreviewIndexes = computed(() => {
     return activeReferences.value.map((reference) =>
@@ -100,6 +120,7 @@ export const usePatternPreviews = ({
       spacing: spacing.value,
       propColors: [leftPropColor.value, rightPropColor.value],
       prop: prop.value,
+      hands: hands.value,
     }
 
     if (spinToggleCells.has(reference)) selection.isAnti = isAnti.value
@@ -126,10 +147,21 @@ export const usePatternPreviews = ({
     partialIndexes: spinPreviewIndexes,
     activeIndexes: activePreviewIndexes,
     active,
+    ...(createVtgPreviews
+      ? {
+          createAnimations: (references: readonly VtgCellReference[]) =>
+            createVtgPreviews(
+              references.map(
+                (reference) => createSelection?.(reference) ?? buildSelection(reference),
+              ),
+            ),
+        }
+      : undefined),
     createAnimation: (reference) => {
-      const selection = buildSelection(reference)
+      const selection: VtgPatternSelection | QtrPatternSelection =
+        createSelection?.(reference) ?? buildSelection(reference)
       if (createVtgPreview) return createVtgPreview(selection)
-      return 'quarters' in selection
+      return isQtrPatternSelection(selection)
         ? createQtrPreviewAnimation(selection)
         : createVtgPreviewAnimation(selection)
     },
@@ -144,6 +176,7 @@ export const usePatternPreviews = ({
       beat,
       scale,
       spacing,
+      hands,
       quarters,
       leftPropColor,
       rightPropColor,

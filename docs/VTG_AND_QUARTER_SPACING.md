@@ -59,7 +59,10 @@ and Editor. Slots persist complete animation paths, update only after animation 
 saved as named sets. Their interaction, startup, routing, and Timeline placement contracts are
 documented in [`QUICK_SLOTS.md`](./QUICK_SLOTS.md).
 
-Scale, Thick, Spacing, and BPM appear below the Starting Beat and transition controls in VTG. Each
+Thick, Spacing, and BPM appear in Customize below the Starting Beat and transition controls in VTG.
+Scale appears there only with Auto enabled in Properties > Scale; manual mode exposes independent
+Left/Right Simple or Advanced controls instead. VTG and QTR share this behavior; see
+[`VTG_TIMING_RATIOS.md`](./VTG_TIMING_RATIOS.md#ratio-dependent-scale). Each
 slider gesture is one undo step. The sliders begin a query
 history group on pointer-down or key-down and end it on pointer-up, pointer-cancel, key-up, or blur,
 matching the editor slider interaction boundary. Touch and pen pointer input allows vertical page
@@ -73,19 +76,20 @@ represent `props[0]` and `props[1]` and default to checked. Unchecking one write
 they are inherited and omitted from the query string. At least one prop must remain enabled;
 disabling the only enabled side automatically enables the other side. VTG and Quarter Spacing
 players default to Paths on, Hands off, and Arms on; non-default choices are added to the pattern
-selection before the player animation is built. These choices are intentionally excluded from
-`usePatternPreviews`: thumbnail animations always use their canonical Paths-on, Hands-off,
-Arms-off rendering settings.
+selection before the player animation is built. VTG thumbnails retain their lightweight canonical
+Paths-on and Arms-off rendering, but now follow the shared Hands toggle so Third Order hand-path
+motion can be inspected directly.
 
 Current VTG numeric behavior is:
 
-| Control                | UI range and step    | Stored transform                                                    |
-| ---------------------- | -------------------- | ------------------------------------------------------------------- |
-| BPM                    | 40..140, step 1      | Explicitly clamped by `clampVtgBpm()`                               |
-| Scale                  | 0.5..1.4, step 0.1   | Explicitly clamped, multiplied by 10, and rounded for frame `scale` |
-| Scale-derived Distance | Piecewise 14..15..25 | Interpolated from Scale and rounded to the nearest whole number     |
-| Thick                  | 1..15, step 1        | Defaults to 5 and is passed directly from the UI selection          |
-| Spacing                | 0..20, step 1        | Alternates precise horizontal placement between the two props       |
+| Control                | UI range and step    | Stored transform                                                     |
+| ---------------------- | -------------------- | -------------------------------------------------------------------- |
+| BPM                    | 20..140, step 1      | Explicitly clamped by `clampVtgBpm()`                                |
+| Auto Scale base        | 0.5..1.4, step 0.1   | Add the ratio adjustment, clamp to 0.5..1.4, then store hundredths   |
+| Manual Scale           | 0..1.4, step 0.1     | Independent authored frame values in hundredths; no ratio adjustment |
+| Scale-derived Distance | Piecewise 14..15..25 | Interpolated from Scale and rounded to the nearest whole number      |
+| Thick                  | 1..15, step 1        | Defaults to 5 and is passed directly from the UI selection           |
+| Spacing                | 0..20, step 1        | Alternates precise horizontal placement between the two props        |
 
 Spacing is a persisted Concepts preference and is never inferred from a loaded pattern. Its
 default is `1`. The integer value is distributed outward one step at a time: `0 -> (0, 0)`,
@@ -109,7 +113,10 @@ features, replaces pattern props, and then assigns `ROOT.value`. The normal rout
 subsequently serializes it.
 
 VTG matching identifies patterns from their normalized authored `turns`, `arc`, `plane`, and `axis`
-frame values, and identifies Scale from the first frame's internal scale. Matching authored frames
+frame values. Unmarked legacy Scale is recovered separately from frame hundredths; new animations
+carry explicit Auto/manual intent and an automatic base. The VTG pane normalizes manual Scale on
+a match-only copy so independent or zero values do not lose the selection. Warp
+and Strength are deliberately excluded from the structural signature. Matching authored frames
 is important because two closed cycles can compile to the same geometry while retaining different
 first-frame instructions that identify their selected starting beat. The authored rotation axis is
 also pattern-defining and distinguishes cells whose hand paths coincide but whose prop rotations do
@@ -168,7 +175,7 @@ quarter-orientation radios.
 The reciprocal transition internally subdivides every authored frame interval in two and doubles
 the stored animation BPM before adding its relationship changes. The added frame is the midpoint of
 the interval: incremental turns and arcs are
-halved, while scale, depth, and adjustment values are interpolated. The BPM control continues to
+halved, while scale, strength, depth, and adjustment values are interpolated. The BPM control continues to
 show the user's original value, and matching maps the stored BPM back to that displayed value.
 Because both rate and frame count change by the same multiplier, total duration, interval endpoints,
 and visible motion remain unchanged. Subdivision derives its output from the animation's actual
@@ -243,6 +250,23 @@ producing the alternate face-on presentation with the opposite travel direction.
 90-degree symmetric, so `180°` keeps the base QTR orientation and applies only the plane reversal.
 Previews and compiled-geometry matching use the same order.
 
+VTG and QTR apply Offset, Scale, Fold, Twist, and Third Order before the final Swap.
+When non-empty property settings or manual Scale are present, Beats reconstructs the pattern at its property
+authoring beat, applies the complete configuration, and then uses the editor's shared Shift
+reconstruction to move to the requested beat. This transports every property with the path,
+including Third Order's initial warp, rather than reapplying properties after shifting the base.
+As in editor Shift, non-closing property combinations are supported and final outgoing values
+are retained. Hydrated controls remember their matched authoring beat in runtime state, preventing
+a saved shifted URL from receiving the same offset twice; no URL format change is required.
+Empty property settings use ordinary beat generation, shifting the base before expanding Trans/45
+so that changing Beats does not move the transition boundaries.
+Swap assigns the opposite prop (including its color and visibility) to each complete path;
+the path geometry, spacing motion, and transition choice remain unchanged. Left/Right property
+controls continue to refer to the original authored paths, and toggling Swap never exchanges
+their values. The pane restores authored path order when reading or editing a swapped animation,
+then reapplies the final assignment. Individual property implementations do not need Swap logic.
+Builder edits retain their existing timeline prop-slot semantics.
+
 Cells `1-1`, `1-2`, `2-1`, `2-2`, `3-3`, `3-4`, `4-3`, and `4-4` have an intentional fixed shape in
 their source patterns. Diamond and Box therefore produce identical animation data for those cells
 in both VTG and Quarter Spacing.
@@ -288,7 +312,9 @@ change the Cartesian endpoint reached in one beat, so both starting orientations
 same canonical phase along their real incoming axes instead of treating the compiled endpoints as
 the timing definition. At 1:3, this checkpoint is the ordinary compiled destination, preserving the
 established 1:3 labels. The generated tooltip expands the independent results as
-`Hands: Timing / Direction` and `Props: Timing / Direction`.
+`Hands: Timing / Direction` and `Props: Timing / Direction`. A third line gives each prop's
+spin in left/right order, such as `Spin / Anti` or `Anti / Anti`, following the current Swap
+and Spin/Anti settings.
 
 An unrotated matrix classifies the destination rule relationship. A 90-degree pattern orientation
 swaps the horizontal and vertical rule axes, so the same classifier uses the source relationship.
@@ -368,6 +394,36 @@ participate in this calculation. Tilted does not: header positions always derive
 corresponding non-Tilted pattern.
 
 The top-header prop diagrams are not displayed in QTR mode.
+
+VTG shares one rendered path thumbnail across each four-cell group when the paths match. Candidates
+whose adjacent rows diverge use the paired 18-thumbnail layout instead, without ratio-specific rules
+or an exception for unmodified patterns. The pane compares the final sampled prop-head paths (and
+hand paths when Hands is enabled)
+for the representative `1-6` and `2-6` candidates in the active context, including Builder
+insertion context and all effective VTG property settings. Equivalent results retain the shared
+nine-thumbnail layout. Candidate generation and compiled-path comparison run in the shared pattern
+matching worker, while rapid control changes are batched and stale results are ignored. The same
+candidate-generation path supplies both this comparison and the rendered thumbnails. Comparison
+uses only this representative pair for performance. Unordered, deduplicated world-space samples
+ignore starting point, direction, and repeated visits without rotating the path based on its initial
+hand position. Samples between authored frames distinguish curves with shared endpoints. Thumbnail
+rendering waits for the current comparison to finish, avoiding a redundant batch for the old layout.
+
+Catalog thumbnails and their layout comparison exclude the Trans/45 sequence expansion, including
+when entering compact or full-catalog Builder with either mode enabled. They show the base VTG/QTR
+cycle with the current property settings, retained initial Turns offsets, and Builder insertion
+context. Trans/45 still applies to the selected player animation; authored Builder portion previews
+retain their existing behavior.
+
+In Pattern Builder, selecting the empty Drop target clears the effective per-portion Third Order
+preview context. Full Grid then compares unmodified candidate paths: equivalent paths share nine
+thumbnails, while different paths require eighteen. Selecting a concrete Builder portion restores
+its effective Third Order context. Changes to the source portion or insertion position also trigger
+comparison, even when the property controls are unchanged. Compact Builder retains its own layout.
+
+Detected VTG property controls remain active when another matrix cell is selected, including for
+QTR selections and tilted layouts. Reset clears the active Twist, Third Order, Fold, and transition
+offset settings before regenerating the selected pattern.
 
 The 1:2 and 1:4 VTG ratios also hide the top-header labels, prop diagrams, dividers, and tooltips
 while retaining the numbers and selection behavior. At 1:1 and 1:5, the visible top-header rules

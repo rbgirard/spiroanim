@@ -1,5 +1,6 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { toDisplayScale } from '@/domain/animation/scale'
 
 export type CompiledVtgAnimation = ReturnType<typeof rootCompile>
 
@@ -218,5 +219,5 @@ export const getVtgPropRotationOffsetsFromCompiled = (
 export const getVtgAnimationScale = (animation: RootDataFinal): number | undefined => {
   const firstScale =
     animation.props[0]?.anim[0]?.scale ?? rootCompile(animation).props[0]?.anim[0]?.scale
-  return firstScale === undefined ? undefined : firstScale / 10
+  return firstScale === undefined ? undefined : toDisplayScale(firstScale)
 }

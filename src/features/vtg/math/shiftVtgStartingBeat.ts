@@ -1,12 +1,16 @@
 import type { VtgBeat } from '@/features/vtg/types'
 import { rootCompile } from '@/math/animation/AnimFunc'
-import { shiftAnimationFrames } from '@/math/animation/shiftAnimationFrames'
+import {
+  shiftAnimationFrameRange,
+  type ShiftAnimationRangeOptions,
+} from '@/math/animation/shiftAnimationFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
 
-/** Applies the requested semantic Shift offset to a closed VTG/QTR animation in one pass. */
+/** Applies semantic Shift in one pass; closed-cycle validation is the default for catalog callers. */
 export const shiftVtgStartingFrames = (
   animation: RootDataFinal,
   shiftCount: number,
+  options: Omit<ShiftAnimationRangeOptions, 'shiftCount'> = {},
 ): RootDataFinal | undefined => {
   if (shiftCount === 0) return animation
 
@@ -15,7 +19,16 @@ export const shiftVtgStartingFrames = (
   for (const [propIndex, prop] of animation.props.entries()) {
     const compiledProp = compiled.props[propIndex]
     if (!compiledProp) return undefined
-    const shiftedFrames = shiftAnimationFrames(prop.anim, compiledProp.anim, shiftCount)
+    const shiftedFrames = shiftAnimationFrameRange(
+      prop.anim,
+      compiledProp.anim,
+      0,
+      prop.anim.length - 1,
+      {
+        ...options,
+        shiftCount,
+      },
+    )
     if (!shiftedFrames) return undefined
     shiftedProps.push({ ...prop, anim: shiftedFrames })
   }

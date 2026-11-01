@@ -363,12 +363,14 @@ export const createVtgCatalogMatcher = <
     )
     if (!localPropRotationOffsets) return undefined
     const hasLocalPropRotationOffsets = localPropRotationOffsets.some((offset) => offset !== 0)
-    const propRotationOffsets = localPropRotationOffsets
+    const propRotationOffsets: readonly [number, number] = candidate.swapProps
+      ? [localPropRotationOffsets[1], localPropRotationOffsets[0]]
+      : localPropRotationOffsets
     const hasPropRotationOffsets = hasLocalPropRotationOffsets
     const regeneratedSignature = calculateExact
       ? hasPropRotationOffsets
         ? createCompiledVtgPatternSignature(
-            applyVtgPropRotationOffsets(orientedState.animation, propRotationOffsets),
+            applyVtgPropRotationOffsets(orientedState.animation, localPropRotationOffsets),
           )
         : (orientedState.exactSignature ??= createCompiledVtgPatternSignatureFromCompiled(
             orientedState.compiled,
@@ -405,7 +407,12 @@ export const createVtgCatalogMatcher = <
                 offsetReferenceState.compiled,
               )
               return stableOffsets
-                ? toMatch({ ...match, propRotationOffsets: stableOffsets })
+                ? toMatch({
+                    ...match,
+                    propRotationOffsets: candidate.swapProps
+                      ? [stableOffsets[1], stableOffsets[0]]
+                      : stableOffsets,
+                  })
                 : match
             },
           }
@@ -497,7 +504,9 @@ export const createVtgCatalogMatcher = <
             transitionBeats: analysis.transitionBeats,
             ...(analysis.transitionAfterBeat ? { transitionAfterBeat: true } : undefined),
             ...(analysis.transitionQuad ? { transitionQuad: true } : undefined),
-            ...(analysis.transitionSecond ? { transitionSecond: true } : undefined),
+            ...(analysis.transitionQuad && Boolean(analysis.transitionSecond) !== match.swapProps
+              ? { transitionSecond: true }
+              : undefined),
           } as const
           return {
             ...ranking,

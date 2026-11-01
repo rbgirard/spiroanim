@@ -56,6 +56,20 @@ view is not already visible in the paired pane. Thus Concepts can become Timelin
 slot, while Timeline or Editor can become Concepts for a concept slot. Editor does not switch away
 when a slot targets Timeline because its Timeline is already visible inside Editor.
 
+## VTG Pattern Builder exception
+
+While VTG Pattern Builder is open, saved slots are load-only buttons rather than selected radios.
+Loading one keeps the current concept and pane layout. With no Builder portion selected, it previews
+the saved animation and hydrates the VTG grid without replacing the built pattern. With a portion or
+trailing drop target selected, a recognized VTG/Quarter pattern uses that target as preview context,
+just like clicking the VTG grid. Loading a slot never inserts a portion or changes the Builder timeline
+or selection. Unrecognized patterns can still be previewed without a VTG grid match.
+Empty slots are disabled in this mode. Opening Builder preserves the active slot and its highlight,
+and Builder edits continue saving to it. Clicking a different saved slot previews its pattern while
+keeping the current editing slot selected. Only clicking the selected slot itself clears the editing
+selection. Route matching does not reselect a slot after that click. Previewing never selects the
+borrowed slot as a save target.
+
 ## Timeline placement
 
 Timeline renders Quick Slots inside its vertical scroll container. They normally occupy layout

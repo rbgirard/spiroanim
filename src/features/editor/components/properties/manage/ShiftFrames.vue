@@ -68,6 +68,7 @@ import {
   animationRangeEndpointsAlign,
   shiftAnimationFrameRange,
 } from '@/math/animation/shiftAnimationFrames'
+import { resolveAnimationFrames } from '@/math/animation/frameSemantics'
 import { useManageProperties } from '@/features/editor/composables/useManageProperties'
 import { usePropertiesStore } from '@/features/editor/stores/usePropertiesStore'
 import { usePlayerStore } from '@/stores/usePlayerStore'
@@ -154,22 +155,46 @@ const performShift = async () => {
   try {
     const shiftedProps = targets.map(({ propIndex, startIndex, endIndex }) => {
       const prop = ROOT.value.props[propIndex]!
-      return shiftAnimationFrameRange(
-        prop.anim,
-        COMPILED.value.props[propIndex]!.anim,
-        startIndex,
-        endIndex,
-        { allowEndpointMismatch: true, preserveFinalOutgoing: true, shiftCount: repetitions },
-      )
+      const compiled = COMPILED.value.props[propIndex]!.anim
+      const followingFrame = prop.anim[endIndex + 1]
+      const frames = shiftAnimationFrameRange(prop.anim, compiled, startIndex, endIndex, {
+        allowEndpointMismatch: true,
+        preserveFinalOutgoing: true,
+        shiftCount: repetitions,
+      })
+      const shiftedFinalWarp =
+        frames === undefined
+          ? undefined
+          : resolveAnimationFrames(
+              frames,
+              startIndex > 0 ? compiled[startIndex - 1] : undefined,
+            ).at(-1)?.warp
+      const resolvedFollowingWarp = compiled[endIndex + 1]?.warp
+      const followingWarp =
+        followingFrame !== undefined &&
+        followingFrame.warp === undefined &&
+        resolvedFollowingWarp !== shiftedFinalWarp
+          ? resolvedFollowingWarp
+          : undefined
+      return { frames, followingWarp }
     })
-    if (shiftedProps.some((frames) => frames === undefined)) return
+    if (shiftedProps.some(({ frames }) => frames === undefined)) return
 
     for (const [selectionIndex, target] of targets.entries()) {
-      ROOT.value.props[target.propIndex]!.anim.splice(
+      const prop = ROOT.value.props[target.propIndex]!
+      const shifted = shiftedProps[selectionIndex]!
+      prop.anim.splice(
         target.startIndex,
         target.endIndex - target.startIndex + 1,
-        ...shiftedProps[selectionIndex]!,
+        ...shifted.frames!,
       )
+      const followingFrame = prop.anim[target.endIndex + 1]
+      if (followingFrame !== undefined && shifted.followingWarp !== undefined) {
+        // Warp controls the transition into the shifted final frame, so replacing it with the old
+        // final value would break the reconstructed seam. Preserve inheritance outside a partial
+        // range by materializing the old resolved value on the following frame instead.
+        followingFrame.warp = shifted.followingWarp
+      }
     }
     triggerRef(ROOT)
     await nextTick()

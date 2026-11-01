@@ -13,10 +13,11 @@ import { describe, expect, it } from 'vitest'
 import { COLSET, MOTION_SHAPE, RADIUS, TTYPE } from '@/domain/animation/AnimStruct'
 import { doubleAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
 import { cartesianToMotionAngles, createMotionDirectionState } from '@/math/animation/MotionFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { createSpiroAnimator, type LineMaterial2 } from '@/workers/animation/createSpiroAnimator'
-import type { MotionData, RootData } from '@/types/AnimTypes'
+import type { MotionData, PropInd, RootData } from '@/types/AnimTypes'
 
 type CartesianMotionFrame = Omit<MotionData, 'arc' | 'plane' | 'distance'> & {
   move?: [number, number, number]
@@ -83,8 +84,8 @@ const createRoot = (arms: boolean, hands = false): RootData => ({
     {
       motion: angularMotion([{ beats: 1, move: [2, 0, 0] }, {}]),
       anim: [
-        { beats: 1, scale: 10 },
-        { scale: 20, arc: 90 },
+        { beats: 1, scale: 100 },
+        { scale: 200, arc: 90 },
       ],
     },
   ],
@@ -212,6 +213,93 @@ it('draws a path for all five Fan heads and rotates them with Twist', () => {
   expect(additionalPaths.every((path) => path.parent?.visible === false)).toBe(true)
   animator.setAllHeadPaths(true)
   expect(additionalPaths.every((path) => path.parent?.visible === true)).toBe(true)
+})
+
+it.each([
+  ['Fan', 3],
+  ['Triad', 4],
+] as const)(
+  'draws the primary %s path at the same endpoints as the other props',
+  (_name, propType) => {
+    const renderPrimaryPath = (propType: PropInd): Vector3[] => {
+      const root = createRoot(false)
+      root.prop = propType
+      root.paths = true
+      const scene = new Scene()
+      const compiled = rootCompile(rootFinal(root))
+
+      createSpiroAnimator({
+        scene,
+        speed: 1,
+        girth: 2,
+        bpm: compiled.bpm,
+        smooth: compiled.smooth,
+        prop: compiled.props[0]!,
+        completed: () => undefined,
+        width: 800,
+        height: 600,
+        distance: 22,
+        fov: 45,
+        timeline: false,
+      })
+
+      const primaryPath = scene
+        .getObjectsByProperty('isLine2', true)
+        .find(
+          (object): object is Line2 =>
+            object instanceof Line2 &&
+            (object.material as LineMaterial2).color.getHex() === COLSET[2]![0] &&
+            object.parent?.parent?.parent !== scene,
+        )
+      if (!primaryPath) throw new Error('Expected a primary prop path')
+      return getLinePoints(primaryPath)
+    }
+
+    const poiPoints = renderPrimaryPath(0)
+    const propPoints = renderPrimaryPath(propType)
+
+    expect(propPoints).toHaveLength(poiPoints.length)
+    for (let index = 0; index < poiPoints.length; index++)
+      expect(propPoints[index]!.distanceTo(poiPoints[index]!)).toBeCloseTo(0)
+  },
+)
+
+it('draws three equal-radius Triad head paths', () => {
+  const root = createRoot(false)
+  root.prop = 4
+  root.paths = true
+  const scene = new Scene()
+  const compiled = rootCompile(rootFinal(root))
+
+  createSpiroAnimator({
+    scene,
+    speed: 1,
+    girth: 2,
+    bpm: compiled.bpm,
+    smooth: compiled.smooth,
+    prop: compiled.props[0]!,
+    completed: () => undefined,
+    width: 800,
+    height: 600,
+    distance: 22,
+    fov: 45,
+    timeline: false,
+  })
+
+  const paths = scene
+    .getObjectsByProperty('isLine2', true)
+    .filter(
+      (object): object is Line2 =>
+        object instanceof Line2 &&
+        (object.material as LineMaterial2).color.getHex() === COLSET[2]![0],
+    )
+  expect(paths).toHaveLength(3)
+
+  const headPoints = paths.map((path) => getLinePoints(path)[0]!)
+  const center = headPoints.reduce((sum, point) => sum.add(point), new Vector3()).divideScalar(3)
+  const radii = headPoints.map((point) => point.distanceTo(center))
+  expect(radii[1]).toBeCloseTo(radii[0]!)
+  expect(radii[2]).toBeCloseTo(radii[0]!)
 })
 
 describe('createSpiroAnimator Arms rendering', () => {
@@ -468,7 +556,7 @@ describe('createSpiroAnimator prop orientation', () => {
     root.prop = 3
     root.props[0]!.motion = []
     root.props[0]!.anim = [
-      { arc: 180, scale: 7 },
+      { arc: 180, scale: 70 },
       { arc: 90, turns: -360 },
       { plane: 90 },
       {},
@@ -544,13 +632,249 @@ describe('createSpiroAnimator linear scaling', () => {
 
     const start = new Vector3()
       .fromArray(prop.anim[0]!.pos)
-      .multiplyScalar((RADIUS * prop.anim[0]!.scale) / 10)
+      .multiplyScalar((RADIUS * prop.anim[0]!.scale) / 100)
     const end = new Vector3()
       .fromArray(prop.anim[1]!.pos)
-      .multiplyScalar((RADIUS * prop.anim[1]!.scale) / 10)
+      .multiplyScalar((RADIUS * prop.anim[1]!.scale) / 100)
     const expectedMidpoint = start.lerp(end, 0.5)
 
     expect(modelGroup.position.distanceTo(expectedMidpoint)).toBeCloseTo(0)
+  })
+
+  it('connects fully rendered Warp endpoints with a straight line', () => {
+    const root = createRoot(false, true)
+    root.props[0]!.motion = []
+    root.props[0]!.anim[0]!.warp = -45
+    root.props[0]!.anim[1]!.warp = 90
+    root.props[0]!.anim[1]!.type = TTYPE.LINE
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    animator.seek(500)
+
+    const renderedStart = applyWarpPath(
+      new Vector3().fromArray(prop.anim[0]!.pos),
+      new Vector3().fromArray(prop.anim[0]!.warpPos),
+      prop.anim[0]!.scale / 100,
+      prop.anim[0]!.strength / 1000,
+      new Vector3(),
+    )
+    const renderedEnd = applyWarpPath(
+      new Vector3().fromArray(prop.anim[1]!.pos),
+      new Vector3().fromArray(prop.anim[1]!.warpPos),
+      prop.anim[1]!.scale / 100,
+      prop.anim[1]!.strength / 1000,
+      new Vector3(),
+    )
+    const expected = renderedStart.clone().lerp(renderedEnd, 0.5).multiplyScalar(RADIUS)
+    expect(getAnimatedModelGroup(scene).position.distanceTo(expected)).toBeCloseTo(0)
+
+    const handLine = getLineByColor(scene, COLSET[2]![2])
+    if (!handLine) throw new Error('Expected the Warp-adjusted Linear hand path')
+    const endpoints = getLineEndpoints(handLine)
+    expect(endpoints.first.distanceTo(renderedStart.clone().multiplyScalar(RADIUS))).toBeCloseTo(0)
+    expect(endpoints.last.distanceTo(renderedEnd.clone().multiplyScalar(RADIUS))).toBeCloseTo(0)
+  })
+
+  it('traces an auxiliary spherical rotation without changing prop orientation', () => {
+    const warpedRoot = createRoot(false)
+    warpedRoot.props[0]!.motion = []
+    warpedRoot.props[0]!.anim[1]!.warp = 90
+    warpedRoot.props[0]!.anim[1]!.strength = 1000
+    const canonicalRoot = structuredClone(warpedRoot)
+    delete canonicalRoot.props[0]!.anim[1]!.warp
+
+    const create = (root: RootData) => {
+      const scene = new Scene()
+      const compiled = rootCompile(rootFinal(root))
+      const animator = createSpiroAnimator({
+        scene,
+        speed: 1,
+        girth: 2,
+        bpm: compiled.bpm,
+        smooth: compiled.smooth,
+        prop: compiled.props[0]!,
+        completed: () => undefined,
+        width: 800,
+        height: 600,
+        distance: 22,
+        fov: 45,
+        timeline: false,
+      })
+      animator.seek(500)
+      return getAnimatedModelGroup(scene)
+    }
+
+    const warped = create(warpedRoot)
+    const canonical = create(canonicalRoot)
+
+    expect(warped.position.distanceTo(canonical.position)).toBeGreaterThan(0.1)
+    expect(Math.abs(warped.quaternion.dot(canonical.quaternion))).toBeCloseTo(1)
+  })
+
+  it('uses Strength for the Warp deformation independently from Scale', () => {
+    const root = createRoot(false, true)
+    root.paths = true
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [
+      { beats: 1, arc: 0, warp: 0, strength: 500, scale: 80 },
+      { arc: 90, warp: 90, strength: 500, scale: 80 },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    animator.seek(500)
+
+    const canonical = new Vector3()
+      .fromArray(prop.anim[0]!.pos)
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.posx), Math.PI / 4)
+    const auxiliary = new Vector3()
+      .fromArray(prop.anim[0]!.warpPos)
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.warpx), Math.PI / 2)
+    const expected = applyWarpPath(canonical, auxiliary, 0.8, 0.5, new Vector3()).multiplyScalar(
+      RADIUS,
+    )
+    const position = getAnimatedModelGroup(scene).position
+    const pathLine = getLineByColor(scene, COLSET[2]![2])
+    if (!pathLine) throw new Error('Expected the Warp-adjusted hand line')
+    const nearestPathPoint = Math.min(
+      ...getLinePoints(pathLine).map((point) => point.distanceTo(expected)),
+    )
+
+    expect(position.distanceTo(expected)).toBeCloseTo(0)
+    expect(position.length()).toBeGreaterThan(0)
+    expect(nearestPathPoint).toBeLessThan(0.1)
+  })
+
+  it('uses the target Strength immediately when both strengths share the segment start', () => {
+    const root = createRoot(false, true)
+    root.paths = true
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [
+      { beats: 1, arc: 0, warp: 0, strength: 1000, scale: 80 },
+      { arc: 90, warp: 90, strength: 500, scale: 80 },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    animator.seek(500)
+
+    const canonical = new Vector3()
+      .fromArray(prop.anim[0]!.pos)
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.posx), Math.PI / 4)
+    const auxiliary = new Vector3()
+      .fromArray(prop.anim[0]!.warpPos)
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.warpx), Math.PI / 2)
+    const expected = applyWarpPath(canonical, auxiliary, 0.8, 0.5, new Vector3()).multiplyScalar(
+      RADIUS,
+    )
+    const oldStrengthTween = applyWarpPath(
+      canonical,
+      auxiliary,
+      0.8,
+      0.75,
+      new Vector3(),
+    ).multiplyScalar(RADIUS)
+    const position = getAnimatedModelGroup(scene).position
+    const pathLine = getLineByColor(scene, COLSET[2]![2])
+    if (!pathLine) throw new Error('Expected the Strength-adjusted hand line')
+
+    expect(position.distanceTo(expected)).toBeCloseTo(0)
+    expect(position.distanceTo(oldStrengthTween)).toBeGreaterThan(0.1)
+    expect(
+      Math.min(...getLinePoints(pathLine).map((point) => point.distanceTo(expected))),
+    ).toBeLessThan(0.1)
+  })
+
+  it('continues tweening Strength when the change would move a separated start', () => {
+    const root = createRoot(false, true)
+    root.props[0]!.motion = []
+    root.props[0]!.anim = [
+      { beats: 1, arc: 0, warp: 90, strength: 1000, scale: 80 },
+      { arc: 90, warp: 0, strength: 500, scale: 80 },
+    ]
+
+    const scene = new Scene()
+    const compiled = rootCompile(rootFinal(root))
+    const prop = compiled.props[0]!
+    const animator = createSpiroAnimator({
+      scene,
+      speed: 1,
+      girth: 2,
+      bpm: compiled.bpm,
+      smooth: compiled.smooth,
+      prop,
+      completed: () => undefined,
+      width: 800,
+      height: 600,
+      distance: 22,
+      fov: 45,
+      timeline: false,
+    })
+
+    animator.seek(500)
+
+    const startCanonical = new Vector3().fromArray(prop.anim[0]!.pos)
+    const startAuxiliary = new Vector3().fromArray(prop.anim[0]!.warpPos)
+    const canonical = startCanonical
+      .clone()
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.posx), Math.PI / 4)
+    const auxiliary = startAuxiliary
+      .clone()
+      .applyAxisAngle(new Vector3().fromArray(prop.anim[1]!.warpx), Math.PI / 4)
+    const expected = applyWarpPath(canonical, auxiliary, 0.8, 0.75, new Vector3()).multiplyScalar(
+      RADIUS,
+    )
+
+    expect(getAnimatedModelGroup(scene).position.distanceTo(expected)).toBeCloseTo(0)
   })
 
   it('interpolates Motion independently from the animation frames', () => {
@@ -630,9 +954,9 @@ describe('createSpiroAnimator linear scaling', () => {
     root.paths = true
     root.nodes = true
     root.props[0]!.anim = [
-      { beats: 1, scale: 10, arc: 0, turns: 0 },
-      { scale: 10, arc: 0, turns: 0 },
-      { scale: 10, arc: 0, turns: 0 },
+      { beats: 1, scale: 100, arc: 0, turns: 0 },
+      { scale: 100, arc: 0, turns: 0 },
+      { scale: 100, arc: 0, turns: 0 },
     ]
     root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
@@ -710,7 +1034,7 @@ describe('createSpiroAnimator linear scaling', () => {
   it('continues baked Paths and Hands when Motion outlasts Animation', () => {
     const root = createRoot(false, true)
     root.paths = true
-    root.props[0]!.anim = [{ beats: 1, scale: 10, arc: 0, turns: 0 }]
+    root.props[0]!.anim = [{ beats: 1, scale: 100, arc: 0, turns: 0 }]
     root.props[0]!.motion = angularMotion([{ beats: 1, move: [0, 0, 0] }, { move: [10, 0, 0] }])
 
     const scene = new Scene()
@@ -744,8 +1068,8 @@ describe('createSpiroAnimator linear scaling', () => {
     const root = createRoot(false)
     root.paths = true
     root.props[0]!.anim = [
-      { beats: 4, scale: 10, arc: 0, turns: 0 },
-      { scale: 10, arc: 0, turns: 0 },
+      { beats: 4, scale: 100, arc: 0, turns: 0 },
+      { scale: 100, arc: 0, turns: 0 },
     ]
     root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
@@ -784,8 +1108,8 @@ describe('createSpiroAnimator linear scaling', () => {
   it('holds the final animated pose while longer Motion continues', () => {
     const root = createRoot(false)
     root.props[0]!.anim = [
-      { beats: 1, scale: 10, arc: 0 },
-      { scale: 10, arc: 90 },
+      { beats: 1, scale: 100, arc: 0 },
+      { scale: 100, arc: 90 },
     ]
     root.props[0]!.motion = angularMotion([
       { beats: 1, move: [0, 0, 0] },
@@ -830,9 +1154,9 @@ describe('createSpiroAnimator linear scaling', () => {
     const root = createRoot(false)
     root.paths = true
     root.props[0]!.anim = [
-      { beats: 1, scale: 10 },
-      { type: TTYPE.LINE, scale: 20, arc: 90 },
-      { type: TTYPE.LINE, scale: 15, arc: 90 },
+      { beats: 1, scale: 100 },
+      { type: TTYPE.LINE, scale: 200, arc: 90 },
+      { type: TTYPE.LINE, scale: 150, arc: 90 },
     ]
 
     const scene = new Scene()

@@ -40,13 +40,25 @@ export const vtgIndividualSpeedRatios = [
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
 export const vtgRatioPickerRatios = [
   '1:1',
-  '2:1',
   '1:2',
+  '2:1',
   '1:3',
   '2:3',
   '1:4',
   '1:5',
   '2:5',
+] as const satisfies readonly VtgIndividualSpeedRatio[]
+export const vtgMoreRatioPickerRatios = [
+  ...vtgRatioPickerRatios,
+  '1:6',
+  '1:7',
+  '2:7',
+  '1:8',
+  '1:9',
+  '2:9',
+  '1:10',
+  '1:11',
+  '2:11',
 ] as const satisfies readonly VtgIndividualSpeedRatio[]
 export const vtgSpeedRatioRows = [
   vtgRatioPickerRatios,
@@ -107,14 +119,6 @@ export const getVtgTimingCycleCount = (speedRatio: VtgSpeedRatio): number => {
   return leastCommonMultiple(leftParts.numerator, rightParts.numerator)
 }
 
-/** Whether adjacent VTG rows diverge and therefore need independently rendered path previews. */
-export const requiresPairedVtgPreviewLayout = (speedRatio: VtgSpeedRatio): boolean =>
-  getVtgTimingCycleCount(speedRatio) > 1 ||
-  getVtgPropSpeedRatios(speedRatio).some((ratio) => {
-    const parts = parseVtgIndividualSpeedRatio(ratio)
-    return parts !== undefined && parts.denominator % 2 === 0
-  })
-
 export const formatVtgSpeedRatio = (
   left: VtgIndividualSpeedRatio,
   right: VtgIndividualSpeedRatio,
@@ -156,11 +160,12 @@ export const getVtgPatternOrientations = (
 export const vtgDefaultPatternOrientation = -90 satisfies VtgPatternOrientation
 export const getDefaultVtgPatternOrientation = (
   speedRatio: VtgSpeedRatio,
-): VtgPatternOrientation =>
-  getVtgTimingCycleCount(speedRatio) === 2 ||
-  getVtgPropSpeedRatios(speedRatio).some((ratio) => Number(ratio.slice(2)) % 2 === 0)
+): VtgPatternOrientation => {
+  const [firstRatio] = getVtgPropSpeedRatios(speedRatio)
+  return getVtgTimingCycleCount(firstRatio) === 2 || Number(firstRatio.slice(2)) % 2 === 0
     ? vtgDefaultPatternOrientation
     : 0
+}
 export const vtgDefaultTransitionBeats = 4 satisfies VtgTransitionBeats
 
 export interface VtgPatternSelection
@@ -183,6 +188,7 @@ export interface VtgPatternSelection
   propRotationOffsets?: readonly [number, number]
   bpm?: number
   scale?: number
+  scaleSettings?: import('@/types/AnimationScale').VtgScaleSettings
   thick?: number
   paths?: boolean
   hands?: boolean

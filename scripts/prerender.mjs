@@ -98,7 +98,7 @@ const serviceWorkerResult = await generateSW({
     'vtg3/**',
     ...clientOnlyRoutePrecacheIgnores,
   ],
-  globPatterns: ['**/*.{css,html,ico,js,png,svg,webmanifest}'],
+  globPatterns: ['**/*.{css,html,ico,js,png,svg,webp,webmanifest}'],
   navigateFallback: 'app-shell.html',
   navigateFallbackDenylist: [
     /^\/(?:index\/?|about\/?|tips\/?)?$/,

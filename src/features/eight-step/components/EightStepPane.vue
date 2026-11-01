@@ -13,7 +13,12 @@
     <div class="eight-step-top-options">
       <PatternTransformControls role-prefix="eight-step" @reset="resetPatternControls">
         <template #before-reset>
-          <PatternShapeControls v-model:shape="shape" role-prefix="eight-step" />
+          <PatternShapeControls
+            v-model:shape="shape"
+            v-model:halve="halve"
+            role-prefix="eight-step"
+            show-halve
+          />
         </template>
       </PatternTransformControls>
     </div>
@@ -112,12 +117,12 @@
             @click="selectCell(cell)"
           >
             <img
-              v-if="previewUrls[cell.rowIndex]"
-              :src="previewUrls[cell.rowIndex]"
+              v-if="getPreviewUrl(cell.reference)"
+              :src="getPreviewUrl(cell.reference)"
               alt=""
               class="eight-step-cell__preview"
               data-role="eight-step-preview"
-              :data-preview-reference="eightStepPreviewReferences[cell.rowIndex]"
+              :data-preview-reference="getPreviewReference(cell.reference)"
             />
           </button>
         </template>
@@ -130,12 +135,16 @@
     <ConceptAnimationControls :animation="animation" role-prefix="eight-step">
       <template #before-customize>
         <PatternPropertyControls
-          v-if="!builderActive && animation && selectedCell"
+          v-if="animation && selectedCell"
           context="eight-step"
           :animation="animation"
           :offset-values="propRotationOffsets"
           :twist-mode="vtgTwistMode"
           :twist-values="vtgTwistValues"
+          :third-order-settings="vtgThirdOrderSettings"
+          :third-order-display-settings="vtgThirdOrderDisplaySettings"
+          :third-order-mirror="vtgThirdOrderMirror"
+          :third-order-opposed="vtgThirdOrderOpposed"
           :fold-values="vtgFoldValues"
           :fold-values-materialized="vtgFoldValuesMaterialized"
           :fold-mode="vtgFoldMode"
@@ -149,6 +158,11 @@
           :sliders="sliders"
           @offset-update="updatePropRotationOffset"
           @twist-update="updateTwistSetting"
+          @third-order-initial-update="updateThirdOrderInitial"
+          @third-order-strength-update="updateThirdOrderStrength"
+          @third-order-timing-update="updateThirdOrderTiming"
+          @update:third-order-mirror="updateThirdOrderMirror"
+          @update:third-order-opposed="updateThirdOrderOpposed"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
           @update:fold-mode="updateFoldMode"
@@ -171,9 +185,13 @@
       @toggle="emit('builderOpen', 'manual')"
     />
 
-    <p v-if="shape === 'box'" class="eight-step-development-note" data-role="eight-step-box-note">
-      Tilted / Box mode is experimental, and its patterns have not been validated. Difficult /
-      Impossible highlighting for patterns performed in Wall-Plane is disabled.
+    <p
+      v-if="shape !== 'diamond'"
+      class="eight-step-development-note"
+      data-role="eight-step-box-note"
+    >
+      Tilted / Turned modes are experimental, and their patterns have not been validated. Difficult
+      / Impossible highlighting for patterns performed in Wall-Plane is disabled.
     </p>
     <p
       v-else
@@ -373,18 +391,27 @@ const {
 } = storeToRefs(conceptsStore)
 const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
+const halve = ref(false)
 const propRotationOffsets = ref<EightStepPatternSelection['propRotationOffsets']>()
 
 /**
  * Cell identity for the Flow Arts Composer bridge. This describes which catalog cell the loaded
  * animation is, so it is reported for hydration-driven matches too and is deliberately outside
  * `suppressPatternEmit`, which exists to stop hydration from re-applying a pattern.
+ *
+ * The Composer transcription covers the diamond and box cells as catalogued. The turned shape,
+ * halved turns and per-prop rotation offsets each change the motion away from that cell, so they
+ * report no cell rather than a link that would resolve to the wrong pattern.
  */
 const composerCell = computed<ComposerCell | null>(() => {
   const cell = selectedCell.value
   if (!cell) return null
+  const cellShape = shape.value
+  if (cellShape === 'turned') return null
+  if (halve.value) return null
+  if (propRotationOffsets.value?.some((offset) => offset !== 0)) return null
 
-  return { concept: '8stp', reference: cell.reference, shape: shape.value }
+  return { concept: '8stp', reference: cell.reference, shape: cellShape }
 })
 
 watch(
@@ -408,6 +435,10 @@ const emitPropertyAnimation = (animation: RootDataFinal) => {
 const {
   vtgTwistMode,
   vtgTwistValues,
+  vtgThirdOrderSettings,
+  vtgThirdOrderDisplaySettings,
+  vtgThirdOrderMirror,
+  vtgThirdOrderOpposed,
   vtgFoldValues,
   vtgFoldValuesMaterialized,
   vtgFoldMode,
@@ -420,6 +451,11 @@ const {
   vtgActiveProperty,
   updateTwistSetting,
   updateTwistMode,
+  updateThirdOrderInitial,
+  updateThirdOrderStrength,
+  updateThirdOrderTiming,
+  updateThirdOrderMirror,
+  updateThirdOrderOpposed,
   updateFoldSetting,
   updateFoldMode,
   updateFoldBeat,
@@ -463,13 +499,14 @@ const headColorStyle = computed(() => ({
 
 const paneElement = ref<HTMLElement>()
 const previewDimensions = reactive(eightStepPreviewReferences.map(() => ({ width: 0, height: 0 })))
-const { previewUrls, requestPreviews } = useEightStepPreviews({
+const { previewUrls, requestPreviews, getPreviewUrl, getPreviewReference } = useEightStepPreviews({
   dimensions: previewDimensions,
   swapProps,
   reversePlane,
   scale,
   spacing,
   shape,
+  halve,
   leftPropColor,
   rightPropColor,
   prop,
@@ -502,6 +539,7 @@ const createSelection = (cell: EightStepPatternDefinition): EightStepPatternSele
   if (swapProps.value) selection.swapProps = true
   if (reversePlane.value) selection.reversePlane = true
   if (shape.value !== 'diamond') selection.shape = shape.value
+  if (halve.value) selection.halve = true
   if (bpm.value !== vtgBpmControl.default) selection.bpm = bpm.value
   if (scale.value !== vtgScaleControl.default) selection.scale = scale.value
   if (propRotationOffsets.value !== undefined)
@@ -585,13 +623,14 @@ const resetPatternControls = async () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   shape.value = 'diamond'
+  halve.value = false
   propRotationOffsets.value = undefined
   await nextTick()
   suppressPatternEmit = false
   if (selectedCell.value) emitPatternSelection(selectedCell.value)
 }
 
-watch([swapProps, reversePlane, shape], () => {
+watch([swapProps, reversePlane, shape, halve], () => {
   if (!suppressPatternEmit && selectedCell.value) emitPatternSelection(selectedCell.value)
 })
 
@@ -660,6 +699,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
     swapProps.value = match.swapProps
     reversePlane.value = match.reversePlane
     shape.value = match.shape
+    halve.value = match.halve ?? false
     bpm.value = match.bpm
     scale.value = match.scale
     propRotationOffsets.value = match.propRotationOffsets
@@ -693,6 +733,7 @@ const selectInitialRandomPattern = () => {
   suppressPatternEmit = true
   conceptsStore.resetPatternControls()
   shape.value = 'diamond'
+  halve.value = false
   propRotationOffsets.value = undefined
   selectRandomCell()
 
@@ -728,11 +769,13 @@ onMounted(() => {
       if (!(entry.target instanceof HTMLElement)) continue
 
       const rowIndex = Number(entry.target.dataset.previewRowIndex)
-      const dimensions = previewDimensions[rowIndex]
-      if (!dimensions) continue
-
-      dimensions.width = roundDimension(entry.contentRect.width * 0.78)
-      dimensions.height = roundDimension(entry.contentRect.height * 0.78)
+      const width = roundDimension(entry.contentRect.width * 0.78)
+      const height = roundDimension(entry.contentRect.height * 0.78)
+      previewDimensions.forEach((dimensions, index) => {
+        if (cells[index]?.rowIndex !== rowIndex) return
+        dimensions.width = width
+        dimensions.height = height
+      })
     }
     requestPreviews()
   })
@@ -757,6 +800,7 @@ defineExpose({
   swapProps,
   reversePlane,
   shape,
+  halve,
   bpm,
   scale,
   thick,

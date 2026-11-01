@@ -26,6 +26,8 @@ import {
   motionAnglesToCartesian,
 } from '@/math/animation/MotionFunc'
 import { MathUtils, Vector3 } from 'three'
+import { formatScale } from '@/domain/animation/scale'
+import { formatStrength } from '@/domain/animation/strength'
 
 import type {
   VarTypes,
@@ -103,7 +105,9 @@ function stringGet(key: string, val?: VarTypes) {
         case 'path':
           return INDPNT[val] ?? String(val)
         case 'scale':
-          return String((val / 10).toFixed(1))
+          return formatScale(val)
+        case 'strength':
+          return formatStrength(val)
         case 'depth':
           return String((val / 10).toFixed(1))
         case 'turns':
@@ -114,6 +118,7 @@ function stringGet(key: string, val?: VarTypes) {
         case 'yaw':
         case 'rotate':
         case 'adjust':
+        case 'warp':
         case 'twist':
           return val + '°'
       }
@@ -247,6 +252,11 @@ export function useProperties(store: string = 'main') {
         if (val === undefined) (ANIMS.value as AnonObject[]).every((obj) => delete obj[key] || true)
         else (ANIMS.value as AnonObject[]).every((obj) => (obj[key] = val) || true)
         break
+    }
+
+    if (key === 'scale' && ANIMS.value.length > 0 && ROOT.value.vtgScale) {
+      // Explicit Editor Scale edits supersede the VTG generator's automatic sizing intent.
+      ROOT.value.vtgScale = { ...ROOT.value.vtgScale, auto: false, mode: 'advanced' }
     }
 
     // trigger shallow watchers

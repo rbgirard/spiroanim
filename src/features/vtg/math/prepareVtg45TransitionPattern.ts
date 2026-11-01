@@ -3,12 +3,12 @@ import {
   consolidateAnimationPlayback,
   subdivideAnimationPlayback,
 } from '@/math/animation/subdivideAnimationPlayback'
+import { TIMING_ANGLE_FACTOR } from '@/domain/animation/timingAngle'
 import type { AnimDataCompiled, RootDataFinal } from '@/types/AnimTypes'
 
 const continuationFrameIndex = 1
 const supportedArc = 45
 const supportedPropCount = 2
-const turnsDecimalScale = 10
 const turnsPrecisionTolerance = 0.000_001
 
 export interface PreparedVtg45TransitionPattern {
@@ -39,7 +39,7 @@ const hasRepresentableDividedTurns = (
   divisor: number,
 ): boolean =>
   frames.slice(continuationFrameIndex).every((frame) => {
-    const scaledTurns = (frame.turns / divisor) * turnsDecimalScale
+    const scaledTurns = (frame.turns / divisor) * TIMING_ANGLE_FACTOR
     return Math.abs(scaledTurns - Math.round(scaledTurns)) <= turnsPrecisionTolerance
   })
 

@@ -13,7 +13,7 @@ Production hosting must:
 - serve `/vtg3/` and `/vtg4/` as their rendered, indexable standalone documents;
 - serve the generated client-only directory index files for `/app`, `/player`, `/editor`,
   `/timeline`, `/concepts`, `/vulcan-tech-gospel`, `/quarterspacing`, `/eight-step`,
-  `/quarter-space-tech`, `/third-order`, `/the-kinetic-alphabet`, and the pane-layout aliases. A
+  `/quarter-space-tech`, `/the-kinetic-alphabet`, and the pane-layout aliases. A
   blanket rewrite to `/index.html` would
   replace this separation and should not be used;
 - serve both web manifests as `application/manifest+json`;

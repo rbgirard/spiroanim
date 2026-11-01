@@ -131,7 +131,16 @@
           class="pattern-property-controls__option-group pattern-property-controls__twist-mode"
         >
           <legend class="pattern-property-controls__visually-hidden">Scale detail</legend>
-          <label v-for="mode in scaleModes" :key="mode">
+          <label v-if="context === 'vtg'">
+            <input
+              type="checkbox"
+              :checked="scaleAuto"
+              data-role="vtg-scale-auto"
+              @change="emit('update:scaleAuto', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>Auto</span>
+          </label>
+          <label v-for="mode in context !== 'vtg' || !scaleAuto ? scaleModes : []" :key="mode">
             <input
               type="radio"
               :name="`${controlId}-scale-mode`"
@@ -142,138 +151,140 @@
             <span>{{ mode === 'simple' ? 'Simple' : 'Advanced' }}</span>
           </label>
         </fieldset>
-        <div v-if="scaleMode === 'simple'" class="pattern-property-controls__twist-columns">
-          <section
-            v-for="(label, propIndex) in propLabels"
-            :key="label"
-            class="pattern-property-controls__twist-column"
-            :aria-label="`${label} Scale`"
-          >
-            <header class="pattern-property-controls__twist-header">
-              <span>Beat</span>
-              <h3>{{ label }}</h3>
-              <span>Value</span>
-            </header>
-            <label
-              class="pattern-property-controls__twist-frame"
-              :class="{
-                'pattern-property-controls__twist-frame--inherited': !scaleIsSet(propIndex),
-                'pattern-property-controls__value-set': scaleIsSet(propIndex),
-                'pattern-property-controls__twist-frame--stepper': !sliders,
-              }"
+        <template v-if="context !== 'vtg' || !scaleAuto">
+          <div v-if="scaleMode === 'simple'" class="pattern-property-controls__twist-columns">
+            <section
+              v-for="(label, propIndex) in propLabels"
+              :key="label"
+              class="pattern-property-controls__twist-column"
+              :aria-label="`${label} Scale`"
             >
-              <span class="pattern-property-controls__beat">
-                {{ formatBeat(simpleScaleFrame(propIndex).beat) }}
-              </span>
-              <input
-                v-if="sliders"
-                type="range"
-                min="0"
-                max="1.4"
-                step="0.1"
-                :value="scaleValue(propIndex)"
-                :aria-valuetext="scaleValue(propIndex).toFixed(1)"
-                :aria-label="`${label} Scale`"
-                :data-role="`${context}-scale-${propIndex}`"
-                @input="setScaleFromSlider(propIndex, simpleScaleFrame(propIndex).beat, $event)"
-                @pointerdown="emit('sliderStart')"
-                @pointerup="emit('sliderEnd')"
-                @pointercancel="emit('sliderEnd')"
-                @keydown="emit('sliderStart')"
-                @keyup="emit('sliderEnd')"
-                @blur="emit('sliderEnd')"
-              />
-              <ConceptStepper
-                v-else
-                :model-value="scaleValue(propIndex)"
-                :min="0"
-                :max="1.4"
-                :step="0.1"
-                :label="`${label} Scale`"
-                :data-role="`${context}-scale-${propIndex}-stepper`"
-                :display-value="scaleValue(propIndex).toFixed(1)"
-                @update:model-value="
-                  setScaleFromStepper(propIndex, simpleScaleFrame(propIndex).beat, $event)
-                "
-              />
-              <output v-if="sliders">{{ scaleValue(propIndex).toFixed(1) }}</output>
-              <button
-                type="button"
-                class="pattern-property-controls__delete"
-                :disabled="!scaleIsSet(propIndex)"
-                :aria-label="`Clear ${label} Scale`"
-                @click="clearScale(propIndex, simpleScaleFrame(propIndex).beat)"
+              <header class="pattern-property-controls__twist-header">
+                <span>Beat</span>
+                <h3>{{ label }}</h3>
+                <span>Value</span>
+              </header>
+              <label
+                class="pattern-property-controls__twist-frame"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited': !scaleIsSet(propIndex),
+                  'pattern-property-controls__value-set': scaleIsSet(propIndex),
+                  'pattern-property-controls__twist-frame--stepper': !sliders,
+                }"
               >
-                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
-              </button>
-            </label>
-          </section>
-        </div>
-        <div v-else class="pattern-property-controls__twist-columns">
-          <section
-            v-for="(column, propIndex) in scaleColumns"
-            :key="column.label"
-            class="pattern-property-controls__twist-column"
-            :aria-label="`${column.label} Scale`"
-          >
-            <header class="pattern-property-controls__twist-header">
-              <span>Beat</span>
-              <h3>{{ column.label }}</h3>
-              <span>Value</span>
-            </header>
-            <label
-              v-for="frame in column.frames"
-              :key="frame.index"
-              class="pattern-property-controls__twist-frame"
-              :class="{
-                'pattern-property-controls__twist-frame--inherited': !frame.isSet,
-                'pattern-property-controls__value-set': frame.isSet,
-                'pattern-property-controls__twist-frame--stepper': !sliders,
-              }"
+                <span class="pattern-property-controls__beat">
+                  {{ formatBeat(simpleScaleFrame(propIndex).beat) }}
+                </span>
+                <input
+                  v-if="sliders"
+                  type="range"
+                  min="0"
+                  max="1.4"
+                  step="0.1"
+                  :value="scaleValue(propIndex)"
+                  :aria-valuetext="scaleValue(propIndex).toFixed(1)"
+                  :aria-label="`${label} Scale`"
+                  :data-role="`${context}-scale-${propIndex}`"
+                  @input="setScaleFromSlider(propIndex, simpleScaleFrame(propIndex).beat, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <ConceptStepper
+                  v-else
+                  :model-value="scaleValue(propIndex)"
+                  :min="0"
+                  :max="1.4"
+                  :step="0.1"
+                  :label="`${label} Scale`"
+                  :data-role="`${context}-scale-${propIndex}-stepper`"
+                  :display-value="scaleValue(propIndex).toFixed(1)"
+                  @update:model-value="
+                    setScaleFromStepper(propIndex, simpleScaleFrame(propIndex).beat, $event)
+                  "
+                />
+                <output v-if="sliders">{{ scaleValue(propIndex).toFixed(1) }}</output>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="!scaleIsSet(propIndex)"
+                  :aria-label="`Clear ${label} Scale`"
+                  @click="clearScale(propIndex, simpleScaleFrame(propIndex).beat)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </label>
+            </section>
+          </div>
+          <div v-else class="pattern-property-controls__twist-columns">
+            <section
+              v-for="(column, propIndex) in scaleColumns"
+              :key="column.label"
+              class="pattern-property-controls__twist-column"
+              :aria-label="`${column.label} Scale`"
             >
-              <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
-              <input
-                v-if="sliders"
-                type="range"
-                min="0"
-                max="1.4"
-                step="0.1"
-                :value="frame.value"
-                :aria-valuetext="frame.value.toFixed(1)"
-                :aria-label="`${column.label} Scale at beat ${formatBeat(frame.beat)}`"
-                :data-role="`${context}-scale-${propIndex}-${frame.index}`"
-                @input="setScaleFromSlider(propIndex, frame.beat, $event)"
-                @pointerdown="emit('sliderStart')"
-                @pointerup="emit('sliderEnd')"
-                @pointercancel="emit('sliderEnd')"
-                @keydown="emit('sliderStart')"
-                @keyup="emit('sliderEnd')"
-                @blur="emit('sliderEnd')"
-              />
-              <ConceptStepper
-                v-else
-                :model-value="frame.value"
-                :min="0"
-                :max="1.4"
-                :step="0.1"
-                :label="`${column.label} Scale at beat ${formatBeat(frame.beat)}`"
-                :data-role="`${context}-scale-${propIndex}-${frame.index}-stepper`"
-                :display-value="frame.value.toFixed(1)"
-                @update:model-value="setScaleFromStepper(propIndex, frame.beat, $event)"
-              />
-              <output v-if="sliders">{{ frame.value.toFixed(1) }}</output>
-              <button
-                type="button"
-                class="pattern-property-controls__delete"
-                :disabled="!frame.isSet"
-                :aria-label="`Clear ${column.label} Scale at beat ${formatBeat(frame.beat)}`"
-                @click="clearScale(propIndex, frame.beat)"
+              <header class="pattern-property-controls__twist-header">
+                <span>Beat</span>
+                <h3>{{ column.label }}</h3>
+                <span>Value</span>
+              </header>
+              <label
+                v-for="frame in column.frames"
+                :key="frame.index"
+                class="pattern-property-controls__twist-frame"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited': !frame.isSet,
+                  'pattern-property-controls__value-set': frame.isSet,
+                  'pattern-property-controls__twist-frame--stepper': !sliders,
+                }"
               >
-                <BaseIcon :path="mdiTrashCanOutline" :size="18" />
-              </button>
-            </label>
-          </section>
-        </div>
+                <span class="pattern-property-controls__beat">{{ formatBeat(frame.beat) }}</span>
+                <input
+                  v-if="sliders"
+                  type="range"
+                  min="0"
+                  max="1.4"
+                  step="0.1"
+                  :value="frame.value"
+                  :aria-valuetext="frame.value.toFixed(1)"
+                  :aria-label="`${column.label} Scale at beat ${formatBeat(frame.beat)}`"
+                  :data-role="`${context}-scale-${propIndex}-${frame.index}`"
+                  @input="setScaleFromSlider(propIndex, frame.beat, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <ConceptStepper
+                  v-else
+                  :model-value="frame.value"
+                  :min="0"
+                  :max="1.4"
+                  :step="0.1"
+                  :label="`${column.label} Scale at beat ${formatBeat(frame.beat)}`"
+                  :data-role="`${context}-scale-${propIndex}-${frame.index}-stepper`"
+                  :display-value="frame.value.toFixed(1)"
+                  @update:model-value="setScaleFromStepper(propIndex, frame.beat, $event)"
+                />
+                <output v-if="sliders">{{ frame.value.toFixed(1) }}</output>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="!frame.isSet"
+                  :aria-label="`Clear ${column.label} Scale at beat ${formatBeat(frame.beat)}`"
+                  @click="clearScale(propIndex, frame.beat)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </label>
+            </section>
+          </div>
+        </template>
       </template>
       <template v-else-if="property.key === 'axis'">
         <p
@@ -537,6 +548,167 @@
           </section>
         </div>
       </template>
+      <template v-else-if="property.key === 'third-order'">
+        <p
+          class="pattern-property-controls__usage-note"
+          :data-role="`${context}-property-third-order-note`"
+        >
+          Hand path manipulations
+        </p>
+        <div class="pattern-property-controls__fold-option-row">
+          <fieldset class="pattern-property-controls__option-group">
+            <legend class="pattern-property-controls__visually-hidden">
+              Third Order mirroring
+            </legend>
+            <label>
+              <input
+                type="checkbox"
+                :checked="thirdOrderMirror"
+                aria-label="Mirror Third Order"
+                @change="emitThirdOrderMirror"
+              />
+              <span>Mirror</span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                :checked="thirdOrderOpposed"
+                :disabled="!thirdOrderMirror"
+                aria-label="Opposed Third Order"
+                @change="emitThirdOrderOpposed"
+              />
+              <span>Opposed</span>
+            </label>
+          </fieldset>
+        </div>
+        <div class="pattern-property-controls__twist-columns">
+          <template v-for="(label, propIndex) in propLabels" :key="label">
+            <section
+              v-if="!thirdOrderMirror || propIndex === 0"
+              class="pattern-property-controls__twist-column pattern-property-controls__third-order-column"
+              :aria-label="`${label} Third Order`"
+            >
+              <h3>{{ label }}</h3>
+
+              <div
+                class="pattern-property-controls__third-order-row"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited':
+                    !isThirdOrderTimingSet(propIndex),
+                  'pattern-property-controls__value-set': isThirdOrderTimingSet(propIndex),
+                }"
+              >
+                <span>Ratio</span>
+                <select
+                  :value="thirdOrderDisplaySettings.timing[propIndex] ?? ''"
+                  :aria-label="`${label} Third Order Ratio`"
+                  :data-role="`${context}-third-order-timing-${propIndex}`"
+                  @change="setThirdOrderTiming(propIndex, $event)"
+                >
+                  <option value="">Undefined</option>
+                  <option
+                    v-for="option in vtgThirdOrderTimingOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="!isThirdOrderTimingSet(propIndex)"
+                  :aria-label="`Clear ${label} Third Order Ratio`"
+                  @click="emitThirdOrderTiming(propIndex)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </div>
+
+              <div
+                class="pattern-property-controls__third-order-row"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited':
+                    thirdOrderSettings[propIndex]?.strength === undefined,
+                  'pattern-property-controls__value-set':
+                    thirdOrderSettings[propIndex]?.strength !== undefined,
+                }"
+              >
+                <span>Strength</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  :value="thirdOrderDisplaySettings.strength[propIndex]"
+                  :disabled="thirdOrderDisplaySettings.timing[propIndex] === undefined"
+                  :aria-valuetext="`${thirdOrderDisplaySettings.strength[propIndex]}%`"
+                  :aria-label="`${label} Third Order Strength`"
+                  :data-role="`${context}-third-order-strength-${propIndex}`"
+                  @input="setThirdOrderStrength(propIndex, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <output>{{ thirdOrderDisplaySettings.strength[propIndex] }}%</output>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="thirdOrderSettings[propIndex]?.strength === undefined"
+                  :aria-label="`Clear ${label} Third Order Strength`"
+                  @click="emitThirdOrderStrength(propIndex)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </div>
+
+              <div
+                v-if="firstEditableFrameIndex === 0"
+                class="pattern-property-controls__third-order-row"
+                :class="{
+                  'pattern-property-controls__twist-frame--inherited':
+                    thirdOrderSettings[propIndex]?.initial === undefined,
+                  'pattern-property-controls__value-set':
+                    thirdOrderSettings[propIndex]?.initial !== undefined,
+                }"
+              >
+                <span>Adjust</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="360"
+                  step="5"
+                  :value="thirdOrderInitialAngle(propIndex)"
+                  :disabled="thirdOrderDisplaySettings.timing[propIndex] === undefined"
+                  :aria-valuetext="`${thirdOrderInitialAngle(propIndex)}°`"
+                  :aria-label="`${label} Third Order Adjust`"
+                  :data-role="`${context}-third-order-initial-${propIndex}`"
+                  @input="setThirdOrderInitialAngle(propIndex, $event)"
+                  @pointerdown="emit('sliderStart')"
+                  @pointerup="emit('sliderEnd')"
+                  @pointercancel="emit('sliderEnd')"
+                  @keydown="emit('sliderStart')"
+                  @keyup="emit('sliderEnd')"
+                  @blur="emit('sliderEnd')"
+                />
+                <output>{{ thirdOrderInitialAngle(propIndex) }}°</output>
+                <button
+                  type="button"
+                  class="pattern-property-controls__delete"
+                  :disabled="thirdOrderSettings[propIndex]?.initial === undefined"
+                  :aria-label="`Clear ${label} Third Order Adjust`"
+                  @click="emitThirdOrderInitial(propIndex)"
+                >
+                  <BaseIcon :path="mdiTrashCanOutline" :size="18" />
+                </button>
+              </div>
+            </section>
+          </template>
+        </div>
+      </template>
       <p v-else>{{ propertyName(property) }} controls will go here.</p>
     </div>
   </section>
@@ -564,8 +736,15 @@ import type { VtgBuilderScaleMode, VtgBuilderScaleValues } from '@/features/buil
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { isTouchDevice } from '@/utils/device'
 import type { VtgPatternSelection } from '@/features/vtg/types'
+import {
+  vtgThirdOrderTimingOptions,
+  type VtgThirdOrderDisplaySettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderSettings,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
 
-type PatternPropertyContext = 'vtg' | 'builder' | 'eight-step'
+type PatternPropertyContext = 'vtg' | 'builder' | 'builder-drop' | 'eight-step'
 type PatternPropertyKey = VtgPropertyKey | 'scale'
 
 const props = withDefaults(
@@ -576,11 +755,17 @@ const props = withDefaults(
     animation?: RootDataFinal
     offsetValues?: VtgPatternSelection['propRotationOffsets']
     scaleMode?: VtgBuilderScaleMode
+    scaleAuto?: boolean
     scaleValues?: VtgBuilderScaleValues
     scaleDisplayValues?: VtgBuilderScaleValues
     twistMode?: VtgTwistMode
     twistValues?: VtgTwistValues
     twistDisplayValues?: VtgTwistValues
+    thirdOrderSettings?: VtgThirdOrderSettings
+    thirdOrderDisplaySettings?: VtgThirdOrderDisplaySettings
+    thirdOrderTimingSet?: readonly [boolean, boolean]
+    thirdOrderMirror?: boolean
+    thirdOrderOpposed?: boolean
     initialYawValues?: readonly [number, number]
     firstEditableFrameIndex?: number
     allowTwistZero?: boolean
@@ -600,11 +785,20 @@ const props = withDefaults(
     showTurns: false,
     showOffset: true,
     scaleMode: 'simple',
+    scaleAuto: true,
     scaleValues: () => [{}, {}],
     scaleDisplayValues: () => [{}, {}],
     twistMode: 'simple',
     twistValues: () => [{}, {}],
     twistDisplayValues: () => [{}, {}],
+    thirdOrderSettings: () => [{}, {}],
+    thirdOrderDisplaySettings: () => ({
+      initial: [undefined, undefined],
+      strength: [100, 100],
+      timing: [undefined, undefined],
+    }),
+    thirdOrderMirror: true,
+    thirdOrderOpposed: false,
     initialYawValues: () => [90, 90],
     firstEditableFrameIndex: 0,
     allowTwistZero: false,
@@ -626,7 +820,13 @@ const emit = defineEmits<{
   offsetUpdate: [propIndex: 0 | 1, value?: number]
   scaleUpdate: [propIndex: 0 | 1, beat: number, value?: number]
   'update:scaleMode': [mode: VtgBuilderScaleMode]
+  'update:scaleAuto': [auto: boolean]
   twistUpdate: [propIndex: 0 | 1, beat: number, value?: number]
+  thirdOrderInitialUpdate: [propIndex: 0 | 1, value?: VtgThirdOrderInitial]
+  thirdOrderStrengthUpdate: [propIndex: 0 | 1, value?: number]
+  thirdOrderTimingUpdate: [propIndex: 0 | 1, value?: VtgThirdOrderTiming]
+  'update:thirdOrderMirror': [mirror: boolean]
+  'update:thirdOrderOpposed': [opposed: boolean]
   'update:twistMode': [mode: VtgTwistMode]
   foldUpdate: [propIndex: 0 | 1, beat: number, fold: keyof VtgFoldValue, value?: number]
   'update:foldMode': [mode: VtgFoldMode]
@@ -656,6 +856,7 @@ const properties = [
   { key: 'axis', name: 'Rotate', label: 'Rotate' },
   { key: 'twist', name: 'Twist', label: 'Twist' },
   { key: 'turns', name: 'Turns', label: 'Turns' },
+  { key: 'third-order', name: 'Third Order', label: 'Third Order' },
 ] as const satisfies readonly { key: PatternPropertyKey; name: string; label: string }[]
 
 const controlId = `pattern-properties-${useId()}`
@@ -668,7 +869,7 @@ const visibleProperties = computed(() =>
     (property) =>
       (property.key !== 'turns' || props.showTurns) &&
       (property.key !== 'offset' || props.showOffset) &&
-      (property.key !== 'scale' || props.context === 'builder'),
+      (property.key !== 'scale' || props.context === 'builder' || props.context === 'vtg'),
   ),
 )
 const propertyLabel = (property: (typeof properties)[number]) => property.label
@@ -720,6 +921,43 @@ const endOffsetText = (propIndex: number) => {
 const clearOffset = (propIndex: number) => {
   if (!isPropIndex(propIndex)) return
   emit('offsetUpdate', propIndex)
+}
+
+const thirdOrderInitialAngle = (propIndex: number) => {
+  const value = props.thirdOrderDisplaySettings.initial[propIndex]
+  return typeof value === 'number' ? value : 0
+}
+const isThirdOrderTimingSet = (propIndex: number) =>
+  props.thirdOrderTimingSet?.[propIndex] ??
+  props.thirdOrderSettings[propIndex]?.timing !== undefined
+const emitThirdOrderInitial = (propIndex: number, value?: VtgThirdOrderInitial) => {
+  if (!isPropIndex(propIndex)) return
+  emit('thirdOrderInitialUpdate', propIndex, value)
+}
+const setThirdOrderInitialAngle = (propIndex: number, event: Event) => {
+  emitThirdOrderInitial(propIndex, Number((event.target as HTMLInputElement).value))
+}
+const emitThirdOrderStrength = (propIndex: number, value?: number) => {
+  if (!isPropIndex(propIndex)) return
+  emit('thirdOrderStrengthUpdate', propIndex, value)
+}
+const setThirdOrderStrength = (propIndex: number, event: Event) => {
+  emitThirdOrderStrength(propIndex, Number((event.target as HTMLInputElement).value))
+}
+const emitThirdOrderTiming = (propIndex: number, value?: VtgThirdOrderTiming) => {
+  if (!isPropIndex(propIndex)) return
+  emit('thirdOrderTimingUpdate', propIndex, value)
+}
+const setThirdOrderTiming = (propIndex: number, event: Event) => {
+  const value = (event.target as HTMLSelectElement).value
+  emitThirdOrderTiming(propIndex, value === '' ? undefined : (value as VtgThirdOrderTiming))
+}
+const emitThirdOrderMirror = (event: Event) => {
+  emit('update:thirdOrderMirror', (event.target as HTMLInputElement).checked)
+}
+const emitThirdOrderOpposed = (event: Event) => {
+  if (!props.thirdOrderMirror) return
+  emit('update:thirdOrderOpposed', (event.target as HTMLInputElement).checked)
 }
 
 const scaleColumns = computed(() =>
@@ -842,7 +1080,7 @@ const availableFoldBeats = computed(() => {
     for (const frame of column.frames) {
       if (
         frame.index >= props.firstEditableFrameIndex &&
-        (props.context !== 'builder' || frame.beat > 0)
+        ((props.context !== 'builder' && props.context !== 'builder-drop') || frame.beat > 0)
       ) {
         beats.add(frame.beat)
       }
@@ -987,7 +1225,13 @@ const collapseFromTabRow = (event: MouseEvent) => {
 }
 
 const revealOpenedProperty = async (property: PatternPropertyKey | null) => {
-  if (property !== 'offset' && property !== 'scale' && property !== 'axis' && property !== 'twist')
+  if (
+    property !== 'offset' &&
+    property !== 'scale' &&
+    property !== 'axis' &&
+    property !== 'twist' &&
+    property !== 'third-order'
+  )
     return
   await nextTick()
   const root = rootElement.value
@@ -1282,6 +1526,54 @@ watch(() => props.activeProperty, revealOpenedProperty)
 
 .pattern-property-controls__twist-column + .pattern-property-controls__twist-column {
   border-inline-start: 1px solid var(--color-border);
+}
+
+.pattern-property-controls__third-order-column > h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.pattern-property-controls__third-order-row {
+  display: grid;
+  grid-template-columns: 4.25rem minmax(0, 1fr) 3.25rem 2rem;
+  min-height: 2.25rem;
+  color: var(--color-text);
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pattern-property-controls__third-order-row + .pattern-property-controls__third-order-row {
+  border-block-start: 1px solid var(--color-border);
+}
+
+.pattern-property-controls__third-order-row input[type='range'] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--color-action-primary);
+}
+
+.pattern-property-controls__third-order-row select {
+  grid-column: 2 / 4;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
+  font-weight: 700;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.pattern-property-controls__third-order-row select:focus-visible {
+  outline: 2px solid var(--color-action-primary);
+  outline-offset: 2px;
+}
+
+.pattern-property-controls__third-order-row output {
+  font-size: 0.75rem;
+  text-align: end;
+  white-space: nowrap;
 }
 
 .pattern-property-controls__fold-schedule {

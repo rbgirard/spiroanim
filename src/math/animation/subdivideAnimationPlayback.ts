@@ -1,6 +1,13 @@
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import { resolveMotionFrames } from '@/math/animation/frameSemantics'
+import {
+  applyWarpPath,
+  doesStrengthChangeWarpPathPosition,
+} from '@/math/animation/warpPathInterpolation'
+import { TTYPE } from '@/domain/animation/AnimStruct'
+import { toScaleMultiplier } from '@/domain/animation/scale'
+import { toStrengthRatio } from '@/domain/animation/strength'
 import { MathUtils, Quaternion, Vector3 } from 'three'
 import type {
   AnimData,
@@ -42,13 +49,16 @@ const compiledBoundaryStateMatches = (
 ): boolean =>
   expected.beats === actual.beats &&
   expected.scale === actual.scale &&
+  expected.strength === actual.strength &&
   expected.depth === actual.depth &&
   expected.type === actual.type &&
   expected.adjust === actual.adjust &&
   nearlyEqual(expected.twistRoll, actual.twistRoll) &&
   vectorsNearlyEqual(expected.pos, actual.pos) &&
+  vectorsNearlyEqual(expected.warpPos, actual.warpPos) &&
   vectorsNearlyEqual(expected.rot, actual.rot) &&
   vectorsNearlyEqual(expected.posx, actual.posx) &&
+  vectorsNearlyEqual(expected.warpx, actual.warpx) &&
   vectorsNearlyEqual(expected.rotx, actual.rotx) &&
   vectorsNearlyEqual(expected.yawx, actual.yawx) &&
   quaternionsNearlyEqual(expected.primaryOrient, actual.primaryOrient) &&
@@ -58,6 +68,43 @@ const compiledBoundaryStateMatches = (
     adjustedOrientation(expected).toArray(),
     adjustedOrientation(actual).toArray(),
   )
+
+const renderedHandPosition = (frame: AnimDataCompiled): Vector3 =>
+  applyWarpPath(
+    new Vector3().fromArray(frame.pos),
+    new Vector3().fromArray(frame.warpPos),
+    toScaleMultiplier(frame.scale),
+    toStrengthRatio(frame.strength),
+    new Vector3(),
+  )
+
+const linearSubdivisionsPreservePath = (
+  expected: readonly AnimDataCompiled[],
+  actual: readonly AnimDataCompiled[],
+  subdivisionCount: number,
+): boolean => {
+  for (let targetIndex = 1; targetIndex < expected.length; targetIndex += 1) {
+    const start = expected[targetIndex - 1]
+    const target = expected[targetIndex]
+    if (!start || !target || target.type !== TTYPE.LINE) continue
+
+    const renderedStart = renderedHandPosition(start)
+    const renderedEnd = renderedHandPosition(target)
+    for (let step = 1; step < subdivisionCount; step += 1) {
+      const actualFrame = actual[(targetIndex - 1) * subdivisionCount + step]
+      if (!actualFrame) return false
+
+      const expectedPosition = renderedStart.clone().lerp(renderedEnd, step / subdivisionCount)
+      if (
+        !vectorsNearlyEqual(expectedPosition.toArray(), renderedHandPosition(actualFrame).toArray())
+      ) {
+        return false
+      }
+    }
+  }
+
+  return true
+}
 
 const subdivisionPreservesCompiledBoundaries = (
   expected: ReturnType<typeof rootCompile>,
@@ -70,6 +117,7 @@ const subdivisionPreservesCompiledBoundaries = (
     return (
       actualProp !== undefined &&
       actualProp.anim.length === (prop.anim.length - 1) * subdivisionCount + 1 &&
+      linearSubdivisionsPreservePath(prop.anim, actualProp.anim, subdivisionCount) &&
       prop.anim.every((frame, frameIndex) => {
         const actualFrame = actualProp.anim[frameIndex * subdivisionCount]
         return actualFrame !== undefined && compiledBoundaryStateMatches(frame, actualFrame)
@@ -113,13 +161,27 @@ const subdivideFrame = (
   subdivisionCount: number,
 ): AnimData => {
   const progress = step / subdivisionCount
+  const scale = interpolate(start.scale, target.scale, progress)
+  const strength =
+    target.type === TTYPE.SPHE &&
+    !doesStrengthChangeWarpPathPosition(
+      new Vector3().fromArray(start.pos),
+      new Vector3().fromArray(start.warpPos),
+      toScaleMultiplier(start.scale),
+      toStrengthRatio(start.strength),
+      toStrengthRatio(target.strength),
+    )
+      ? target.strength
+      : interpolate(start.strength, target.strength, progress)
   return {
     turns: target.turns / subdivisionCount,
     twist: target.twist / subdivisionCount,
     yaw: target.yaw,
     rotate: target.rotate / subdivisionCount,
     beats: step === subdivisionCount ? target.beats : start.beats,
-    scale: interpolate(start.scale, target.scale, progress),
+    scale,
+    warp: target.warp / subdivisionCount,
+    strength,
     depth: interpolate(start.depth, target.depth, progress),
     type: target.type,
     adjust: interpolate(start.adjust, target.adjust, progress),
@@ -255,6 +317,11 @@ export const consolidateAnimationPlayback = (
         ).reduce<number>((sum, rotate) => sum + (rotate ?? 0), 0),
         beats: last.beats,
         scale: last.scale,
+        warp: Array.from(
+          { length: consolidationCount },
+          (_, offset) => compiledProp.anim[startIndex + offset]?.warp,
+        ).reduce<number>((sum, warp) => sum + (warp ?? 0), 0),
+        strength: last.strength,
         depth: last.depth,
         type: last.type,
         adjust: last.adjust,

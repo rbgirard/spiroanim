@@ -55,6 +55,10 @@ export interface AnimData {
   rotate?: number
   beats?: number
   scale?: number
+  /** Relative rotation of the auxiliary hand-path vector during this frame interval. */
+  warp?: number
+  /** Tenths-of-a-percent contribution from Warp to the rendered hand path. */
+  strength?: number
   depth?: number
   type?: TypeInd
   adjust?: number
@@ -108,6 +112,8 @@ export interface PropData {
 
 // Root Data
 export interface RootData {
+  /** VTG authoring intent, serialized separately from the numeric animation channels. */
+  vtgScale?: import('@/types/AnimationScale').VtgScaleIntent
   bpm: number
   prop: PropInd
   color: ColorInd
@@ -179,6 +185,8 @@ export interface AnimDataCompiled {
   rebasePrimaryOrientation: boolean
   beats: number
   scale: number
+  warp: number
+  strength: number
   depth: number
   type: TypeInd
   adjust: number
@@ -186,9 +194,13 @@ export interface AnimDataCompiled {
   plane: number
   axis: number
   pos: [number, number, number]
+  /** Complete accumulated auxiliary hand-path vector. */
+  warpPos: [number, number, number]
   adju: [number, number, number]
   rot: [number, number, number]
   posx: [number, number, number]
+  /** Axis used by the auxiliary hand-path vector during this frame interval. */
+  warpx: [number, number, number]
   rotx: [number, number, number]
   yawx: [number, number, number]
   adjustx: [number, number, number]
@@ -247,7 +259,7 @@ export type MotionKeys = keyof MotionData
 export type MotionPathKeys = keyof MotionPathData
 export type CameraKeys = keyof CameraData
 export type PropKeys = keyof Omit<PropData, 'anim' | 'motion'>
-export type RootKeys = keyof Omit<RootDataFinal, 'props' | 'camera'>
+export type RootKeys = keyof Omit<RootDataFinal, 'props' | 'camera' | 'vtgScale'>
 
 export type AnimCompKeys = keyof AnimDataCompiled
 export type MotionCompKeys = keyof MotionDataCompiled
@@ -262,7 +274,7 @@ export type AllCommonKeys = Extract<PropCommonKeys, AnimCommonKeys>
 
 // List of variables - Min / Max / Bits / Transform defined in AnimStruct.ts
 export type AllVars =
-  | keyof Omit<RootData, 'props' | 'camera'>
+  | keyof Omit<RootData, 'props' | 'camera' | 'vtgScale'>
   | keyof Omit<PropData, 'anim' | 'motion'>
   | keyof AnimData
   | keyof MotionData
@@ -286,6 +298,9 @@ export type DynamicVal = {
   step?: number
   mult?: number
   def?: number
+  displayDivisor?: number
+  displayMinimumFractionDigits?: number
+  displayMaximumFractionDigits?: number
 
   neg?: boolean
   posi?: boolean

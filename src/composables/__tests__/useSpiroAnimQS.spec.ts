@@ -18,6 +18,11 @@ import {
   createExtendedAnimationConfig as createExtendedAnimationConfigV11,
   createRotationAnimationConfig as createRotationAnimationConfigV11,
 } from '@/services/query/versions/SpiroAnimQSv11'
+import {
+  CHARSET as CHARSET_V12,
+  VDEF as VDEF_V12,
+  createExtendedAnimationConfig as createExtendedAnimationConfigV12,
+} from '@/services/query/versions/SpiroAnimQSv12'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
 import { doubleAnimationFrames } from '@/features/editor/manage/resampleAnimationFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
@@ -54,6 +59,28 @@ const createRoot = (): RootDataFinal & { distance: number } => ({
 })
 
 describe('useSpiroAnimQS', () => {
+  it.each([
+    { auto: true, base: 1.4, mode: 'simple' as const },
+    { auto: false, base: 0.8, mode: 'simple' as const },
+    { auto: false, base: 0.9, mode: 'advanced' as const },
+  ])('round-trips VTG Scale intent independently of authored frames: %j', async (intent) => {
+    const codec = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const root = createRoot()
+    root.vtgScale = intent
+    root.props[0]!.anim = [{ scale: 65 }, { scale: 120 }]
+    const encoded = codec.encodeQS(root, false)
+    const decoded = codec.decodeQS(encoded)
+    expect(decoded.vtgScale).toEqual(intent)
+    expect(decoded.props[0]!.anim.map((frame) => frame.scale)).toEqual([65, 120])
+    expect(codec.encodeQS(decoded, false)).toEqual(encoded)
+    const legacy = { ...encoded }
+    delete legacy.vs
+    expect(codec.decodeQS(legacy).vtgScale).toBeUndefined()
+    for (const invalid of ['a:49', 'm:141', 'a:NaN', 'x:80', 'd:-50']) {
+      expect(codec.decodeQS({ ...encoded, vs: invalid }).vtgScale).toBeUndefined()
+    }
+  })
+
   it('preserves the version-1 query representation', async () => {
     const query = await useSpiroAnimQS(VDEF, useBaseQS(VDEF), 1)
     const root = createRoot()
@@ -343,6 +370,20 @@ describe('useSpiroAnimQS', () => {
     expect(decoded.props[0]!.prop).toBe(3)
   })
 
+  it('round-trips Triads as prop index 4 in version 12 without changing older ranges', async () => {
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    root.prop = 4
+    root.props[0]!.prop = 4
+
+    const decoded = query.decodeQS(query.encodeQS(root, false))
+
+    expect(VDEF_V11.prop[1]).toBe(3)
+    expect(VDEF_V12.prop).toEqual([0, 4, 4])
+    expect(decoded.prop).toBe(4)
+    expect(decoded.props[0]!.prop).toBe(4)
+  })
+
   it('stores extended Animation values in compact optional x tracks in version 10', async () => {
     const query = await useSpiroAnimQS(VDEF_V10, useBaseQS(VDEF_V10, { charset: CHARSET_V10 }), 10)
     const { distance: _legacyDistance, ...root } = createRoot()
@@ -449,6 +490,74 @@ describe('useSpiroAnimQS', () => {
     expect(createRotationAnimationConfigV11()).toEqual([
       ['anim', 5, [['bits', 5, ['twist', 'rotate', 'yaw']]]],
     ])
+  })
+
+  it('packs v12 Scale, Beats/Depth, Strength, and Warp groups and round-trips sparse frames', async () => {
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const { distance: _legacyDistance, ...root } = createRoot()
+    delete root.props[0]!.anim[0]!.move
+    root.props[0]!.anim = [
+      { turns: -2160, scale: -200, warp: -2160, strength: 0, beats: 1, depth: -30 },
+      { turns: 12.5, scale: 111, warp: 90.5, strength: 555 },
+      { beats: 63, depth: 30 },
+      { turns: 1440, scale: 400, warp: 1440, strength: 1000 },
+    ]
+
+    const encoded = query.encodeQS(root, false)
+
+    expect(encoded.v).toBe('12')
+    expect(encoded.x0!.split('.').map((frame) => frame.length)).toEqual([8, 8, 4, 8])
+    expect(query.decodeQS(encoded).props[0]!.anim).toEqual(root.props[0]!.anim)
+  })
+
+  it('defines the reordered v12 xN groups', () => {
+    expect(createExtendedAnimationConfigV12()).toEqual([
+      [
+        'anim',
+        8,
+        [
+          ['bits', 2, ['scale']],
+          ['bits', 2, ['beats', 'depth']],
+          ['bits', 4, ['strength', 'warp']],
+        ],
+      ],
+    ])
+  })
+
+  it('uses the 10 BPM v12 range and preserves BPM decoded from older query versions', async () => {
+    expect(VDEF_V12.bpm).toEqual([10, 520, 9])
+
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const legacyQuery = await useSpiroAnimQS(
+      VDEF_V11,
+      useBaseQS(VDEF_V11, { charset: CHARSET_V11 }),
+      11,
+    )
+    const legacyRoot = createRoot()
+    legacyRoot.bpm = 20
+
+    const migrated = await query.decodeVer(legacyQuery.encodeQS(legacyRoot, false))
+    expect(migrated.bpm).toBe(20)
+    expect(query.decodeQS(query.encodeQS(migrated, false)).bpm).toBe(20)
+
+    const minimum = createRoot()
+    minimum.bpm = 10
+    expect(query.decodeQS(query.encodeQS(minimum, false)).bpm).toBe(10)
+  })
+
+  it('migrates historical Scale and Turns values into the v12 units', async () => {
+    const query = await useSpiroAnimQS(VDEF_V12, useBaseQS(VDEF_V12, { charset: CHARSET_V12 }), 12)
+    const legacyQuery = await useSpiroAnimQS(
+      VDEF_V11,
+      useBaseQS(VDEF_V11, { charset: CHARSET_V11 }),
+      11,
+    )
+    const legacyRoot = createRoot()
+    legacyRoot.props[0]!.anim = [{ scale: 8 }, { turns: 180 }]
+    const decoded = await query.decodeVer(legacyQuery.encodeQS(legacyRoot, false))
+
+    expect(decoded.props[0]!.anim[0]!.scale).toBe(80)
+    expect(decoded.props[0]!.anim[1]!.turns).toBe(180)
   })
 
   it('omits unused v11 rN tracks without affecting xN tracks', async () => {

@@ -32,6 +32,7 @@ describe('QST pattern catalog', () => {
 
   it('compiles every stored animation into closed QST positions and configured lines', () => {
     for (const pattern of qstPatternDefinitions) {
+      expect(pattern.props.every(({ anim }) => anim[0]?.scale === 80)).toBe(true)
       const animation = createDefaultQstAnimation({
         concept: 'qst',
         reference: pattern.reference,

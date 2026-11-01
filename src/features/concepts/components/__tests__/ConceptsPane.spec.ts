@@ -356,6 +356,7 @@ describe('ConceptsPane', () => {
       'Staff',
       'Juggling Clubs',
       'Fans',
+      'Triads',
     ])
     await propSelect.setValue('0')
     await wrapper.get<HTMLSelectElement>('[data-role="vtg-left-color"]').setValue('Blue')
@@ -388,7 +389,7 @@ describe('ConceptsPane', () => {
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
 
-  it('shows the Third Order placeholder immediately before The Kinetic Alphabet', async () => {
+  it('shows the Third Order matrix immediately before The Kinetic Alphabet', async () => {
     const wrapper = mount(ConceptsPane)
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
     const options = selector.findAll('option')
@@ -396,10 +397,8 @@ describe('ConceptsPane', () => {
     expect(options.map((option) => option.element.value).slice(-2)).toEqual(['to', 'tka'])
     await selector.setValue('to')
 
-    expect(wrapper.get('[data-role="to-pane"]').text()).toContain('Third Order')
-    expect(wrapper.get('[data-role="to-development-note"]').text()).toBe(
-      'The Rock is in the kitchen and is COOKING something...',
-    )
+    expect(wrapper.findAll('[data-role="to-cell"]')).toHaveLength(136)
+    expect(wrapper.find('[data-role="to-development-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="tka-pane"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
@@ -618,6 +617,50 @@ describe('ConceptsPane', () => {
     await vi.waitFor(() =>
       expect(scrollIntoView.mock.calls.length).toBeGreaterThan(initialCallCount),
     )
+  })
+
+  it('does not reveal the same QST card again when customization updates the animation', async () => {
+    useConceptsStore().selectedConcept = 'qst'
+    const animation = createDefaultQstAnimation({ concept: 'qst', reference: 'beyond-100' })
+    if (!animation) throw new Error('Expected a supported QST animation')
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      if (this instanceof HTMLElement && this.matches('[data-concepts-pane]')) {
+        return new DOMRect(0, 0, 320, 500)
+      }
+      if (this instanceof HTMLElement && this.dataset.patternReference) {
+        return new DOMRect(0, 700, 300, 180)
+      }
+      return new DOMRect(0, 0, 0, 0)
+    })
+    const wrapper = mount(ConceptsPane, { props: { animation, animationReady: true } })
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
+    scrollIntoView.mockClear()
+
+    for (const thick of [12, 10]) {
+      const updated = createDefaultQstAnimation({
+        concept: 'qst',
+        reference: 'beyond-100',
+        thick,
+        paths: false,
+      })
+      if (!updated) throw new Error('Expected a supported customized QST animation')
+      await wrapper.setProps({ animation: updated })
+      await vi.waitFor(() =>
+        expect(wrapper.get<HTMLInputElement>('[data-role="qst-thick"]').element.value).toBe(
+          String(thick),
+        ),
+      )
+      await flushPromises()
+      expect(scrollIntoView).not.toHaveBeenCalled()
+    }
+
+    const differentPattern = createDefaultQstAnimation({ concept: 'qst', reference: 'beyond-99' })
+    if (!differentPattern) throw new Error('Expected another supported QST animation')
+    await wrapper.setProps({ animation: differentPattern })
+    await vi.waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1))
+    wrapper.unmount()
   })
 
   it('preserves shared controls when merged VTG receives an Eight Step animation', async () => {

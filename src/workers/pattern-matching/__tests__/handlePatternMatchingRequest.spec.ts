@@ -5,15 +5,95 @@ import { createDefaultEightStepAnimation } from '@/features/eight-step/createEig
 import { createDefaultQstAnimation } from '@/features/quarter-space-tech/createQstAnimation'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
+import { resizeVtgTransitionPatternPreview } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { createDefaultVtgPropertySettings } from '@/features/vtg/propertySettings'
+import { applyVtgThirdOrderSettings } from '@/features/vtg/thirdOrder'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { loadSpiroAnimQSVersion } from '@/services/query/versions'
+import { CURRENT_SPIRO_ANIM_QS_VERSION, loadSpiroAnimQSVersion } from '@/services/query/versions'
 import {
+  compareVtgCandidateLayoutRequest,
+  createVtgPreviewCandidatesRequest,
   matchEightStepPatternRequest,
   matchQstPatternRequest,
   matchVtgPatternRequest,
+  matchThirdOrderPatternRequest,
 } from '@/workers/pattern-matching/handlePatternMatchingRequest'
+import { createThirdOrderAnimation } from '@/features/third-order/createThirdOrderAnimation'
+import { applyPatternInitialArcRotation } from '@/features/concepts/applyPatternFinalTransforms'
 
 describe('handlePatternMatchingRequest', () => {
+  it('recognizes Third Order without returning a replacement animation', async () => {
+    const preferred = {
+      handRatio: '1:2',
+      propRatio: '1:7',
+      handDirection: 'spin',
+      propDirection: 'anti',
+      version: 2,
+      duplicate: 1,
+    } as const
+    const animation = applyPatternInitialArcRotation(
+      createThirdOrderAnimation(undefined, { concept: 'to', ...preferred })!,
+      45,
+    )
+    const before = structuredClone(animation)
+    await expect(matchThirdOrderPatternRequest({ animation, preferred })).resolves.toEqual({
+      status: 'matched',
+      match: preferred,
+    })
+    expect(animation).toEqual(before)
+    await expect(
+      matchThirdOrderPatternRequest({ animation: { ...animation, props: [] } }),
+    ).resolves.toEqual({ status: 'unmatched' })
+  })
+  it('generates a batch of final VTG preview candidates', async () => {
+    const candidates = await createVtgPreviewCandidatesRequest({
+      selections: [
+        { reference: '1-1', speedRatio: '1:3' },
+        { reference: '3-3', speedRatio: '1:3' },
+      ],
+      options: {},
+    })
+
+    expect(candidates).toHaveLength(2)
+    expect(candidates.every((candidate) => candidate?.props.length === 2)).toBe(true)
+  })
+
+  it('compares final VTG candidate paths for thumbnail layout', async () => {
+    const properties = createDefaultVtgPropertySettings()
+    properties.thirdOrder.settings = [{ initial: '1:3-pro', strength: 1, timing: '1:3-pro' }, {}]
+
+    await expect(
+      compareVtgCandidateLayoutRequest({
+        selections: [
+          { reference: '1-6', speedRatio: '1:3' },
+          { reference: '2-6', speedRatio: '1:3' },
+        ],
+        options: { properties },
+      }),
+    ).resolves.toBe(true)
+  })
+
+  it.each([
+    ['1:3', false],
+    ['1:2', true],
+    ['2:1', true],
+    ['2:3', true],
+    ['2:5', true],
+  ] as const)(
+    'compares unmodified %s thumbnails without property settings',
+    async (speedRatio, paired) => {
+      await expect(
+        compareVtgCandidateLayoutRequest({
+          selections: [
+            { reference: '1-6', speedRatio },
+            { reference: '2-6', speedRatio },
+          ],
+          options: {},
+        }),
+      ).resolves.toBe(paired)
+    },
+  )
+
   it('matches VTG and preserves a selection that produced the animation', async () => {
     const selection = {
       reference: '2-2',
@@ -43,6 +123,71 @@ describe('handlePatternMatchingRequest', () => {
     ).resolves.toEqual({ status: 'unchanged' })
   })
 
+  it.each([3.5, 4.5])(
+    'matches a single VTG portion normalized from %s beats',
+    async (beatCount) => {
+      const animation = createDefaultVtgAnimation({ reference: '2-2', speedRatio: '1:3' })
+      if (!animation) throw new Error('Expected a supported VTG animation')
+      const resized = resizeVtgTransitionPatternPreview(animation, 0, beatCount)
+      if (!resized) throw new Error('Expected the VTG animation to resize')
+
+      await expect(
+        matchVtgPatternRequest({
+          animation: resized,
+          preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+        }),
+      ).resolves.toMatchObject({
+        status: 'matched',
+        source: 'vtg',
+        exact: false,
+        match: { reference: '2-2', speedRatio: '1:3' },
+      })
+    },
+  )
+
+  it('matches a repeated base cycle required by Third Order', async () => {
+    const base = createDefaultVtgAnimation(
+      { reference: '2-2', speedRatio: '1:3' },
+      { minimumCycleCount: 2 },
+    )
+    if (!base) throw new Error('Expected a supported VTG animation')
+    const animation = applyVtgThirdOrderSettings(base, [
+      { initial: 0, strength: 50, timing: '2:3-pro' },
+      {},
+    ])
+
+    await expect(
+      matchVtgPatternRequest({
+        animation,
+        preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+      }),
+    ).resolves.toMatchObject({
+      status: 'matched',
+      source: 'vtg',
+      exact: false,
+      match: { reference: '2-2', speedRatio: '1:3' },
+    })
+  })
+
+  it.each(['turns', 'plane'] as const)(
+    'does not normalize a different-length pattern with authored %s beyond frame 2',
+    async (field) => {
+      const animation = createDefaultVtgAnimation({ reference: '2-2', speedRatio: '1:3' })
+      if (!animation) throw new Error('Expected a supported VTG animation')
+      const resized = resizeVtgTransitionPatternPreview(animation, 0, 3.5)
+      const frame = resized?.props[0]?.anim[2]
+      if (!resized || !frame) throw new Error('Expected the VTG animation to resize')
+      frame[field] = 0
+
+      await expect(
+        matchVtgPatternRequest({
+          animation: resized,
+          preferences: { swapProps: false, reversePlane: false, quarters: 1 },
+        }),
+      ).resolves.toEqual({ status: 'unmatched' })
+    },
+  )
+
   it('falls back from VTG to merged QTR matching', async () => {
     const animation = createDefaultQtrAnimation({
       reference: '3-4',
@@ -65,13 +210,13 @@ describe('handlePatternMatchingRequest', () => {
   })
 
   it('canonicalizes the supplied 1:3 QTR geometry across equivalent orientations', async () => {
-    const version = await loadSpiroAnimQSVersion(6)
+    const version = await loadSpiroAnimQSVersion(CURRENT_SPIRO_ANIM_QS_VERSION)
     const codec = await useSpiroAnimQS(
       version.VDEF,
       useBaseQS(version.VDEF, { charset: version.CHARSET }),
-      6,
+      CURRENT_SPIRO_ANIM_QS_VERSION,
     )
-    const animation = codec.decodeQS(
+    const animation = await codec.decodeVer(
       Object.fromEntries(
         new URLSearchParams(
           'r=Ew08Yk11Y&p0=Q__.gU0_____s.5E0wm.......&m0=_1_mxqv__&p1=N__.g__tyw3_s.5L_s8w3.......&c=_i_bhq&v=6',

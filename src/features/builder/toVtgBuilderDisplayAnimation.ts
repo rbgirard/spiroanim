@@ -9,10 +9,8 @@ import {
 } from '@/features/concepts/patternPropColors'
 import { getPatternPropMoves } from '@/features/concepts/patternPropSpacing'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
-import {
-  INITIAL_ANIMATION_FRAME,
-  resolveAnimationFrames,
-} from '@/math/animation/frameSemantics'
+import { toDisplayScale } from '@/domain/animation/scale'
+import { INITIAL_ANIMATION_FRAME, resolveAnimationFrames } from '@/math/animation/frameSemantics'
 import type { MotionData, PropInd, RootDataFinal } from '@/types/AnimTypes'
 
 export interface VtgBuilderDisplaySettings {
@@ -60,7 +58,7 @@ export const toVtgBuilderDisplayAnimation = (
   const maximumScale = options.maximumScale ?? getVtgBuilderMaximumScale(animation)
   const framed = {
     ...animation,
-    camera: [createDefaultCameraFrame(getVtgDistanceForScale(maximumScale / 10))],
+    camera: [createDefaultCameraFrame(getVtgDistanceForScale(toDisplayScale(maximumScale)))],
   }
 
   if (settings === undefined) return framed

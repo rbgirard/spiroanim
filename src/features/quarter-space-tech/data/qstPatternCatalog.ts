@@ -18,6 +18,28 @@ import type {
   QstReadableAnimation,
 } from '@/features/quarter-space-tech/types'
 import { compactReadableAnimationFrames } from '@/math/animation/compressFrames'
+import { toInternalScale } from '@/domain/animation/scale'
+
+// The imported catalog is preserved in its historical tenths representation. Normalize it once at
+// the catalog boundary so every exported definition follows the current hundredths contract.
+const migrateLegacyQstPages = (pages: readonly QstCatalogPage[]): readonly QstCatalogPage[] =>
+  pages.map((page) => ({
+    ...page,
+    patterns: page.patterns.map((pattern) => ({
+      ...pattern,
+      props: pattern.props.map((prop) => ({
+        ...prop,
+        anim: prop.anim.map((frame) => ({
+          ...frame,
+          ...(frame.scale === undefined ? undefined : { scale: toInternalScale(frame.scale / 10) }),
+        })),
+      })) as [(typeof pattern.props)[0], (typeof pattern.props)[1]],
+    })),
+  }))
+
+const breaksPages = migrateLegacyQstPages(qstBreaksPages)
+const advancedPages = migrateLegacyQstPages(qstAdvancedPages)
+const beyondPages = migrateLegacyQstPages(qstBeyondPages)
 
 const combinePagePairs = (pages: readonly QstCatalogPage[]): readonly QstCatalogPage[] =>
   Array.from({ length: Math.ceil(pages.length / 2) }, (_, index) => ({
@@ -30,7 +52,7 @@ export const qstCollections = [
     title: 'Quarter "Time" Breaks',
     level: 'Intermediate',
     description: 'Intermediate series where Breaks are introduced, expanding on the Fundamentals.',
-    pages: qstBreaksPages,
+    pages: breaksPages,
   },
   {
     key: 'advanced',
@@ -38,7 +60,7 @@ export const qstCollections = [
     level: 'Advanced',
     description:
       'Advanced breaking series which continues to focus on quarter hand positions. Each four beat pattern is combined with another four beat pattern, specifically tailored to mess with the brain and muscle memory.',
-    pages: combinePagePairs(qstAdvancedPages),
+    pages: combinePagePairs(advancedPages),
   },
   {
     key: 'beyond',
@@ -46,7 +68,7 @@ export const qstCollections = [
     level: 'Master',
     description:
       'Master series which adds together / split hand positions to quarters. Each four beat pattern is combined with another four beat pattern, specifically tailored to mess with the brain and muscle memory.',
-    pages: combinePagePairs(qstBeyondPages),
+    pages: combinePagePairs(beyondPages),
   },
 ] as const satisfies readonly QstCollectionDefinition[]
 

@@ -1,9 +1,9 @@
-import { createPinia, setActivePinia } from 'pinia'
+import { createPinia, disposePinia, setActivePinia } from 'pinia'
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
-import { flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useSplitterStore } from '@/stores/useSplitterStore'
 import { useMainPaneStore } from '@/stores/useMainPaneStore'
@@ -21,6 +21,21 @@ import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilder
 import type { QtrPatternSelection } from '@/features/vtg/types'
 import { createCompiledVtgPatternSignature } from '@/features/vtg/math/createVtgAnimationSignature'
 
+// The module-scoped URL codec retains actions bound to the first Pinia in this suite.
+// Keep these roots alive until afterAll; components are still unmounted after every test.
+const testPinias = new Set<ReturnType<typeof createPinia>>()
+const createViewTestPinia = () => {
+  const pinia = createPinia().use(piniaPluginPersistedstate)
+  testPinias.add(pinia)
+  return pinia
+}
+
+afterAll(() => {
+  testPinias.forEach(disposePinia)
+  testPinias.clear()
+  setActivePinia(undefined)
+})
+
 const AnimPlayerStub = {
   props: ['controlsStartClearance', 'controlsEndClearance', 'selectionEnabled', 'conceptsVisible'],
   template:
@@ -35,7 +50,7 @@ const AnimTimelineStub = {
 }
 
 const mountEightStepView = async () => {
-  const pinia = createPinia().use(piniaPluginPersistedstate)
+  const pinia = createViewTestPinia()
   setActivePinia(pinia)
   const router = createRouter({
     history: createMemoryHistory(),
@@ -99,17 +114,27 @@ describe('SpiroAnim view', () => {
     })
   })
 
-  afterEach(() => {
-    document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
-    Object.defineProperty(window, 'visualViewport', {
-      configurable: true,
-      value: undefined,
+  enableAutoUnmount((unmount) => {
+    afterEach(() => {
+      // Unmount before restoring browser stubs, including when an assertion or test times out.
+      try {
+        unmount()
+      } finally {
+        setActivePinia(undefined)
+        document.body.replaceChildren()
+        document.documentElement.classList.remove('disable-scroll', 'disable-text-select')
+        Object.defineProperty(window, 'visualViewport', {
+          configurable: true,
+          value: undefined,
+        })
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+      }
     })
-    vi.unstubAllGlobals()
   })
 
   it('composes pane controls and the requested placeholder views', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -244,15 +269,44 @@ describe('SpiroAnim view', () => {
     expect(playerStore.PREVIEW_PLAYING).toBe(false)
     expect(wrapper.find('[data-role="builder-preview-countdown"]').exists()).toBe(false)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(true)
     expect(wrapper.get('[data-preview-index="0"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
     await vi.waitFor(() => {
       expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toBe('1-1')
     })
+    const builderPaths = wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]')
+    await builderPaths.setValue(false)
+    await flushPromises()
+    expect(playerRoot.value.paths).toBe(false)
+    expect(playerRoot.value.props.every((prop) => prop.paths === false)).toBe(true)
+    await builderPaths.setValue(true)
+    await flushPromises()
+    expect(playerRoot.value.paths).toBe(true)
+    expect(playerRoot.value.props.every((prop) => prop.paths === true)).toBe(true)
+    await builderPaths.setValue(false)
+    await flushPromises()
+    const builderPatternBeforeCustomizeScale = structuredClone(playerRoot.value)
+    await wrapper.get<HTMLInputElement>('[data-role="vtg-scale"]').setValue(0.5)
+    await flushPromises()
+    expect(playerRoot.value).toEqual(builderPatternBeforeCustomizeScale)
+    const builderProp = wrapper.get<HTMLSelectElement>('[data-role="vtg-prop-type"]')
+    await builderProp.setValue('1')
+    await flushPromises()
+    expect(playerRoot.value.prop).toBe(1)
+    await builderProp.setValue('0')
+    await flushPromises()
+    expect(playerRoot.value.prop).toBe(0)
     wrapper.get('[data-role="builder-properties"]')
     wrapper.get('[data-role="builder-property-offset-toggle"]')
+    await wrapper.get('[data-role="builder-property-third-order-toggle"]').trigger('click')
+    const firstPortionRatio = wrapper.get<HTMLSelectElement>(
+      '[data-role="builder-third-order-timing-0"]',
+    )
+    await firstPortionRatio.setValue('1:1-pro')
+    await flushPromises()
+    expect(firstPortionRatio.element.value).toBe('1:1-pro')
     await wrapper.get('[data-role="builder-property-twist-toggle"]').trigger('click')
     const firstPortionTwist = wrapper.get<HTMLInputElement>('[data-role="builder-twist-0-1"]')
     firstPortionTwist.element.value = '10'
@@ -290,6 +344,7 @@ describe('SpiroAnim view', () => {
     expect(wrapper.get('[data-preview-index="1"]').classes()).toContain(
       'vtg-transition-previews__item--selected',
     )
+    expect(wrapper.get<HTMLInputElement>('[data-role="vtg-paths"]').element.checked).toBe(false)
     expect(wrapper.get('[data-preview-index="0"]').classes()).not.toContain(
       'vtg-transition-previews__item--selected',
     )
@@ -368,6 +423,26 @@ describe('SpiroAnim view', () => {
       expect(wrapper.find('.vtg-tile--selected').exists()).toBe(true)
     })
     expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(false)
+    await wrapper.get('[data-role="builder-drop-property-third-order-toggle"]').trigger('click')
+    const dropRatio = wrapper.get<HTMLSelectElement>(
+      '[data-role="builder-drop-third-order-timing-0"]',
+    )
+    await dropRatio.setValue('1:1-pro')
+    await flushPromises()
+    expect(dropRatio.element.value).toBe('1:1-pro')
+    const dropMirror = wrapper.get<HTMLInputElement>('input[aria-label="Mirror Third Order"]')
+    await dropMirror.setValue(false)
+    await flushPromises()
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(true)
+    await dropMirror.setValue(true)
+    await flushPromises()
+    expect(dropMirror.element.checked).toBe(true)
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(false)
+    const secondPortionBeats = wrapper.get<HTMLInputElement>('input[aria-label="Pattern 2 beats"]')
+    await secondPortionBeats.setValue(Number(secondPortionBeats.element.value) + 0.5)
+    await flushPromises()
+    expect(dropMirror.element.checked).toBe(true)
+    expect(wrapper.find('[aria-label="Right Third Order"]').exists()).toBe(false)
     await wrapper.get('[data-cell-reference="1-2"]').trigger('dragstart', { dataTransfer })
     await selectedTrailingSlot.trigger('drop', { dataTransfer })
     await flushPromises()
@@ -378,6 +453,9 @@ describe('SpiroAnim view', () => {
     expect(nextTrailingSlot.classes()).toContain('vtg-transition-previews__item--selected')
     await wrapper.get('button[aria-label="Preview pattern 2"]').trigger('click')
     await flushPromises()
+    expect(
+      wrapper.get('[data-role="builder-property-third-order-toggle"]').attributes('aria-selected'),
+    ).toBe('true')
     await wrapper.get('button[aria-label="Delete pattern 2"]').trigger('click')
     await flushPromises()
     expect(playerStore.raw().CURRENT.value).toBe(preservedPortionStartMS)
@@ -479,7 +557,10 @@ describe('SpiroAnim view', () => {
     await flushPromises()
     expect(playerRoot.value.props).toHaveLength(0)
     expect(wrapper.findAll('[data-role="vtg-tile"]')).toHaveLength(36)
-    expect(wrapper.find('[data-role="vtg-playback-controls"]').exists()).toBe(true)
+    await wrapper.get('[data-role="vtg-transition-preview-drop-target"]').trigger('click')
+    await flushPromises()
+    wrapper.get('[data-role="builder-drop-third-order-initial-0"]')
+    wrapper.get('[data-role="builder-drop-third-order-timing-0"]')
     wrapper.get('[data-role="vtg-qtr"]')
     wrapper.get('[data-role="vtg-orientation"]')
     wrapper.get('[data-role="vtg-beat"]')
@@ -616,11 +697,11 @@ describe('SpiroAnim view', () => {
       aspecty: vtgPlayerSettings.aspecty,
       props: [
         {
-          anim: [{ arc: 90, scale: 9 }, { arc: 45 }, {}, {}, {}, {}, {}, {}, {}],
+          anim: [{ arc: 90, scale: 90 }, { arc: 45 }, {}, {}, {}, {}, {}, {}, {}],
         },
         {
           anim: [
-            { plane: 180, arc: 90, scale: 9 },
+            { plane: 180, arc: 90, scale: 90 },
             { arc: 45, turns: -90 },
             {},
             {},
@@ -688,7 +769,7 @@ describe('SpiroAnim view', () => {
   }, 15_000)
 
   it('drops Quarter patterns into Builder with and without a selected portion', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -776,7 +857,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('automatically opens and reconstructs Builder after unmatched Rotate', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -826,7 +907,7 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
-  it('auto-opens Pattern Viewer with structure editing and external properties disabled', async () => {
+  it('auto-opens Pattern Viewer with structure editing disabled and 8-Step properties available', async () => {
     const { wrapper, paneStore } = await mountEightStepView()
 
     expect(
@@ -840,7 +921,7 @@ describe('SpiroAnim view', () => {
     expect(wrapper.find('[data-role="vtg-transition-preview-swap"]').exists()).toBe(false)
     expect(wrapper.find('button[aria-label^="Delete pattern"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
-    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
 
     await wrapper.get('[data-role="builder-exit"]').trigger('click')
     await flushPromises()
@@ -867,7 +948,8 @@ describe('SpiroAnim view', () => {
 
     await wrapper.get('button[aria-label="Preview pattern 1"]').trigger('click')
     await flushPromises()
-    expect(wrapper.find('[data-role="builder-properties"]').exists()).toBe(true)
+    expect(wrapper.find('[data-role="builder-properties"]').exists()).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)
     expect(usePlayerStore('main').PLAYBACK_OVERRIDE_ACTIVE).toBe(true)
 
     const playerStore = usePlayerStore('main')
@@ -963,7 +1045,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('does not save a Quick Slot when animation data is loaded from a URL', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1007,7 +1089,7 @@ describe('SpiroAnim view', () => {
         quickSlotPaths: [null, null, null, null],
       }),
     )
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1036,8 +1118,114 @@ describe('SpiroAnim view', () => {
     wrapper.unmount()
   })
 
+  it.each([undefined, 0, 1])(
+    'borrows a Quick Slot in Builder at target %s without switching or saving it',
+    async (targetIndex) => {
+      const pinia = createViewTestPinia()
+      setActivePinia(pinia)
+      const router = createRouter({
+        history: createMemoryHistory(),
+        routes: [{ path: '/:pathMatch(.*)*', component: { render: () => null } }],
+      })
+      await router.push('/play-vtg')
+      await router.isReady()
+      const playerStore = usePlayerStore('main')
+      const playerRoot = playerStore.raw().ROOT
+      playerRoot.value = createVtgAnimation(playerRoot.value, {
+        reference: '1-1',
+        speedRatio: '1:3',
+      })!
+      const target = createVtgAnimation(playerRoot.value, {
+        reference: '3-3',
+        speedRatio: '1:3',
+        isAnti: true,
+      })!
+      const qsStore = useQSMainStore()
+      const path = router.resolve({
+        path: '/time-8stp',
+        query: qsStore.encodeQS(target, false),
+      }).fullPath
+      setActivePinia(pinia)
+      const conceptsStore = useConceptsStore(pinia)
+      conceptsStore.restoreQuickSlots()
+      conceptsStore.quickSlotPaths[1] = path
+      const { default: SpiroAnim } = await import('@/views/SpiroAnim.vue')
+      const wrapper = mount(SpiroAnim, {
+        attachTo: document.body,
+        global: {
+          plugins: [pinia, router],
+          stubs: { Player: AnimPlayerStub, AnimTimeline: AnimTimelineStub },
+        },
+      })
+      await flushPromises()
+      const paneStore = useMainPaneStore()
+      paneStore.exitPaneHijack()
+      await flushPromises()
+      paneStore.setViewInPane('concepts', 'right')
+      conceptsStore.selectedQuickSlot = 2
+      expect(paneStore.hijackOppositePane('builder', 'concepts')).toBe(true)
+      await flushPromises()
+      expect(conceptsStore.selectedQuickSlot).toBe(2)
+      expect(wrapper.get('[data-role="quick-slot-2"] button').attributes('aria-pressed')).toBe(
+        'true',
+      )
+      if (targetIndex !== undefined) {
+        await wrapper
+          .get(
+            targetIndex === 0
+              ? 'button[aria-label="Preview pattern 1"]'
+              : '[data-role="vtg-transition-preview-drop-target"]',
+          )
+          .trigger('click')
+        await flushPromises()
+      }
+      const before = structuredClone(toRaw(playerRoot.value))
+      const layout = structuredClone(toRaw(paneStore.parents))
+      conceptsStore.quickSlotPaths[2] = path
+      await nextTick()
+      const storedPaths = [...conceptsStore.quickSlotPaths]
+      await wrapper.get('[data-role="quick-slot-3"] button').trigger('click')
+      await vi.waitFor(() => expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true))
+      await flushPromises()
+      expect(conceptsStore.selectedQuickSlot).toBe(2)
+      expect(wrapper.get('[data-role="quick-slot-2"] button').attributes('aria-pressed')).toBe(
+        'true',
+      )
+      expect(conceptsStore.quickSlotPaths).toEqual(storedPaths)
+      await wrapper.get('[data-role="quick-slot-2"] button').trigger('click')
+      await vi.waitFor(() => {
+        expect(wrapper.get('[data-role="vtg-pane"]').attributes('data-selected-cell')).toMatch(
+          /^[1-6]-[1-6]$/,
+        )
+        expect(playerStore.PLAYBACK_PREVIEW_ACTIVE).toBe(true)
+      })
+      await flushPromises()
+      expect(conceptsStore.selectedConcept).toBe('vtg')
+      expect(paneStore.isPaneHijacked).toBe(true)
+      expect(paneStore.parents).toEqual(layout)
+      expect(conceptsStore.selectedQuickSlot).toBeNull()
+      expect(conceptsStore.quickSlotPaths).toEqual(storedPaths)
+      expect(playerRoot.value).toEqual(before)
+      expect(
+        wrapper
+          .findAll('.vtg-transition-previews__item--selected')
+          .map((item) => item.attributes('data-preview-index')),
+      ).toEqual(targetIndex === undefined ? [] : [String(targetIndex)])
+      // A second activation still previews; it never toggles a slot into save mode.
+      await wrapper.get('[data-role="quick-slot-2"] button').trigger('click')
+      await flushPromises()
+      expect(conceptsStore.selectedQuickSlot).toBeNull()
+      expect(conceptsStore.quickSlotPaths).toEqual(storedPaths)
+      expect(playerRoot.value).toEqual(before)
+      playerRoot.value = before
+      paneStore.exitPaneHijack()
+      wrapper.unmount()
+    },
+    15000,
+  )
+
   it('applies a stored Quick Slot without changing the pane layout', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1097,7 +1285,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('replaces the Concepts pane with the Timeline targeted by a Quick Slot', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1143,7 +1331,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('replaces the Timeline pane with Concepts when targeted by a Quick Slot', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1203,7 +1391,7 @@ describe('SpiroAnim view', () => {
   })
 
   it('keeps the Editor pane when its embedded Timeline loads a Timeline target', async () => {
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),
@@ -1256,7 +1444,7 @@ describe('SpiroAnim view', () => {
 
   it('does not auto-select a Concepts pattern for unsupported animation data', async () => {
     const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const pinia = createPinia().use(piniaPluginPersistedstate)
+    const pinia = createViewTestPinia()
     setActivePinia(pinia)
     const router = createRouter({
       history: createMemoryHistory(),

@@ -1,4 +1,6 @@
 import type { EightStepPatternMatch, EightStepPatternSelection } from '@/features/eight-step/types'
+import type { VtgBuilderPatternSelection } from '@/features/builder/types'
+import type { VtgPropertySettings } from '@/features/vtg/propertySettings'
 import type {
   QstPatternMatch,
   QstPatternMatchPreferences,
@@ -14,6 +16,16 @@ import type {
   VtgPatternSelection,
 } from '@/features/vtg/types'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import type { ThirdOrderPatternMatch } from '@/features/third-order/types'
+
+export interface ThirdOrderPatternMatchRequest {
+  animation: RootDataFinal
+  preferred?: ThirdOrderPatternMatch
+}
+
+export type ThirdOrderPatternMatchResult =
+  | { status: 'unmatched' }
+  | { status: 'matched'; match: ThirdOrderPatternMatch }
 
 export interface VtgPatternMatchRequest {
   animation: RootDataFinal
@@ -51,7 +63,29 @@ export type QstPatternMatchResult =
   | { status: 'unmatched' }
   | { status: 'matched'; match: QstPatternMatch }
 
+export interface VtgCandidateLayoutRequest {
+  selections: readonly [VtgBuilderPatternSelection, VtgBuilderPatternSelection]
+  options: {
+    source?: RootDataFinal
+    builderInsertionIndex?: number
+    properties?: VtgPropertySettings
+  }
+}
+
+export interface VtgPreviewCandidatesRequest {
+  selections: readonly VtgBuilderPatternSelection[]
+  options: {
+    source?: RootDataFinal
+    builderInsertionIndex?: number
+    properties?: VtgPropertySettings
+  }
+}
+
 export interface PatternMatchingBridgeMap {
+  matchThirdOrder: {
+    arg: ThirdOrderPatternMatchRequest
+    ret: ThirdOrderPatternMatchResult
+  }
   matchVtg: {
     arg: VtgPatternMatchRequest
     ret: VtgPatternMatchResult
@@ -64,10 +98,25 @@ export interface PatternMatchingBridgeMap {
     arg: QstPatternMatchRequest
     ret: QstPatternMatchResult
   }
+  compareVtgCandidateLayout: {
+    arg: VtgCandidateLayoutRequest
+    ret: boolean
+  }
+  createVtgPreviewCandidates: {
+    arg: VtgPreviewCandidatesRequest
+    ret: readonly (RootDataFinal | undefined)[]
+  }
 }
 
 export interface PatternMatchingClient {
+  matchThirdOrder?: (
+    request: ThirdOrderPatternMatchRequest,
+  ) => Promise<ThirdOrderPatternMatchResult>
   matchVtg: (request: VtgPatternMatchRequest) => Promise<VtgPatternMatchResult>
   matchEightStep: (request: EightStepPatternMatchRequest) => Promise<EightStepPatternMatchResult>
   matchQst: (request: QstPatternMatchRequest) => Promise<QstPatternMatchResult>
+  compareVtgCandidateLayout?: (request: VtgCandidateLayoutRequest) => Promise<boolean>
+  createVtgPreviewCandidates?: (
+    request: VtgPreviewCandidatesRequest,
+  ) => Promise<readonly (RootDataFinal | undefined)[]>
 }

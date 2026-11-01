@@ -38,6 +38,11 @@ Reciprocal Trans playback follows the same timing-cycle length. A one-rotation t
 relationship-change passes. When either prop requires a numerator-2 cycle, Trans performs eight
 passes so the reciprocal sequence closes across the complete eight-beat pattern.
 
+A continuing Third Order `2:*` Timing imposes that same two-rotation minimum even when both grid
+prop timings are `1:*`. Ordinary VTG, reciprocal Trans, thumbnails, and Builder/Viewer 45-degree
+pieces therefore all use the established seventeen-frame/eight-beat cycle. The slider and pattern
+matcher do not currently identify this Third Order-driven doubling.
+
 ## Individual timing definition
 
 A valid individual VTG timing is a positive reduced ratio `p:q`:
@@ -121,8 +126,8 @@ The equivalent 45-degree segments are:
 | Anti-Spin | 45° | -112.5° |                     -67.5° |
 | In-Spin   | 45° |   22.5° |                      67.5° |
 
-Sixteen such segments accumulate the same values as the 720-degree form. This timing is why Turns
-must retain tenths in the query format.
+Sixteen such segments accumulate the same values as the 720-degree form. Numerator-2 timing is why
+Turns and Warp retain half-degree precision in the current query format.
 
 ## Ratio detection
 
@@ -151,9 +156,10 @@ rate = 0.5     -> 1/2 -> 2:1
 ```
 
 Detection uses a floating-point tolerance when finding the reduced rational number. The tolerance
-includes half of the v7 Turns resolution relative to the segment Arc, allowing the intended ratio
-to survive tenths quantization. It rejects a zero Arc, zero absolute prop displacement, non-finite
-values, and continuations that disagree on either timing or spin.
+includes half of the widest supported serialized Turns step relative to the segment Arc, allowing
+the intended ratio to survive historical whole-degree or current half-degree quantization. It
+rejects a zero Arc, zero absolute prop displacement, non-finite values, and continuations that
+disagree on either timing or spin.
 
 Spin is recovered separately from the ratio. The compiled hand and prop axes, Arc, and absolute
 prop displacement determine whether their signed motions agree:
@@ -171,6 +177,18 @@ initial `Arc = 180`, `Turns = 0` may establish placement while later 45-degree c
 the timing.
 
 ## Compound timings
+
+Generation uses the first prop's definition family for both props: denominators 1-2 select
+`1:1`, 3-4 select `1:3`, 5-6 select `1:5`, and other denominators fall back to `1:3`.
+Each prop still calculates Turns from its own complete timing ratio, and cycle length still
+uses the least common multiple of both numerators. For example, `1:2v2:5` uses the `1:1`
+definitions for both props, with `1:2` rotation amounts on the left and `2:5` on the right.
+This replaces independent family selection for newly generated compound patterns; existing
+animation frame data is unchanged until regenerated.
+
+Default rotation also follows only the first ratio: numerator-2 or even-denominator timings
+default to -90 degrees; other timings default to 0 degrees. Changing the second More dropdown
+does not change rotation, and manually selected rotations remain preserved.
 
 Each prop's timing is detected independently and retains prop order. When both props have the same
 individual timing, the pattern uses that timing directly:
@@ -203,12 +221,31 @@ it.
 
 ## Ratio-dependent Scale
 
-VTG's established Scale adjustments are keyed by the individual timing denominator rather than by
-the complete ratio string. Consequently, `2:3` uses the same adjustment as `1:3`, and `2:5` uses
-the same adjustment as `1:5`.
+VTG's automatic Scale adjustments use the individual timing denominator, subtracting one from
+that lookup level for a numerator of `2`. Levels `1` through `5` add `+0.1`, `-0.2`, `0`, `+0.1`,
+and `+0.2`, respectively; unmapped levels add zero. Consequently, `2:3` uses the `2` adjustment,
+and `2:5` uses the `4` adjustment.
 
 For a compound timing, generation uses the larger of the two denominator adjustments. For example,
 `1:3v2` uses the `3` adjustment because it is larger than the `2` adjustment.
+
+VTG and QTR share the same Scale modes. Properties > Scale has an Auto toggle. Auto is on for
+new patterns, hides per-prop Scale controls, and shows the base Scale in Customize (default `0.8`).
+The base plus the larger ratio adjustment is clamped to `0.5..1.4` and applied to both props.
+
+Turning Auto off hides Customize Scale and initializes both manual values from the currently
+rendered automatic values. Manual Simple and Advanced controls match Builder: independent Left
+and Right values, `0..1.4` in `0.1` steps, with Advanced supporting sparse per-beat values and
+inheritance. Manual values receive no ratio adjustment. Turning Auto back on reapplies automatic
+sizing; turning it off again starts from those new automatic values, not earlier manual edits.
+Reset returns to Auto. Manual Scale is applied to authored VTG/QTR paths before Swap and also feeds grid
+previews. Pattern matching normalizes manual Scale on a copy, including zero values.
+
+Scale intent and the automatic base travel with the animation, including shared URLs. Unmarked
+older animations open in manual mode without modifying their authored Scale. Builder, QST, and
+Eight Step do not expose this Auto toggle.
+Explicit Scale edits in Builder or Editor switch existing VTG intent to manual so those authored
+values remain editable when returning to VTG.
 
 ## Pattern Builder Arc conversion
 
@@ -218,9 +255,9 @@ Arcs are consolidated when they divide 45 evenly (`15`, for example) and complet
 available.
 
 Subdivision divides Turns by the same factor. Every resulting Turns value must be exactly
-representable to one decimal place. A result requiring hundredths or finer precision, such as
-`.01`, is rejected instead of being rounded. Consolidation likewise preserves complete intervals
-and multiplies Arc and Turns cleanly; it never discards a partial interval group.
+representable in the current half-degree storage precision. A result requiring quarter-degrees or
+finer precision is rejected instead of being rounded. Consolidation likewise preserves complete
+intervals and multiplies Arc and Turns cleanly; it never discards a partial interval group.
 
 ## Detection procedure
 
@@ -232,18 +269,23 @@ and multiplies Arc and Turns cleanly; it never discards a partial interval group
 6. Verify that every continuation for the prop has the same timing and spin.
 7. Combine the two prop timings using the canonical compound naming rules.
 
-The ratio picker remains curated. Its row contains `1:1`, `2:1`, `1:2`, `1:3`, `2:3`, `1:4`,
-`1:5`, and `2:5`. Compound and other canonical ratios can still be generated programmatically,
-recovered from loaded animations, and used by VTG pattern matching even though they are not exposed
-as picker options.
+The radio ratio row remains curated. It contains `1:1`, `1:2`, `2:1`, `1:3`, `2:3`, `1:4`,
+`1:5`, and `2:5`. Other canonical ratios can still be generated programmatically, recovered from
+loaded animations, and used by VTG pattern matching.
 
 The `More` control replaces the radio row with one ratio selector per prop. The first selector starts
 with the current radio ratio. The second starts at `none`, which applies the first ratio to both
-props. Selecting a second ratio creates the canonical compound timing for the two prop tracks.
+props. Both selectors add `1:6`, `1:7`, `2:7`, `1:8`, `1:9`, `2:9`, `1:10`, `1:11`, and `2:11`
+after the existing options, ordered by increasing denominator. Selecting a second ratio creates the
+canonical compound timing for the two prop tracks. These additions do not change the radio row
+or Third Order timing choices. When selected first, `1:6` uses the `1:5` definition family;
+the other additions use the canonical `1:3` fallback. All use standard top headers and zero
+automatic Scale adjustment. `1:12`, `1:13`, and `2:13` are not offered in the dropdowns.
 
 Pattern Builder drag/drop operations retain one complete cycle of the selected timing. A
 numerator-1-only selection inserts a four-beat piece; a selection involving a numerator-2 timing,
-including a mixed compound such as `1:1v2:3`, inserts an eight-beat piece.
+including a mixed compound such as `1:1v2:3`, inserts an eight-beat piece. An active continuing
+Third Order `2:*` Timing raises an otherwise numerator-1 selection to the same eight-beat piece.
 
 Every Builder junction preserves the complete motion code. Append, prepend, insert, replace, swap,
 reverse, and suffix rejoin operations may adjust both Plane and Axis, and accept a junction only

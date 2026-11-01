@@ -1,5 +1,6 @@
 import type { ComputedRef, Ref } from 'vue'
 
+import { toDisplayScale } from '@/domain/animation/scale'
 import { applyVtgBuilderScaleSettings } from '@/features/builder/applyVtgBuilderScaleSettings'
 import {
   applyVtgBuilderPortionProperties,
@@ -15,7 +16,6 @@ import type {
   VtgFoldSpan,
   VtgFoldValue,
   VtgFoldValues,
-  VtgPropertyKey,
   VtgTwistMode,
   VtgTwistValues,
 } from '@/features/concepts/stores/useConceptsStore'
@@ -25,14 +25,35 @@ import {
   detectVtgFoldSimpleSettings,
 } from '@/features/vtg/applyVtgFoldSettings'
 import { applyVtgTwistSettings, detectVtgTwistMode } from '@/features/vtg/applyVtgTwistSettings'
+import {
+  applyVtgThirdOrderSettings,
+  detectVtgThirdOrderRelationship,
+  extractVtgThirdOrderSettings,
+  getVtgThirdOrderCycleCount,
+  getVtgThirdOrderDisplaySettings,
+  materializeVtgThirdOrderSettings,
+  updateVtgThirdOrderSettings,
+  updateVtgThirdOrderTimingSetting,
+  type VtgThirdOrderDisplaySettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderSettings,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
-import type { VtgPatternSelection } from '@/features/vtg/types'
+import { getVtgTimingCycleCount, type VtgPatternSelection } from '@/features/vtg/types'
+import {
+  createVtgTransitionPreviewAnimation,
+  resizeVtgTransitionPatternPreview,
+} from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { rootCompile } from '@/math/animation/AnimFunc'
+import { compactAnimationFrames } from '@/math/animation/compressFrames'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { updateVtgMirroredSideSetting } from '@/features/vtg/propertySettings'
 
 interface UseVtgBuilderPortionPropertiesOptions {
   pattern: ComputedRef<RootDataFinal>
   previews: ComputedRef<readonly RootDataFinal[] | undefined>
+  speedRatio: Ref<VtgPatternSelection['speedRatio']>
   initialPropRotationOffsets: Ref<VtgPatternSelection['propRotationOffsets']>
   selectedIndex: Ref<number | undefined>
   commit: (updated: RootDataFinal) => void
@@ -57,6 +78,7 @@ const copyFoldValues = (values: VtgFoldValues): VtgFoldValues => [
 export const useVtgBuilderPortionProperties = ({
   pattern,
   previews,
+  speedRatio,
   initialPropRotationOffsets,
   selectedIndex,
   commit,
@@ -76,7 +98,6 @@ export const useVtgBuilderPortionProperties = ({
     })
   })
 
-  const activeProperty = ref<VtgPropertyKey | 'scale' | null>(null)
   const offsetValues = ref<readonly [number, number]>([0, 0])
   const scaleMode = ref<VtgBuilderScaleMode>('simple')
   const twistMode = ref<VtgTwistMode>('simple')
@@ -87,6 +108,8 @@ export const useVtgBuilderPortionProperties = ({
   const foldAlternate = ref<VtgFoldSideSettings<boolean>>([false, false])
   const foldSpan = ref<VtgFoldSpan>('eighth')
   const foldMirror = ref(true)
+  const thirdOrderMirror = ref(true)
+  const thirdOrderOpposed = ref(false)
 
   const twistValues = computed<VtgTwistValues>(() => {
     const index = selectedIndex.value
@@ -97,6 +120,32 @@ export const useVtgBuilderPortionProperties = ({
       selectedLocalBeats.value,
       'twist',
     ) ?? emptyTwistValues()) as VtgTwistValues
+  })
+  const thirdOrderSettings = computed<VtgThirdOrderSettings>(() => {
+    const animation = selectedControlAnimation.value
+    return animation
+      ? extractVtgThirdOrderSettings(animation, firstEditableFrameIndex.value)
+      : [{}, {}]
+  })
+  const thirdOrderDisplaySettings = computed<VtgThirdOrderDisplaySettings>(() => {
+    const animation = selectedControlAnimation.value
+    return animation
+      ? getVtgThirdOrderDisplaySettings(
+          animation,
+          thirdOrderSettings.value,
+          firstEditableFrameIndex.value,
+        )
+      : { initial: [undefined, undefined], strength: [100, 100], timing: [undefined, undefined] }
+  })
+  const thirdOrderTimingSet = computed<readonly [boolean, boolean]>(() => {
+    const index = selectedIndex.value
+    const range = index === undefined ? undefined : getVtgBuilderPortionRanges(pattern.value)[index]
+    if (!range) return [false, false]
+    const timingFrameIndex = Math.max(range.firstOwnedFrameIndex, range.startFrameIndex + 1)
+    return [
+      pattern.value.props[0]?.anim[timingFrameIndex]?.warp !== undefined,
+      pattern.value.props[1]?.anim[timingFrameIndex]?.warp !== undefined,
+    ]
   })
   const scaleValues = computed<VtgBuilderScaleValues>(() => {
     const index = selectedIndex.value
@@ -111,7 +160,7 @@ export const useVtgBuilderPortionProperties = ({
     return values.map((side) =>
       Object.fromEntries(
         Object.entries(side).flatMap(([beat, value]) =>
-          value === undefined ? [] : [[beat, value / 10]],
+          value === undefined ? [] : [[beat, toDisplayScale(value)]],
         ),
       ),
     ) as VtgBuilderScaleValues
@@ -127,7 +176,9 @@ export const useVtgBuilderPortionProperties = ({
     )
     if (!values) return emptyScaleValues()
     return values.map((side) =>
-      Object.fromEntries(Object.entries(side).map(([beat, value]) => [beat, value / 10])),
+      Object.fromEntries(
+        Object.entries(side).map(([beat, value]) => [beat, toDisplayScale(value)]),
+      ),
     ) as VtgBuilderScaleValues
   })
   const twistDisplayValues = computed<VtgTwistValues>(() => {
@@ -197,6 +248,18 @@ export const useVtgBuilderPortionProperties = ({
     offsetValues.value = initialPropRotationOffsets.value ?? [0, 0]
   }
 
+  const manuallyUnmirroredPortions = new Set<number>()
+  const hydrateThirdOrderRelationship = (animation: RootDataFinal) => {
+    const thirdOrderRelationship = detectVtgThirdOrderRelationship(
+      animation,
+      firstEditableFrameIndex.value,
+    )
+    thirdOrderMirror.value =
+      selectedIndex.value !== undefined && manuallyUnmirroredPortions.has(selectedIndex.value)
+        ? false
+        : thirdOrderRelationship.mirror
+    thirdOrderOpposed.value = thirdOrderRelationship.opposed
+  }
   const hydrateModes = () => {
     const animation = selectedControlAnimation.value
     if (!animation) return
@@ -207,6 +270,7 @@ export const useVtgBuilderPortionProperties = ({
       ? 'simple'
       : 'advanced'
     twistMode.value = detectVtgTwistMode(twistValues.value)
+    hydrateThirdOrderRelationship(animation)
     const values = foldValues.value
     const hasAuthoredFold = values.some((side) => Object.keys(side).length > 0)
     const simpleFold = detectVtgFoldSimpleSettings(animation, values)
@@ -222,20 +286,23 @@ export const useVtgBuilderPortionProperties = ({
     foldMirror.value = simpleFold.mirror
   }
 
-  watch(selectedIndex, (index) => {
-    if (index !== 0 && activeProperty.value === 'offset') activeProperty.value = null
+  watch(selectedIndex, () => {
     syncOffsetValues()
     hydrateModes()
+  })
+  watch(selectedControlAnimation, (animation) => {
+    if (animation) hydrateThirdOrderRelationship(animation)
   })
   watch(initialPropRotationOffsets, syncOffsetValues)
 
   const commitWorkingProperties = (
     working: RootDataFinal,
     keys: readonly VtgBuilderPortionPropertyKey[],
+    source = pattern.value,
   ) => {
     const index = selectedIndex.value
     if (index === undefined) return
-    const updated = applyVtgBuilderPortionProperties(pattern.value, index, working, keys)
+    const updated = applyVtgBuilderPortionProperties(source, index, working, keys)
     if (updated) commit(updated)
   }
 
@@ -279,6 +346,198 @@ export const useVtgBuilderPortionProperties = ({
   const updateTwistMode = (mode: VtgTwistMode) => {
     twistMode.value = mode
     applyTwistValues(mode, twistValues.value)
+  }
+
+  const applyThirdOrderSettings = (
+    settings: VtgThirdOrderSettings,
+    keys: readonly ('warp' | 'strength')[],
+    resizeCycle = false,
+    propIndexes: readonly (0 | 1)[] = [0, 1],
+    compactKeys: readonly ('warp' | 'strength')[] = [],
+  ) => {
+    const index = selectedIndex.value
+    if (index === undefined) return
+    const source = resizeCycle
+      ? resizeVtgTransitionPatternPreview(
+          pattern.value,
+          index,
+          Math.max(
+            getVtgTimingCycleCount(speedRatio.value),
+            getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value),
+          ) * 4,
+        )
+      : pattern.value
+    const animation = resizeCycle
+      ? source && createVtgTransitionPreviewAnimation(source, index)
+      : selectedControlAnimation.value
+    if (!source || !animation) return
+    const sourceRange = getVtgBuilderPortionRanges(source)[index]
+    if (!sourceRange) return
+    const applied = applyVtgThirdOrderSettings(animation, settings, {
+      firstEditableFrameIndex: firstEditableFrameIndex.value,
+      mirror: thirdOrderMirror.value,
+      opposed: thirdOrderOpposed.value,
+    })
+    const working: RootDataFinal = {
+      ...applied,
+      props: applied.props.map((prop, propIndex) =>
+        propIndexes.includes(propIndex as 0 | 1)
+          ? {
+              ...prop,
+              anim:
+                compactKeys.length === 0
+                  ? prop.anim
+                  : compactAnimationFrames(prop.anim, {
+                      preserve: (frameIndex, key) =>
+                        !compactKeys.some((compactKey) => compactKey === key) ||
+                        key === 'warp' ||
+                        (key === 'strength' && frameIndex < firstEditableFrameIndex.value),
+                    }),
+            }
+          : {
+              ...prop,
+              anim: prop.anim.map((frame, localFrameIndex) => {
+                const sourceFrame =
+                  source.props[propIndex]?.anim[sourceRange.startFrameIndex + localFrameIndex]
+                if (!sourceFrame) return frame
+                const preserved = { ...frame }
+                for (const key of keys) {
+                  const value = sourceFrame[key]
+                  if (value === undefined) delete preserved[key]
+                  else preserved[key] = value
+                }
+                return preserved
+              }),
+            },
+      ),
+    }
+    const updated = applyVtgBuilderPortionProperties(source, index, working, keys)
+    if (!updated) return
+    if (!compactKeys.includes('warp') || !thirdOrderMirror.value) {
+      commit(updated)
+      return
+    }
+
+    const globalTimingStartIndex = Math.max(
+      sourceRange.firstOwnedFrameIndex,
+      sourceRange.startFrameIndex + 1,
+    )
+    const withoutRelationshipWarps: RootDataFinal = {
+      ...updated,
+      props: updated.props.map((prop, propIndex) =>
+        propIndexes.includes(propIndex as 0 | 1)
+          ? {
+              ...prop,
+              anim: prop.anim.map((frame, frameIndex) => {
+                if (
+                  frameIndex < globalTimingStartIndex ||
+                  frameIndex > sourceRange.endFrameIndex ||
+                  frame.warp === undefined
+                ) {
+                  return frame
+                }
+                const withoutWarp = { ...frame }
+                delete withoutWarp.warp
+                return withoutWarp
+              }),
+            }
+          : prop,
+      ),
+    }
+    const compactedPreview = createVtgTransitionPreviewAnimation(withoutRelationshipWarps, index)
+    const relationship = compactedPreview
+      ? detectVtgThirdOrderRelationship(compactedPreview, firstEditableFrameIndex.value)
+      : undefined
+    commit(
+      relationship?.mirror && relationship.opposed === thirdOrderOpposed.value
+        ? withoutRelationshipWarps
+        : updated,
+    )
+  }
+  const updateThirdOrderInitial = (propIndex: 0 | 1, value?: VtgThirdOrderInitial) => {
+    const previousCycleCount = getVtgThirdOrderCycleCount(
+      thirdOrderSettings.value,
+      thirdOrderMirror.value,
+    )
+    const settings = updateVtgThirdOrderSettings(thirdOrderSettings.value, propIndex, {
+      initial: value,
+    })
+    applyThirdOrderSettings(
+      settings,
+      ['warp'],
+      previousCycleCount !== getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value),
+      thirdOrderMirror.value ? [0, 1] : [propIndex],
+    )
+  }
+  const updateThirdOrderStrength = (propIndex: 0 | 1, value?: number) => {
+    const settings = updateVtgThirdOrderSettings(thirdOrderSettings.value, propIndex, {
+      strength: value,
+    })
+    applyThirdOrderSettings(
+      settings,
+      ['strength'],
+      false,
+      thirdOrderMirror.value ? [0, 1] : [propIndex],
+    )
+  }
+  const updateThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
+    const animation = selectedControlAnimation.value
+    if (!animation) return
+    const previousCycleCount = getVtgThirdOrderCycleCount(
+      thirdOrderSettings.value,
+      thirdOrderMirror.value,
+    )
+    const ownedSettings = thirdOrderSettings.value.map((side, sideIndex) => {
+      const owned = { ...side }
+      if (!thirdOrderTimingSet.value[sideIndex]) delete owned.timing
+      return owned
+    }) as VtgThirdOrderSettings
+    const settings = updateVtgThirdOrderTimingSetting(animation, ownedSettings, propIndex, value)
+    applyThirdOrderSettings(
+      settings,
+      ['warp', 'strength'],
+      previousCycleCount !== getVtgThirdOrderCycleCount(settings, thirdOrderMirror.value),
+      thirdOrderMirror.value ? [0, 1] : [propIndex],
+    )
+  }
+  const updateThirdOrderMirror = (mirror: boolean) => {
+    const index = selectedIndex.value
+    const animation = selectedControlAnimation.value
+    if (index === undefined || !animation) return
+    if (!mirror) {
+      manuallyUnmirroredPortions.add(index)
+      thirdOrderMirror.value = false
+      return
+    }
+
+    manuallyUnmirroredPortions.delete(index)
+    const relationship = detectVtgThirdOrderRelationship(animation, firstEditableFrameIndex.value)
+    thirdOrderMirror.value = true
+    thirdOrderOpposed.value = relationship.opposed
+    if (relationship.mirror) return
+
+    const settings = materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex.value)
+    const previousCycleCount = getVtgThirdOrderCycleCount(settings, false)
+    applyThirdOrderSettings(
+      settings,
+      ['warp', 'strength'],
+      previousCycleCount !== getVtgThirdOrderCycleCount(settings, true),
+      [1],
+      ['warp', 'strength'],
+    )
+  }
+  const updateThirdOrderOpposed = (opposed: boolean) => {
+    if (!thirdOrderMirror.value) return
+    const animation = selectedControlAnimation.value
+    if (!animation) return
+    thirdOrderOpposed.value = opposed
+    applyThirdOrderSettings(
+      materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex.value),
+      ['warp'],
+      false,
+      [1],
+      ['warp'],
+    )
   }
 
   const foldOptions = () => ({
@@ -331,29 +590,40 @@ export const useVtgBuilderPortionProperties = ({
     const sources = simpleFoldSources()
     const previousBeat = foldBeat.value[propIndex]
     const source = sources[propIndex][String(previousBeat)]
-    foldBeat.value[propIndex] = beat
-    if (foldMirror.value && propIndex === 0) foldBeat.value[1] = beat
+    foldBeat.value = updateVtgMirroredSideSetting(foldBeat.value, propIndex, beat, foldMirror.value)
     delete sources[propIndex][String(previousBeat)]
     if (source) sources[propIndex][String(beat)] = source
     applyFoldValues(sources)
   }
   const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
     const sources = simpleFoldSources()
-    foldRepeat.value[propIndex] = repeat
-    if (foldMirror.value && propIndex === 0) foldRepeat.value[1] = repeat
+    foldRepeat.value = updateVtgMirroredSideSetting(
+      foldRepeat.value,
+      propIndex,
+      repeat,
+      foldMirror.value,
+    )
     if (!repeat) foldAlternate.value[propIndex] = false
     applyFoldValues(sources)
   }
   const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
     const sources = simpleFoldSources()
-    foldEvery.value[propIndex] = every
-    if (foldMirror.value && propIndex === 0) foldEvery.value[1] = every
+    foldEvery.value = updateVtgMirroredSideSetting(
+      foldEvery.value,
+      propIndex,
+      every,
+      foldMirror.value,
+    )
     applyFoldValues(sources)
   }
   const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
     const sources = simpleFoldSources()
-    foldAlternate.value[propIndex] = alternate
-    if (foldMirror.value && propIndex === 0) foldAlternate.value[1] = alternate
+    foldAlternate.value = updateVtgMirroredSideSetting(
+      foldAlternate.value,
+      propIndex,
+      alternate,
+      foldMirror.value,
+    )
     applyFoldValues(sources)
   }
   const updateFoldSpan = (span: VtgFoldSpan) => {
@@ -386,7 +656,6 @@ export const useVtgBuilderPortionProperties = ({
   return {
     firstEditableFrameIndex,
     selectedControlAnimation,
-    activeProperty,
     offsetValues,
     scaleMode,
     scaleValues,
@@ -394,6 +663,11 @@ export const useVtgBuilderPortionProperties = ({
     twistMode,
     twistValues,
     twistDisplayValues,
+    thirdOrderSettings,
+    thirdOrderDisplaySettings,
+    thirdOrderTimingSet,
+    thirdOrderMirror,
+    thirdOrderOpposed,
     foldValues,
     foldMode,
     foldBeat,
@@ -408,6 +682,11 @@ export const useVtgBuilderPortionProperties = ({
     updateScaleMode,
     updateTwist,
     updateTwistMode,
+    updateThirdOrderInitial,
+    updateThirdOrderStrength,
+    updateThirdOrderTiming,
+    updateThirdOrderMirror,
+    updateThirdOrderOpposed,
     updateFold,
     updateFoldMode,
     updateFoldBeat,

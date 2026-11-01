@@ -78,6 +78,19 @@ describe('usePropertiesStore', () => {
     ])
   })
 
+  it('clears properties when the last prop is deleted before a queued properties refresh', async () => {
+    const { player, properties } = await createPopulatedStore('delete-last-prop')
+    // Builder selection changes can queue this watcher before ROOT's compilation watcher.
+    properties.pBOUND = false
+    player.raw().ROOT.value = { ...player.raw().ROOT.value, props: [] }
+    await nextTick()
+    expect(properties.ANIMS).toEqual([])
+    expect(properties.CMPDS).toEqual([])
+    expect(properties.IDENT).toEqual([])
+    expect(properties.PROPS).toEqual([])
+    expect(properties.ACTIVE).toEqual([])
+  })
+
   it('updates the selected animation through the editor composable', async () => {
     const { player } = await createPopulatedStore('editor-update')
     const editor = useProperties('editor-update')
@@ -97,6 +110,15 @@ describe('usePropertiesStore', () => {
       twistRoll: 100,
     })
     expect(editor.animGet('twist')).toEqual([100, true, '100°', false])
+  })
+
+  it('retains Editor Scale edits as manual VTG intent', async () => {
+    const { player } = await createPopulatedStore('editor-vtg-scale')
+    player.raw().ROOT.value.vtgScale = { auto: true, base: 0.9, mode: 'simple' }
+    player.PLAYING = false
+    useProperties('editor-vtg-scale').animSet('scale', 65)
+    expect(player.raw().ROOT.value.vtgScale).toEqual({ auto: false, base: 0.9, mode: 'advanced' })
+    expect(player.raw().ROOT.value.props[0]!.anim[0]!.scale).toBe(65)
   })
 
   it('uses independent Motion timing and edits Motion without changing Animation', async () => {

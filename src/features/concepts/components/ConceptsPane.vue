@@ -17,6 +17,7 @@
 
     <QuickSlotsControl
       v-if="quickSlotCount > 0"
+      :apply-only="builderActive && selectedConcept === 'vtg'"
       @apply="emit('quickSlotApply', $event)"
       @save="emit('quickSlotSave', $event)"
     />
@@ -98,7 +99,15 @@
       @pattern-select="emit('patternSelect', $event)"
       @customize="emit('customize', $event)"
     />
-    <ThirdOrderPane v-else-if="selectedConcept === 'to'" />
+    <ThirdOrderPane
+      v-else-if="selectedConcept === 'to'"
+      :animation="animation"
+      :animation-ready="animationReady"
+      :animation-revision="animationRevision"
+      :pattern-matcher="patternMatcher"
+      @pattern-select="emit('patternSelect', $event)"
+      @customize="emit('customize', $event)"
+    />
     <KineticAlphabetPane v-else />
   </section>
 </template>
@@ -182,7 +191,6 @@ watch(
 
 const usesPatternMatching = computed(
   () =>
-    selectedConcept.value !== 'to' &&
     selectedConcept.value !== 'tka' &&
     (!props.builderActive ||
       (selectedConcept.value === 'vtg' && props.builderMatchAnimation !== undefined)),
@@ -191,7 +199,8 @@ const patternMatcher = usePatternMatchingClient(usesPatternMatching)
 
 const createQuickSlots = () => {
   conceptsStore.restoreQuickSlots()
-  conceptsStore.selectedQuickSlot = 1
+  conceptsStore.selectedQuickSlot =
+    props.builderActive && selectedConcept.value === 'vtg' ? null : 1
 }
 
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
@@ -209,9 +218,7 @@ const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 }
 
 .concepts-pane__docs-anchor {
-  position: sticky;
-  inset-block-start: 1px;
-  inset-inline-end: 1px;
+  position: relative;
   z-index: 2900;
   width: var(--size-concepts-docs-trigger);
   height: calc(var(--size-editor-toolbar-height) - 1px);

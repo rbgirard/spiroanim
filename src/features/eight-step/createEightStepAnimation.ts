@@ -4,7 +4,11 @@ import type {
   EightStepPatternSelection,
   EightStepReadableAnimation,
 } from '@/features/eight-step/types'
-import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgDefaultProp,
+  vtgPlayerSettings,
+  vtgPropSettings,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
@@ -14,6 +18,7 @@ import { applyPatternPropSpacing } from '@/features/concepts/patternPropSpacing'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
 import { applyVtgPropRotationOffsets } from '@/features/vtg/createVtgAnimation'
+import { halveEightStepTurns } from '@/features/eight-step/halveEightStepTurns'
 import {
   doubleAnimationPlayback,
   doublePlaybackMultiplier,
@@ -34,6 +39,7 @@ const mergeWithCurrentAnimation = (
   pattern: EightStepReadableAnimation,
 ): RootReadable => ({
   ...encodeReadable(current),
+  vtgScale: undefined,
   ...pattern,
   props: pattern.props,
 })
@@ -71,7 +77,7 @@ export const createEightStepAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
-    ...(selection.prop === undefined ? undefined : { prop: selection.prop }),
+    prop: selection.prop ?? vtgDefaultProp,
     camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
     type: pattern.type ?? current.type,
@@ -92,9 +98,10 @@ export const createEightStepAnimation = (
     ...selection,
     swapProps: !selection.swapProps,
   })
+  const turnsAdjusted = selection.halve ? halveEightStepTurns(transformed) : transformed
 
   return applyPatternPropColors(
-    applyVtgPropRotationOffsets(transformed, selection.propRotationOffsets),
+    applyVtgPropRotationOffsets(turnsAdjusted, selection.propRotationOffsets),
     selection,
   )
 }

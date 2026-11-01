@@ -273,9 +273,15 @@ Validation should be proportional to the scope of the change. Run broader checks
 5. `npm run build`
 6. `npm run test:e2e` when the task affects a complete user workflow
 
-The exhaustive VTG 45 Trans audit is opt-in because it takes several minutes. When a change makes
-`npm run audit:vtg-45-trans` relevant, recommend it and wait for explicit user approval before
-running it.
+Exhaustive and audit suites are strictly opt-in. Do not run any of the following commands unless the
+user explicitly asks for that specific audit or asks for the exhaustive/audit suites to be run:
+
+- `npm run audit:vtg-pattern-detection`
+- `npm run audit:vtg-45-trans`
+- `npm run audit:builder-mutations`
+
+Relevance to a change, available time, or ordinary validation requirements is not authorization to
+run them. They are excluded from the default validation workflow.
 
 Report which commands ran and whether they passed. Use only scripts that exist in `package.json`; mention a missing command instead of inventing one. Note that the current formatting script targets only `src/`.
 

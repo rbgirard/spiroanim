@@ -5,7 +5,58 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
+  VtgCandidateLayoutRequest,
+  VtgPreviewCandidatesRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
+import type { RootDataFinal } from '@/types/AnimTypes'
+import type {
+  ThirdOrderPatternMatchRequest,
+  ThirdOrderPatternMatchResult,
+} from './PatternMatchingWorkerTypes'
+
+export const matchThirdOrderPatternRequest = async ({
+  animation,
+  preferred,
+}: ThirdOrderPatternMatchRequest): Promise<ThirdOrderPatternMatchResult> => {
+  const { findThirdOrderPatternMatch } =
+    await import('@/features/third-order/matchThirdOrderAnimation')
+  const match = findThirdOrderPatternMatch(animation, preferred)
+  return match ? { status: 'matched', match } : { status: 'unmatched' }
+}
+
+export const createVtgPreviewCandidatesRequest = async ({
+  selections,
+  options,
+}: VtgPreviewCandidatesRequest): Promise<readonly (RootDataFinal | undefined)[]> => {
+  const { createVtgPreviewCandidate } =
+    await import('@/features/concepts/createVtgPreviewCandidate')
+  return selections.map((selection) => createVtgPreviewCandidate(selection, options))
+}
+
+export const compareVtgCandidateLayoutRequest = async ({
+  selections,
+  options,
+}: VtgCandidateLayoutRequest): Promise<boolean> => {
+  const [
+    { createVtgPreviewCandidate },
+    { requiresPairedVtgCandidateLayout },
+    { toConceptPreviewAnimation },
+  ] = await Promise.all([
+    import('@/features/concepts/createVtgPreviewCandidate'),
+    import('@/features/vtg/math/requiresPairedVtgCandidateLayout'),
+    import('@/features/concepts/data/toConceptPreviewAnimation'),
+  ])
+  const selectionByReference = new Map(
+    selections.map((selection) => [selection.reference, selection]),
+  )
+  const createCandidate = (reference: (typeof selections)[number]['reference']) => {
+    const selection = selectionByReference.get(reference)
+    if (!selection) return undefined
+    const candidate = createVtgPreviewCandidate(selection, options)
+    return candidate ? toConceptPreviewAnimation(candidate, { hands: selection.hands }) : undefined
+  }
+  return requiresPairedVtgCandidateLayout(createCandidate)
+}
 
 const matchedVtg = (
   match: Extract<VtgPatternMatchResult, { source: 'vtg' }>['match'],
@@ -17,7 +68,7 @@ const matchedQtr = (
   exact: boolean,
 ): VtgPatternMatchResult => ({ status: 'matched', source: 'qtr', match, exact })
 
-export const matchVtgPatternRequest = async ({
+const matchVtgPatternRequestAtCurrentDuration = async ({
   animation,
   preferences,
   source,
@@ -163,6 +214,26 @@ export const matchVtgPatternRequest = async ({
   }
   if (resolvedVtgMatch) return matchedVtg(resolvedVtgMatch, false)
   return resolvedQtrMatch ? matchedQtr(resolvedQtrMatch, false) : { status: 'unmatched' }
+}
+
+export const matchVtgPatternRequest = async (
+  request: VtgPatternMatchRequest,
+): Promise<VtgPatternMatchResult> => {
+  const result = await matchVtgPatternRequestAtCurrentDuration(request)
+  if (result.status !== 'unmatched') return result
+
+  const { normalizeVtgPatternMatchCycle } =
+    await import('@/features/vtg/math/normalizeVtgPatternMatchCycle')
+  const normalized = normalizeVtgPatternMatchCycle(request.animation)
+  if (!normalized) return result
+
+  const normalizedResult = await matchVtgPatternRequestAtCurrentDuration({
+    ...request,
+    animation: normalized,
+  })
+  return normalizedResult.status === 'matched'
+    ? { ...normalizedResult, exact: false }
+    : normalizedResult
 }
 
 export const matchEightStepPatternRequest = async ({

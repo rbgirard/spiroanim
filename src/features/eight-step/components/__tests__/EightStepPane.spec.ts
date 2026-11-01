@@ -1,5 +1,5 @@
-import { createPinia, setActivePinia } from 'pinia'
-import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia, disposePinia, getActivePinia, setActivePinia } from 'pinia'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import EightStepPane from '@/features/eight-step/components/EightStepPane.vue'
@@ -11,6 +11,7 @@ import type {
   PatternMatchingClient,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import AppTooltip from '@/components/AppTooltip.vue'
 
 const createDeferred = <Value>() => {
   let resolve!: (value: Value) => void
@@ -67,6 +68,7 @@ class FakeWorker {
     let data: unknown
     if (message.type === 'warnStr') data = message.data
     else if (message.type === 'initialize') data = true
+    else if (message.type === 'loadFinalData') data = 0
     else if (message.type === 'reqimgs') {
       FakeWorker.activePreviewRequests++
       FakeWorker.maxActivePreviewRequests = Math.max(
@@ -102,8 +104,12 @@ const settlePreviewRendering = async () => {
   await nextTick()
 }
 
-const countWorkerMessages = (type: string) =>
-  FakeWorker.instances[0]?.messages.filter((message) => message.type === type).length ?? 0
+const countWorkerMessages = (type: string) => {
+  const workerType = type === 'data' ? 'loadFinalData' : type
+  return (
+    FakeWorker.instances[0]?.messages.filter((message) => message.type === workerType).length ?? 0
+  )
+}
 
 describe('EightStepPane', () => {
   beforeEach(() => {
@@ -118,10 +124,19 @@ describe('EightStepPane', () => {
     vi.stubGlobal('Worker', FakeWorker)
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
+  enableAutoUnmount((unmount) => {
+    afterEach(() => {
+      try {
+        unmount()
+      } finally {
+        const pinia = getActivePinia()
+        if (pinia) disposePinia(pinia)
+        setActivePinia(undefined)
+        vi.restoreAllMocks()
+        vi.unstubAllGlobals()
+        vi.useRealTimers()
+      }
+    })
   })
 
   it('uses shared tooltips for row relationships and cell descriptions', async () => {
@@ -287,6 +302,40 @@ describe('EightStepPane', () => {
     ).toEqual({ girth: 2, timeline: false, thumbnail: true })
   })
 
+  it('renders and reuses the observed Halve thumbnail groups across the matrix', async () => {
+    const wrapper = mount(EightStepPane)
+    await settlePreviewRendering()
+    reportAllPreviewDimensions(72, 68)
+    await settlePreviewRendering()
+
+    const before = countWorkerMessages('reqimgs')
+    await wrapper.get<HTMLInputElement>('[data-role="eight-step-halve"]').setValue(true)
+    await settlePreviewRendering()
+
+    const expectedSources = {
+      AA: [1, 1, 1, 1, 1, 1, 1, 1],
+      AE: [1, 1, 1, 1, 1, 1, 1, 1],
+      AI: [1, 2, 1, 2, 2, 2, 2, 2],
+      EA: [1, 1, 1, 1, 5, 5, 5, 5],
+      EE: [1, 1, 1, 1, 5, 5, 5, 5],
+      EI: [1, 2, 1, 2, 5, 5, 5, 5],
+      IA: [1, 2, 2, 1, 1, 1, 2, 2],
+      IE: [1, 2, 2, 1, 1, 1, 2, 2],
+      II: [1, 2, 3, 4, 5, 6, 7, 8],
+    } as const
+
+    for (const [row, sources] of Object.entries(expectedSources)) {
+      const rowPreviews = wrapper.findAll(
+        `[data-board-row="${row}"] [data-role="eight-step-preview"]`,
+      )
+      expect(rowPreviews.map((preview) => preview.attributes('data-preview-reference'))).toEqual(
+        sources.map((column) => `${column}-${row}`),
+      )
+    }
+
+    expect(countWorkerMessages('reqimgs')).toBe(before + 23)
+  })
+
   it('refreshes row previews for resize, Swap, 180°, and Scale only', async () => {
     const wrapper = mount(EightStepPane)
     await settlePreviewRendering()
@@ -315,7 +364,7 @@ describe('EightStepPane', () => {
       wrapper.get<HTMLInputElement>('[data-role="eight-step-scale"]').setValue(1.1),
     )
     await expectNineMorePreviews(() =>
-      wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]').setValue(true),
+      wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]').trigger('click'),
     )
 
     const beforeRenderingControls = countWorkerMessages('data')
@@ -328,13 +377,35 @@ describe('EightStepPane', () => {
     await expectNineMorePreviews(() => reportAllPreviewDimensions(80, 76))
   })
 
-  it('places Tilted after 180 and before Reset and warns about tilted patterns', async () => {
+  it('places Halve before the deselectable Tilted and Turned radios', async () => {
     const wrapper = mount(EightStepPane)
     const tilted = wrapper.get<HTMLInputElement>('[data-role="eight-step-tilted"]')
+    const turned = wrapper.get<HTMLInputElement>('[data-role="eight-step-turned"]')
+    const halve = wrapper.get<HTMLInputElement>('[data-role="eight-step-halve"]')
 
-    expect(tilted.element.type).toBe('checkbox')
+    expect(tilted.element.type).toBe('radio')
     expect(tilted.element.checked).toBe(false)
-    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
+    expect(turned.element.type).toBe('radio')
+    expect(turned.element.checked).toBe(false)
+    expect(halve.element.type).toBe('checkbox')
+    expect(halve.element.checked).toBe(false)
+    expect(halve.attributes('aria-label')).toBe(
+      'Halve Turns for double-ended props like Staff and Triads',
+    )
+    expect(
+      wrapper
+        .findAllComponents(AppTooltip)
+        .some(
+          (tooltip) =>
+            tooltip.props('text') === 'Intended for double-ended props like Staff and Triads.',
+        ),
+    ).toBe(true)
+    expect(
+      wrapper
+        .get('[data-role="eight-step-shape-controls"]')
+        .findAll('label > span')
+        .map((label) => label.text()),
+    ).toEqual(['Halve', 'Tilted', 'Turned'])
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="eight-step-diamond-note"]').text()).toBe(
       'Patterns highlighted in yellow, or red when selected, may be difficult or impossible to perform in Wall-Plane without significant modification.',
@@ -352,12 +423,12 @@ describe('EightStepPane', () => {
     ).toBeTruthy()
 
     await wrapper.get('[data-cell-reference="1-AI"]').trigger('click')
-    await tilted.setValue(true)
+    await tilted.trigger('click')
+    await halve.setValue(true)
 
-    expect(wrapper.get('[data-role="eight-step-shape-controls"]').text()).toBe('Tilted')
     expect(wrapper.findAll('.eight-step-cell--marked')).toHaveLength(0)
     expect(wrapper.get('[data-role="eight-step-box-note"]').text()).toBe(
-      'Tilted / Box mode is experimental, and its patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
+      'Tilted / Turned modes are experimental, and their patterns have not been validated. Difficult / Impossible highlighting for patterns performed in Wall-Plane is disabled.',
     )
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(false)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -366,11 +437,31 @@ describe('EightStepPane', () => {
         reference: '1-AI',
         prop: 2,
         shape: 'box',
+        halve: true,
+      },
+    ])
+
+    await tilted.trigger('click')
+    expect(tilted.element.checked).toBe(false)
+    expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
+
+    await turned.trigger('click')
+    expect(turned.element.checked).toBe(true)
+    expect(tilted.element.checked).toBe(false)
+    expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
+      {
+        concept: '8stp',
+        reference: '1-AI',
+        prop: 2,
+        shape: 'turned',
+        halve: true,
       },
     ])
 
     await wrapper.get('[data-role="eight-step-reset"]').trigger('click')
     expect(tilted.element.checked).toBe(false)
+    expect(turned.element.checked).toBe(false)
+    expect(halve.element.checked).toBe(false)
     expect(wrapper.find('[data-role="eight-step-box-note"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-diamond-note"]').exists()).toBe(true)
     expect(wrapper.emitted('patternSelect')?.at(-1)).toEqual([
@@ -660,7 +751,7 @@ describe('EightStepPane', () => {
     expect(wrapper.emitted('builderOpen')).toHaveLength(1)
   })
 
-  it('applies whole-pattern Offset, Rotate, and Twist properties without losing the match', async () => {
+  it('applies whole-pattern Offset, Rotate, Twist, and Third Order properties', async () => {
     const animation = createDefaultEightStepAnimation({
       concept: '8stp',
       reference: '4-EI',
@@ -672,6 +763,20 @@ describe('EightStepPane', () => {
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Offset')
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Rotate')
     expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Twist')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Third Order')
+
+    await wrapper.get('[data-role="eight-step-property-third-order-toggle"]').trigger('click')
+    const ratio = wrapper.get<HTMLSelectElement>('[data-role="eight-step-third-order-timing-0"]')
+    await ratio.setValue('1:1-pro')
+    expect(ratio.element.value).toBe('1:1-pro')
+    await wrapper
+      .get<HTMLInputElement>('[data-role="eight-step-third-order-strength-0"]')
+      .setValue('60')
+    const thirdOrder = wrapper.emitted('animationUpdate')?.at(-1)?.[0] as RootDataFinal | undefined
+    expect(thirdOrder?.props[0]?.anim[0]?.strength).toBe(600)
+
+    await wrapper.setProps({ animation: thirdOrder })
+    await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
 
     await wrapper.get('[data-role="eight-step-property-twist-toggle"]').trigger('click')
     await wrapper.get<HTMLInputElement>('input[data-role^="eight-step-twist-0-"]').setValue('10')
@@ -828,7 +933,7 @@ describe('EightStepPane', () => {
     expect(mirroredFold && findEightStepPatternMatch(mirroredFold)?.reference).toBe('4-EI')
   })
 
-  it('hides whole-pattern properties while Pattern Viewer is open', async () => {
+  it('keeps whole-pattern properties available while Pattern Viewer is open', async () => {
     const animation = createDefaultEightStepAnimation({
       concept: '8stp',
       reference: '4-EI',
@@ -837,7 +942,9 @@ describe('EightStepPane', () => {
     const wrapper = mount(EightStepPane, { props: { animation, builderActive: true } })
 
     await vi.waitFor(() => expect(wrapper.attributes('data-selected-cell')).toBe('4-EI'))
-    expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Offset')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Rotate')
+    expect(wrapper.get('[data-role="eight-step-properties"]').text()).toContain('Twist')
 
     await wrapper.setProps({ builderActive: false })
     expect(wrapper.find('[data-role="eight-step-properties"]').exists()).toBe(true)

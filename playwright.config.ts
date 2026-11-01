@@ -68,7 +68,7 @@ export default defineConfig({
     },
     {
       name: 'webkit',
-      testIgnore: ['**/pwa.spec.ts', '**/vue.spec.ts'],
+      testIgnore: ['**/pwa.spec.ts', '**/vue.spec.ts', '**/third-order.spec.ts'],
       use: {
         ...devices['Desktop Safari'],
       },

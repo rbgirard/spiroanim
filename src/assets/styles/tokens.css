@@ -47,4 +47,6 @@
   );
 
   --transition-fast: 150ms ease;
+  --transition-label-swap: 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  --delay-label-swap-step: 18ms;
 }

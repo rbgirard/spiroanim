@@ -1,5 +1,3 @@
-import { rootCompile } from '@/math/animation/AnimFunc'
-import { PROPTIMES } from '@/math/animation/PlayerFunc'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import type { AnimBridgeMap } from '@/workers/animation/AnimWorkerTypes'
 import { createMessageChannel } from '@/workers/createMessageChannel'
@@ -13,6 +11,9 @@ interface UseConceptPreviewRendererOptions<Reference extends string> {
   dimensions: readonly ConceptPreviewDimensions[]
   references: readonly Reference[]
   createAnimation: (reference: Reference) => RootDataFinal | undefined
+  createAnimations?: (
+    references: readonly Reference[],
+  ) => Promise<readonly (RootDataFinal | undefined)[]>
   label: string
   partialIndexes?: readonly number[]
   activeIndexes?: Readonly<Ref<readonly number[]>>
@@ -30,6 +31,7 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   dimensions,
   references,
   createAnimation,
+  createAnimations,
   label,
   partialIndexes = [],
   activeIndexes,
@@ -47,6 +49,9 @@ export const useConceptPreviewRenderer = <Reference extends string>({
   let renderedVersion = 0
   let requestedPartialVersion = 0
   let renderedPartialVersion = 0
+  let workerWidth = 0
+  let workerHeight = 0
+  let workerRatio = 0
   const isActive = () => active?.value !== false
 
   const getActiveIndexes = () => activeIndexes?.value ?? references.map((_, index) => index)
@@ -86,6 +91,21 @@ export const useConceptPreviewRenderer = <Reference extends string>({
           ? currentActiveIndexes
           : partialIndexes.filter((index) => currentActiveIndexes.includes(index))
         let failed = false
+        const batchReferences = previewIndexes.flatMap((index) => {
+          const reference = references[index]
+          return reference === undefined ? [] : [reference]
+        })
+        const batchAnimations = createAnimations
+          ? await createAnimations(batchReferences)
+          : undefined
+        if (
+          disposed ||
+          !isActive() ||
+          version !== requestedVersion ||
+          (!renderAll && partialVersion !== requestedPartialVersion)
+        )
+          continue
+        let batchIndex = 0
 
         for (const index of previewIndexes) {
           if (
@@ -100,28 +120,39 @@ export const useConceptPreviewRenderer = <Reference extends string>({
           const previewDimensions = dimensions[index]
           if (!reference || !previewDimensions) continue
 
-          const animation = createAnimation(reference)
+          const animation =
+            batchAnimations === undefined
+              ? createAnimation(reference)
+              : batchAnimations[batchIndex++]
           if (!animation) continue
 
           const width = Math.max(1, Math.round(previewDimensions.width))
           const height = Math.max(1, Math.round(previewDimensions.height))
-          channel.send('resize', {
-            width,
-            height,
-            ratio: typeof window === 'undefined' ? 1 : window.devicePixelRatio,
-          })
-          channel.send('projection', {
-            fov: 45,
-            aspect: width / height,
-            near: 0.1,
-            far: 1000,
-          })
-          const compiled = rootCompile(animation)
-          channel.send('data', compiled)
+          const ratio = typeof window === 'undefined' ? 1 : window.devicePixelRatio
+          if (width !== workerWidth || height !== workerHeight || ratio !== workerRatio) {
+            workerWidth = width
+            workerHeight = height
+            workerRatio = ratio
+            channel.send('resize', { width, height, ratio })
+            channel.send('projection', {
+              fov: 45,
+              aspect: width / height,
+              near: 0.1,
+              far: 1000,
+            })
+          }
 
           try {
-            const propTimes = PROPTIMES(compiled)[0]
-            const time = frame === 'final' ? (propTimes?.at(-1) ?? 0) : 0
+            const finalTime = await channel.call('loadFinalData', animation)
+            if (
+              disposed ||
+              !isActive() ||
+              version !== requestedVersion ||
+              (!renderAll && partialVersion !== requestedPartialVersion)
+            )
+              break
+
+            const time = frame === 'final' ? finalTime : 0
             const urls = await channel.call('reqimgs', [{ index: 0, time }])
             const nextUrl = urls[0]
             if (!nextUrl) continue

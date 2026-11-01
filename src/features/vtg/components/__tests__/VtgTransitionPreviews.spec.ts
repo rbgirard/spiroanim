@@ -3,6 +3,16 @@ import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import AppTooltip from '@/components/AppTooltip.vue'
+import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
+import { useBaseQS } from '@/services/query/createBaseQS'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv12'
+import { rootFinal } from '@/math/animation/PlayerFunc'
+import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import {
+  createVtgTransitionPreviewAnimations,
+  getVtgTransitionPreviewBeatCount,
+} from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
+import { describeVtgBuilderPreviewRelationships } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import VtgTransitionPreviews from '@/features/vtg/components/VtgTransitionPreviews.vue'
 import { createDefaultVtgAnimation } from '@/features/vtg/createVtgAnimation'
 import { useViewportStore } from '@/stores/useViewportStore'
@@ -28,6 +38,80 @@ describe('VtgTransitionPreviews', () => {
   beforeEach(() => {
     device.touch = false
     setActivePinia(createPinia())
+  })
+
+  it('renders QST plane-break portions and explains unavailable swaps without blocking previews', async () => {
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
+    const source = rootFinal(
+      codec.decodeQS({
+        r: 'Ew48uk11Y',
+        p0: 'Q__..bg0-Ug._Vq.._Vq....',
+        x0: 'Qo',
+        m0: '_1_mxqv__',
+        p1: 'N__..bg0-Ug....._Vq.._Vq',
+        x1: 'Qo',
+        c: '_i_89K~_1_J27',
+        v: '12',
+      }),
+    )
+    const prepared = prepareVtg45TransitionPattern(source)
+    expect(prepared.supported).toBe(true)
+    const previews = createVtgTransitionPreviewAnimations(prepared.pattern)
+    if (!previews) throw new Error('Expected QST portions')
+    expect(previews).toHaveLength(5)
+    const beatCounts = previews.map(getVtgTransitionPreviewBeatCount)
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: previews,
+        relationships: describeVtgBuilderPreviewRelationships(previews),
+        refreshKey: 'qst-plane-breaks',
+        initialBeatCounts: beatCounts,
+        beatCounts,
+      },
+    })
+    expect(wrapper.findAll('.vtg-transition-previews__visual')).toHaveLength(5)
+    expect(wrapper.findAll('.vtg-transition-previews__ratio').map((item) => item.text())).toEqual(
+      Array.from({ length: 5 }, () => '1:3'),
+    )
+    expect(wrapper.findAll('.vtg-transition-previews__label').map((item) => item.text())).toEqual([
+      'TS / TS',
+      'XX / XX',
+      'TS / TS',
+      'XX / XX',
+      'TS / TS',
+    ])
+    for (const portion of [2, 4]) {
+      const swap = wrapper.get<HTMLButtonElement>(
+        `button[aria-label="Swap props in pattern ${portion}"]`,
+      )
+      expect(swap.attributes('aria-disabled')).toBe('true')
+      // ARIA-disabled controls remain focusable so keyboard and touch users can read the tooltip.
+      expect(swap.element.disabled).toBe(false)
+      expect(swap.attributes('aria-describedby')).toBeTruthy()
+      await swap.trigger('click')
+      await wrapper.get(`button[aria-label="Preview pattern ${portion}"]`).trigger('click')
+    }
+    expect(wrapper.emitted('patternSwap')).toBeUndefined()
+    expect(wrapper.emitted('patternPreview')).toEqual([
+      [previews[1], 1],
+      [previews[3], 3],
+    ])
+    expect(
+      wrapper
+        .findAllComponents(AppTooltip)
+        .filter(
+          (tooltip) =>
+            tooltip.props('text') ===
+            "Swap Props is unavailable because this portion's motion relationships could not be determined.",
+        ),
+    ).toHaveLength(2)
+
+    await wrapper.setProps({ animations: previews.map(() => mixedSpinAnimation) })
+    const swap = wrapper.get('button[aria-label="Swap props in pattern 2"]')
+    expect(swap.attributes('aria-disabled')).toBe('false')
+    await swap.trigger('click')
+    expect(wrapper.emitted('patternSwap')).toEqual([[1]])
+    wrapper.unmount()
   })
 
   it('emits the exact thumbnail animation when its visual is clicked', async () => {
@@ -135,6 +219,24 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.get('[data-test="selected-properties"]').text()).toBe('Properties')
   })
 
+  it('hides selected portion properties when structure editing is disabled', () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'read-only-properties',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        selectedIndex: 0,
+        structureEditingEnabled: false,
+      },
+      slots: { 'selected-properties': '<div data-test="selected-properties">Properties</div>' },
+    })
+
+    expect(wrapper.find('[data-role="vtg-transition-preview-properties"]').exists()).toBe(false)
+    expect(wrapper.find('[data-test="selected-properties"]').exists()).toBe(false)
+  })
+
   it('places selected properties after the final preview while hiding the placeholder', () => {
     const animations = Array.from({ length: 5 }, () => animation)
     const wrapper = mount(VtgTransitionPreviews, {
@@ -156,7 +258,34 @@ describe('VtgTransitionPreviews', () => {
     expect(wrapper.find('[data-role="vtg-transition-preview-drop-target"]').exists()).toBe(false)
   })
 
-  it('selects the empty drop slot without previewing an animation or showing properties', async () => {
+  it('can keep the drop placeholder visible without allowing a drop while a portion is selected', async () => {
+    const wrapper = mount(VtgTransitionPreviews, {
+      props: {
+        animations: [animation],
+        relationships: [relationship],
+        refreshKey: 'persistent-drop-placeholder',
+        initialBeatCounts: [1],
+        beatCounts: [1],
+        selectedIndex: 0,
+        keepDropPlaceholderVisible: true,
+      },
+      slots: { 'selected-properties': '<div>Properties</div>' },
+    })
+    const dropTarget = wrapper.get('[data-role="vtg-transition-preview-drop-target"]')
+    const properties = wrapper.get('[data-role="vtg-transition-preview-properties"]')
+    const dataTransfer = {
+      dropEffect: 'copy',
+      getData: () => JSON.stringify({ reference: '1-1', speedRatio: '1:3' }),
+    }
+
+    await dropTarget.trigger('dragenter')
+    expect(properties.element.previousElementSibling).toBe(dropTarget.element)
+    expect(dropTarget.classes()).toContain('vtg-transition-previews__item--drop-blocked')
+    await dropTarget.trigger('drop', { dataTransfer })
+    expect(wrapper.emitted('patternDrop')).toBeUndefined()
+  })
+
+  it('selects the empty drop slot without previewing an animation and shows its properties', async () => {
     const wrapper = mount(VtgTransitionPreviews, {
       props: {
         animations: [animation],
@@ -179,7 +308,7 @@ describe('VtgTransitionPreviews', () => {
     await wrapper.setProps({ selectedIndex: 1 })
     expect(emptySlot.classes()).toContain('vtg-transition-previews__item--selected')
     expect(emptySlot.attributes('aria-pressed')).toBe('true')
-    expect(wrapper.find('[data-role="vtg-transition-preview-properties"]').exists()).toBe(false)
+    expect(wrapper.get('[data-role="vtg-transition-preview-properties"]').text()).toBe('Properties')
 
     await emptySlot.trigger('click')
     expect(wrapper.emitted('selectionChange')).toEqual([[1], [undefined]])

@@ -45,7 +45,26 @@
             @pointerleave="cancelLongPress"
             @contextmenu.prevent
           >
+            <QuickSlotVisual
+              v-if="applyOnly"
+              :class="{ 'quick-slot-visual--selected': selectedQuickSlot === slot }"
+              :aria-pressed="selectedQuickSlot === slot"
+              :aria-label="quickSlotLabel(slot)"
+              :disabled="!quickSlotHasContent(slot)"
+              @click="loadWithoutSelecting(slot)"
+              @keydown.delete.prevent="clearStoredQuickSlot(slot)"
+              @keydown.backspace.prevent="clearStoredQuickSlot(slot)"
+            >
+              Q{{ slot }}
+              <span
+                v-if="quickSlotHasContent(slot)"
+                class="quick-slot-saved-indicator"
+                data-role="quick-slot-saved-indicator"
+                aria-hidden="true"
+              />
+            </QuickSlotVisual>
             <input
+              v-else
               v-model="selectedQuickSlot"
               type="radio"
               name="quick-slot"
@@ -56,7 +75,7 @@
               @keydown.delete.prevent="clearStoredQuickSlot(slot)"
               @keydown.backspace.prevent="clearStoredQuickSlot(slot)"
             />
-            <QuickSlotVisual tag="span">
+            <QuickSlotVisual v-if="!applyOnly" tag="span">
               Q{{ slot }}
               <span
                 v-if="quickSlotHasContent(slot)"
@@ -99,6 +118,7 @@ import { useBalancedControlRows } from '@/composables/useBalancedControlRows'
 import { useConceptsStore } from '@/features/concepts/stores/useConceptsStore'
 import { isTouchDevice } from '@/utils/device'
 
+const props = withDefaults(defineProps<{ applyOnly?: boolean }>(), { applyOnly: false })
 const emit = defineEmits<{
   apply: [path: string]
   save: [slot: number]
@@ -134,13 +154,19 @@ const quickSlotPathLabel = (slot: number) =>
 
 const quickSlotTooltip = (slot: number) => {
   const pathLabel = quickSlotPathLabel(slot)
-  const instruction = `${selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - hold to clear' : 'Empty'})`
+  const instruction = `${props.applyOnly ? 'Load' : selectedQuickSlot.value === slot ? 'Clear' : 'Select'} Quick Slot ${slot} (${quickSlotHasContent(slot) ? 'Saved - hold to clear' : 'Empty'})`
   return pathLabel ? `${instruction}\nLoads: ${pathLabel}` : instruction
 }
 
 const addAndSelectQuickSlot = () => {
   conceptsStore.addQuickSlot()
-  selectedQuickSlot.value = quickSlotCount.value
+  if (!props.applyOnly) selectedQuickSlot.value = quickSlotCount.value
+}
+
+const loadWithoutSelecting = (slot: number) => {
+  if (selectedQuickSlot.value === slot) selectedQuickSlot.value = null
+  const path = quickSlotPaths.value[slot - 1]
+  if (path) emit('apply', path)
 }
 
 const clearStoredQuickSlot = (slot: number) => {
@@ -252,7 +278,8 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 
-.quick-slots input:checked + .quick-slot-visual {
+.quick-slots input:checked + .quick-slot-visual,
+.quick-slots .quick-slot-visual--selected {
   --quick-slot-accent: color-mix(
     in srgb,
     var(--color-action-primary) 68%,

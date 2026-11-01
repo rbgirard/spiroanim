@@ -10,6 +10,9 @@ import type {
   QstPatternMatchResult,
   VtgPatternMatchRequest,
   VtgPatternMatchResult,
+  VtgCandidateLayoutRequest,
+  VtgPreviewCandidatesRequest,
+  ThirdOrderPatternMatchRequest,
 } from '@/workers/pattern-matching/PatternMatchingWorkerTypes'
 
 const patternMatchingWorkerIdleMs = 30_000
@@ -44,6 +47,26 @@ const matchQstWithoutWorker = async (
   const { matchQstPatternRequest } =
     await import('@/workers/pattern-matching/handlePatternMatchingRequest')
   return matchQstPatternRequest(request)
+}
+
+const matchThirdOrderWithoutWorker = async (request: ThirdOrderPatternMatchRequest) => {
+  const { matchThirdOrderPatternRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return matchThirdOrderPatternRequest(request)
+}
+
+const compareVtgCandidateLayoutWithoutWorker = async (
+  request: VtgCandidateLayoutRequest,
+): Promise<boolean> => {
+  const { compareVtgCandidateLayoutRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return compareVtgCandidateLayoutRequest(request)
+}
+
+const createVtgPreviewCandidatesWithoutWorker = async (request: VtgPreviewCandidatesRequest) => {
+  const { createVtgPreviewCandidatesRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return createVtgPreviewCandidatesRequest(request)
 }
 
 export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
@@ -122,6 +145,24 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
       () => matchQstWithoutWorker(request),
     )
 
+  const matchThirdOrder = (request: ThirdOrderPatternMatchRequest) =>
+    callWorker(
+      (activeChannel) => activeChannel.call('matchThirdOrder', request),
+      () => matchThirdOrderWithoutWorker(request),
+    )
+
+  const compareVtgCandidateLayout = (request: VtgCandidateLayoutRequest) =>
+    callWorker(
+      (activeChannel) => activeChannel.call('compareVtgCandidateLayout', request),
+      () => compareVtgCandidateLayoutWithoutWorker(request),
+    )
+
+  const createVtgPreviewCandidates = (request: VtgPreviewCandidatesRequest) =>
+    callWorker(
+      (activeChannel) => activeChannel.call('createVtgPreviewCandidates', request),
+      () => createVtgPreviewCandidatesWithoutWorker(request),
+    )
+
   const acquire = () => {
     if (disposed) return () => undefined
 
@@ -144,7 +185,14 @@ export const usePatternMatchingWorker = (): PatternMatchingWorkerController => {
   })
 
   return {
-    client: { matchVtg, matchEightStep, matchQst },
+    client: {
+      matchVtg,
+      matchEightStep,
+      matchQst,
+      matchThirdOrder,
+      compareVtgCandidateLayout,
+      createVtgPreviewCandidates,
+    },
     acquire,
   }
 }

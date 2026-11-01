@@ -147,6 +147,7 @@ import {
   toVtgBuilderDisplayAnimation,
 } from '@/features/builder/toVtgBuilderDisplayAnimation'
 import { applyVtgCustomization } from '@/features/vtg/applyVtgCustomization'
+import { applyVtgBuilderCustomization } from '@/features/builder/applyVtgBuilderCustomization'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
 
 import { useViewDimensions } from '@/composables/useViewDimensions'
@@ -276,7 +277,9 @@ watch(
 const cEditor = ref<ComponentPublicInstance>()
 const cTimeline = ref<ComponentPublicInstance>()
 const cConcepts = ref<ComponentPublicInstance>()
-const cBuilder = ref<ComponentPublicInstance>()
+const cBuilder = ref<
+  ComponentPublicInstance & Pick<InstanceType<typeof BuilderPane>, 'loadQuickSlotAnimation'>
+>()
 
 // Supply root elements from components to Pane Store
 registerComponentEl(cEditor, eEditor)
@@ -376,12 +379,14 @@ const playerSurfaceStyle = computed<CSSProperties>(() => ({
 }))
 
 const applyConceptPattern = (selection: ConceptPatternSelection) => {
-  const createdAnimation = createConceptPattern(ROOT.value, selection)
+  const createdAnimation = createConceptPattern(ROOT.value, selection, {
+    minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+    vtgProperties: conceptsStore.getVtgPropertySettings(),
+  })
   if (createdAnimation) {
-    const animation =
-      isVtgPatternSelection(selection) || isEightStepPatternSelection(selection)
-        ? conceptsStore.applyVtgPropertyControls(createdAnimation)
-        : createdAnimation
+    const animation = isEightStepPatternSelection(selection)
+      ? conceptsStore.applyVtgPropertyControls(createdAnimation)
+      : createdAnimation
     commitConceptAnimation(animation)
     playerStore.cameraReset = Symbol()
   }
@@ -392,8 +397,14 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
   const animation =
     (isVtgPatternSelection(selection) || isQtrPatternSelection(selection)) &&
     selectedBuilderPreviewIndex.value !== undefined
-      ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value)
-      : createConceptPattern(ROOT.value, selection)
+      ? createVtgBuilderDropPreview(ROOT.value, selection, selectedBuilderPreviewIndex.value, {
+          minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+          properties: conceptsStore.getVtgPropertySettings(),
+        })
+      : createConceptPattern(ROOT.value, selection, {
+          minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+          vtgProperties: conceptsStore.getVtgPropertySettings(),
+        })
   if (!animation) return
 
   playerStore.startPlaybackPreview(
@@ -407,13 +418,21 @@ const previewConceptPattern = (selection: ConceptPatternSelection) => {
 }
 
 const applyBuilderCustomization = (selection: ConceptPatternSelection) => {
-  if (selectedBuilderPreviewIndex.value !== undefined) return
+  const appliesToVtgPattern = isVtgPatternSelection(selection) || isQtrPatternSelection(selection)
+  // Non-VTG customization rebuilds the selected concept. Never let that replacement path run
+  // against a selected Builder portion; VTG/QTR Customize fields instead edit the whole pattern.
+  if (selectedBuilderPreviewIndex.value !== undefined && !appliesToVtgPattern) return
   if (playerStore.PLAYBACK_PREVIEW_ACTIVE) playerStore.endPlaybackPreview()
-  const animation = isVtgPatternSelection(selection)
-    ? applyVtgCustomization(ROOT.value, selection)
+  const animation = appliesToVtgPattern
+    ? paneStore.isPaneHijacked
+      ? applyVtgBuilderCustomization(ROOT.value, selection)
+      : applyVtgCustomization(ROOT.value, selection)
     : (() => {
-        const createdAnimation = createConceptPattern(ROOT.value, selection)
-        return createdAnimation && isEightStepPatternSelection(selection)
+        const createdAnimation = createConceptPattern(ROOT.value, selection, {
+          minimumVtgCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+        })
+        return createdAnimation &&
+          (isQtrPatternSelection(selection) || isEightStepPatternSelection(selection))
           ? conceptsStore.applyVtgPropertyControls(createdAnimation)
           : createdAnimation
       })()
@@ -504,11 +523,26 @@ watch(
   },
 )
 
+let quickSlotLoadVersion = 0
 const applyQuickSlot = async (path: string): Promise<boolean> => {
+  const version = ++quickSlotLoadVersion
+  const builder =
+    paneStore.isPaneHijacked && conceptsStore.selectedConcept === 'vtg' ? cBuilder.value : undefined
   const conceptRoute = findConceptForPath(path)
   const query = Object.fromEntries(new URLSearchParams(path.split('?', 2)[1] ?? ''))
   try {
     const animation = await qsStore.decodeVer(query)
+    if (version !== quickSlotLoadVersion) return false
+    if (builder) {
+      if (
+        builder === cBuilder.value &&
+        paneStore.isPaneHijacked &&
+        conceptsStore.selectedConcept === 'vtg'
+      )
+        await builder.loadQuickSlotAnimation(animation)
+      // Loading into Builder never follows the slot's saved concept or pane layout.
+      return false
+    }
     if (conceptRoute) {
       conceptsStore.selectedConcept = conceptRoute.concept
       conceptsStore.qtrEnabled = conceptRoute.qtrEnabled

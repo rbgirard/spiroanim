@@ -52,16 +52,21 @@
               <span v-if="previewRatios[index]" class="vtg-transition-previews__ratio">
                 {{ previewRatios[index] }}
               </span>
-              <ElementalRelationshipIcons
-                v-if="elementalLayout"
-                class="vtg-transition-previews__label"
-                :hands="previewRelationships[index]?.hands"
-                :props="previewRelationships[index]?.props"
-                :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
-                :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
-                :size="16"
-              />
-              <span v-else class="vtg-transition-previews__label">{{ previewLabels[index] }}</span>
+              <Transition name="vtg-label-swap">
+                <ElementalRelationshipIcons
+                  v-if="elementalLayout"
+                  key="elemental"
+                  class="vtg-transition-previews__label"
+                  :hands="previewRelationships[index]?.hands"
+                  :props="previewRelationships[index]?.props"
+                  :hands-indeterminate="previewRelationships[index]?.handsIndeterminate"
+                  :props-indeterminate="previewRelationships[index]?.propsIndeterminate"
+                  :size="16"
+                />
+                <span v-else key="classic" class="vtg-transition-previews__label">
+                  {{ previewLabels[index] }}
+                </span>
+              </Transition>
             </button>
           </template>
         </AppTooltip>
@@ -85,8 +90,12 @@
               </template>
             </AppTooltip>
             <AppTooltip
-              v-if="structureEditingEnabled && swappablePreviews[index]"
-              text="Swap Props"
+              v-if="structureEditingEnabled && swappablePreviews[index] !== false"
+              :text="
+                swappablePreviews[index] === undefined
+                  ? 'Swap Props is unavailable because this portion\'s motion relationships could not be determined.'
+                  : 'Swap Props'
+              "
             >
               <template #activator="{ props: tooltipProps }">
                 <button
@@ -94,8 +103,9 @@
                   class="vtg-transition-previews__swap"
                   type="button"
                   :aria-label="`Swap props in pattern ${index + 1}`"
+                  :aria-disabled="swappablePreviews[index] === undefined"
                   data-role="vtg-transition-preview-swap"
-                  @click.stop="emit('patternSwap', index)"
+                  @click.stop="swappablePreviews[index] === true && emit('patternSwap', index)"
                 >
                   <BaseIcon :path="mdiSwapHorizontal" :size="18" />
                 </button>
@@ -157,7 +167,7 @@
         </div>
       </div>
       <div
-        v-if="propertiesAfterPreviewIndex === index"
+        v-if="structureEditingEnabled && propertiesAfterPreviewIndex === index"
         class="vtg-transition-previews__properties"
         data-role="vtg-transition-preview-properties"
       >
@@ -187,6 +197,13 @@
     >
       <span>Drag and drop a pattern here</span>
     </button>
+    <div
+      v-if="structureEditingEnabled && propertiesAfterDropPlaceholder"
+      class="vtg-transition-previews__properties"
+      data-role="vtg-transition-preview-properties"
+    >
+      <slot name="selected-properties" />
+    </div>
 
     <Teleport to="body">
       <div
@@ -275,9 +292,16 @@ const props = withDefaults(
     displaySettings?: VtgBuilderDisplaySettings
     selectedIndex?: number
     allowFirstDrop?: boolean
+    keepDropPlaceholderVisible?: boolean
     structureEditingEnabled?: boolean
   }>(),
-  { columns: 4, maximumScale: 10, allowFirstDrop: false, structureEditingEnabled: true },
+  {
+    columns: 4,
+    maximumScale: 10,
+    allowFirstDrop: false,
+    keepDropPlaceholderVisible: false,
+    structureEditingEnabled: true,
+  },
 )
 const { elementalLayout, sliders } = storeToRefs(useConceptsStore())
 const previewReferences = props.animations.map((_, index) => String(index + 1))
@@ -305,23 +329,43 @@ const previewRatios = computed(() => props.animations.map(inferVtgDoubledPortion
 const dropPlaceholderVisible = computed(
   () =>
     props.structureEditingEnabled &&
-    (props.selectedIndex === undefined || props.selectedIndex >= props.animations.length),
+    (props.keepDropPlaceholderVisible ||
+      props.selectedIndex === undefined ||
+      props.selectedIndex >= props.animations.length),
 )
 const propertiesRowEndPosition = computed(() => {
-  if (props.selectedIndex === undefined || props.selectedIndex >= previewUrls.value.length) {
+  const selectedIndex = props.selectedIndex
+  const dropPlaceholderSelected =
+    dropPlaceholderVisible.value && selectedIndex === previewUrls.value.length
+  if (
+    selectedIndex === undefined ||
+    (selectedIndex >= previewUrls.value.length && !dropPlaceholderSelected)
+  ) {
     return undefined
   }
-  const rowStart = Math.floor(props.selectedIndex / props.columns) * props.columns
-  return Math.min(rowStart + props.columns - 1, previewUrls.value.length - 1)
+  const rowStart = Math.floor(selectedIndex / props.columns) * props.columns
+  const finalGridItemIndex = dropPlaceholderVisible.value
+    ? previewUrls.value.length
+    : previewUrls.value.length - 1
+  return Math.min(rowStart + props.columns - 1, finalGridItemIndex)
 })
 const propertiesAfterPreviewIndex = computed(() => {
   const rowEnd = propertiesRowEndPosition.value
   return rowEnd !== undefined && rowEnd < previewUrls.value.length ? rowEnd : undefined
 })
+const propertiesAfterDropPlaceholder = computed(
+  () => propertiesRowEndPosition.value === previewUrls.value.length,
+)
 const swappablePreviews = computed(() =>
   props.animations.map((animation) => {
-    const { spins } = getVtgBuilderMotion(animation)
-    return spins[0] !== spins[1]
+    try {
+      // Swapping needs full motion classification to rejoin adjacent portions. QST plane breaks
+      // can lack classifiable directions without preventing the portions themselves from rendering.
+      const { spins } = getVtgBuilderMotion(animation)
+      return spins[0] !== spins[1]
+    } catch {
+      return undefined
+    }
   }),
 )
 const pointerPosition = ref<
@@ -674,6 +718,12 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
   pointer-events: auto;
 }
 
+/* Keep unavailable swaps focusable and tappable so their explanatory tooltip remains accessible. */
+.vtg-transition-previews__swap[aria-disabled='true'] {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
 .vtg-transition-previews__reverse:focus-visible,
 .vtg-transition-previews__swap:focus-visible {
   outline: 2px solid var(--color-action-primary);
@@ -713,6 +763,28 @@ watch([() => props.animations, () => props.refreshKey], requestPreviews)
 
 .vtg-transition-previews__ratio {
   inset-inline-start: var(--space-1);
+}
+
+.vtg-label-swap-enter-active,
+.vtg-label-swap-leave-active {
+  transition:
+    opacity var(--transition-label-swap),
+    scale var(--transition-label-swap),
+    filter var(--transition-label-swap);
+}
+
+.vtg-label-swap-enter-from,
+.vtg-label-swap-leave-to {
+  opacity: 0;
+  scale: 0.72;
+  filter: blur(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtg-label-swap-enter-active,
+  .vtg-label-swap-leave-active {
+    transition: none;
+  }
 }
 
 .vtg-transition-previews--drag-active .vtg-transition-previews__delete {

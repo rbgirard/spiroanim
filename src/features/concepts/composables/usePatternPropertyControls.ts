@@ -10,21 +10,37 @@ import {
   deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
+import {
+  extractVtgThirdOrderSettings,
+  getVtgThirdOrderDisplaySettings,
+  updateVtgThirdOrderTimingSetting,
+  type VtgThirdOrderDisplaySettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
 import type { RootDataFinal } from '@/types/AnimTypes'
+import { updateVtgMirroredSideSetting } from '@/features/vtg/propertySettings'
 
 interface PatternPropertyControlOptions {
   animation: Readonly<Ref<RootDataFinal | undefined>>
   onAnimationUpdate: (animation: RootDataFinal) => void
+  rebuildAnimationForThirdOrderCycle?: (minimumCycleCount: 1 | 2) => RootDataFinal | undefined
+  firstEditableFrameIndex?: Readonly<Ref<number>>
 }
 
 export const usePatternPropertyControls = ({
   animation,
   onAnimationUpdate,
+  rebuildAnimationForThirdOrderCycle,
+  firstEditableFrameIndex,
 }: PatternPropertyControlOptions) => {
   const conceptsStore = useConceptsStore()
   const {
     vtgTwistMode,
     vtgTwistValues,
+    vtgThirdOrderSettings,
+    vtgThirdOrderMirror,
+    vtgThirdOrderOpposed,
     vtgFoldValues,
     vtgFoldValuesMaterialized,
     vtgFoldMode,
@@ -37,9 +53,31 @@ export const usePatternPropertyControls = ({
     vtgActiveProperty,
   } = storeToRefs(conceptsStore)
 
-  const emitPropertyAnimation = () => {
+  const vtgThirdOrderDisplaySettings = computed<VtgThirdOrderDisplaySettings>(() =>
+    animation.value
+      ? getVtgThirdOrderDisplaySettings(
+          animation.value,
+          vtgThirdOrderSettings.value,
+          firstEditableFrameIndex?.value,
+        )
+      : { initial: [undefined, undefined], strength: [100, 100], timing: [undefined, undefined] },
+  )
+
+  const firstEditableBeat = computed(() =>
+    (animation.value?.props[0]?.anim ?? [])
+      .slice(0, firstEditableFrameIndex?.value ?? 0)
+      .reduce((total, frame) => total + (frame.beats ?? 0.5), 0),
+  )
+
+  const emitPropertyAnimation = (rebuildThirdOrderCycle = false) => {
     if (!animation.value) return
-    onAnimationUpdate(conceptsStore.applyVtgPropertyControls(animation.value))
+    const source = rebuildThirdOrderCycle
+      ? (rebuildAnimationForThirdOrderCycle?.(conceptsStore.getVtgPropertyCycleCount()) ??
+        animation.value)
+      : animation.value
+    onAnimationUpdate(
+      conceptsStore.applyVtgPropertyControls(source, firstEditableFrameIndex?.value),
+    )
   }
 
   const getSimpleFoldSources = () =>
@@ -48,6 +86,7 @@ export const usePatternPropertyControls = ({
       vtgFoldBeat.value,
       vtgFoldSpan.value,
       vtgFoldValuesMaterialized.value,
+      firstEditableBeat.value,
     )
 
   const materializeSimpleFoldValues = (sources = getSimpleFoldSources()) => {
@@ -61,7 +100,9 @@ export const usePatternPropertyControls = ({
         alternate: vtgFoldAlternate.value,
         span: vtgFoldSpan.value,
         mirror: vtgFoldMirror.value,
+        firstEditableFrameIndex: firstEditableFrameIndex?.value,
       }),
+      firstEditableFrameIndex?.value,
     )
     vtgFoldValuesMaterialized.value = true
   }
@@ -73,6 +114,55 @@ export const usePatternPropertyControls = ({
 
   const updateTwistMode = (mode: VtgTwistMode) => {
     vtgTwistMode.value = mode
+    emitPropertyAnimation()
+  }
+
+  const updateThirdOrderInitial = (propIndex: 0 | 1, value?: VtgThirdOrderInitial) => {
+    const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
+    conceptsStore.setVtgThirdOrderInitial(propIndex, value)
+    emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
+  }
+
+  const updateThirdOrderStrength = (propIndex: 0 | 1, value?: number) => {
+    conceptsStore.setVtgThirdOrderStrength(propIndex, value)
+    emitPropertyAnimation()
+  }
+
+  const updateThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
+    const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
+    if (animation.value) {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderTimingSetting(
+        animation.value,
+        vtgThirdOrderSettings.value,
+        propIndex,
+        value,
+      )
+    } else {
+      if (value === undefined) {
+        conceptsStore.setVtgThirdOrderInitial(propIndex)
+        conceptsStore.setVtgThirdOrderStrength(propIndex)
+      }
+      conceptsStore.setVtgThirdOrderTiming(propIndex, value)
+    }
+    emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
+  }
+
+  const updateThirdOrderMirror = (mirror: boolean) => {
+    const previousCycleCount = conceptsStore.getVtgPropertyCycleCount()
+    if (!mirror && vtgThirdOrderMirror.value && animation.value) {
+      vtgThirdOrderSettings.value = extractVtgThirdOrderSettings(
+        animation.value,
+        firstEditableFrameIndex?.value,
+      )
+    }
+    vtgThirdOrderMirror.value = mirror
+    if (!mirror) vtgThirdOrderOpposed.value = false
+    emitPropertyAnimation(previousCycleCount !== conceptsStore.getVtgPropertyCycleCount())
+  }
+
+  const updateThirdOrderOpposed = (opposed: boolean) => {
+    if (!vtgThirdOrderMirror.value) return
+    vtgThirdOrderOpposed.value = opposed
     emitPropertyAnimation()
   }
 
@@ -108,8 +198,12 @@ export const usePatternPropertyControls = ({
     const sources = getSimpleFoldSources()
     const previousBeat = vtgFoldBeat.value[propIndex]
     const source = sources[propIndex][String(previousBeat)]
-    vtgFoldBeat.value[propIndex] = beat
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldBeat.value[1] = beat
+    vtgFoldBeat.value = updateVtgMirroredSideSetting(
+      vtgFoldBeat.value,
+      propIndex,
+      beat,
+      vtgFoldMirror.value,
+    )
     delete sources[propIndex][String(previousBeat)]
     if (source) sources[propIndex][String(beat)] = source
     materializeSimpleFoldValues(sources)
@@ -118,8 +212,12 @@ export const usePatternPropertyControls = ({
 
   const updateFoldRepeat = (propIndex: 0 | 1, repeat: boolean) => {
     const sources = getSimpleFoldSources()
-    vtgFoldRepeat.value[propIndex] = repeat
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldRepeat.value[1] = repeat
+    vtgFoldRepeat.value = updateVtgMirroredSideSetting(
+      vtgFoldRepeat.value,
+      propIndex,
+      repeat,
+      vtgFoldMirror.value,
+    )
     if (!repeat) vtgFoldAlternate.value[propIndex] = false
     materializeSimpleFoldValues(sources)
     emitPropertyAnimation()
@@ -127,16 +225,24 @@ export const usePatternPropertyControls = ({
 
   const updateFoldEvery = (propIndex: 0 | 1, every: number) => {
     const sources = getSimpleFoldSources()
-    vtgFoldEvery.value[propIndex] = every
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldEvery.value[1] = every
+    vtgFoldEvery.value = updateVtgMirroredSideSetting(
+      vtgFoldEvery.value,
+      propIndex,
+      every,
+      vtgFoldMirror.value,
+    )
     materializeSimpleFoldValues(sources)
     emitPropertyAnimation()
   }
 
   const updateFoldAlternate = (propIndex: 0 | 1, alternate: boolean) => {
     const sources = getSimpleFoldSources()
-    vtgFoldAlternate.value[propIndex] = alternate
-    if (vtgFoldMirror.value && propIndex === 0) vtgFoldAlternate.value[1] = alternate
+    vtgFoldAlternate.value = updateVtgMirroredSideSetting(
+      vtgFoldAlternate.value,
+      propIndex,
+      alternate,
+      vtgFoldMirror.value,
+    )
     materializeSimpleFoldValues(sources)
     emitPropertyAnimation()
   }
@@ -164,6 +270,10 @@ export const usePatternPropertyControls = ({
   return {
     vtgTwistMode,
     vtgTwistValues,
+    vtgThirdOrderSettings,
+    vtgThirdOrderDisplaySettings,
+    vtgThirdOrderMirror,
+    vtgThirdOrderOpposed,
     vtgFoldValues,
     vtgFoldValuesMaterialized,
     vtgFoldMode,
@@ -176,6 +286,11 @@ export const usePatternPropertyControls = ({
     vtgActiveProperty,
     updateTwistSetting,
     updateTwistMode,
+    updateThirdOrderInitial,
+    updateThirdOrderStrength,
+    updateThirdOrderTiming,
+    updateThirdOrderMirror,
+    updateThirdOrderOpposed,
     updateFoldSetting,
     updateFoldMode,
     updateFoldBeat,

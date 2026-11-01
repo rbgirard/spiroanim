@@ -7,7 +7,7 @@ frame defaults, incoming axes, and worker ownership rules.
 
 The authoritative implementations are:
 
-- `src/features/editor/manage/shiftAnimationFrames.ts` for endpoint checks and reconstruction.
+- `src/math/animation/shiftAnimationFrames.ts` for endpoint checks and reconstruction.
 - `src/features/editor/components/properties/manage/ShiftFrames.vue` for selection, warning, and
   atomic application behavior.
 - The adjacent tests under their respective `__tests__` directories.
@@ -19,7 +19,8 @@ first and last states with a small floating-point tolerance:
 
 ```text
 C0.pos == Cn.pos
-C0.rot == Cn.rot
+C0.warpPos == Cn.warpPos
+C0.orient == Cn.orient
 C0.twistRoll == Cn.twistRoll modulo 360°
 ```
 
@@ -63,14 +64,15 @@ The incoming segment definitions on frames after the new first frame map as:
 old frame 2, old frame 3, ... old frame n, old frame 1
 ```
 
-Their original `posx`, `rotx`, `arc`, transition type, turns, Twist, and adjustment are preserved. Because
-`plane` and `axis` are relative to transported references, their raw degree values are recalculated
-from those compiled axes.
+Their original `posx`, `rotx`, `arc`, transition type, turns, Twist, Warp, Strength, and adjustment are
+preserved. Because `plane` and `axis` are relative to transported references, their raw degree
+values are recalculated from those compiled axes.
 
 Shift changes the timeline's starting point while leaving a closed loop's complete spatial
 position and rotation paths where they were. The new first frame's incoming path is not displayed,
 so a minimal position and rotation are used. Its adjustment is re-expressed around the
-reconstructed rotation axis.
+reconstructed rotation axis. Warp is a Turns-like relative rotation of the auxiliary hand-path
+vector, so it moves with its incoming interval and is independently accumulated during compilation.
 
 ## Durations and outgoing state
 
@@ -80,10 +82,17 @@ Durations belong to the segment's starting frame, so the used duration order bec
 old beats 1, old beats 2, ... old beats n - 1, old beats 0
 ```
 
-The UI requests preservation of the original final frame's outgoing values. The shifted final frame
-therefore retains the old final `beats`, `scale`, `depth`, `twist`, and `adjust` values needed by the next
-unselected interval. For a whole animation, the final `beats` value remains unused until another
-management operation moves that endpoint.
+The UI requests preservation of the original final frame's endpoint and outgoing values. The
+shifted final frame therefore retains the old final `beats`, `scale`, `strength`, `depth`, `twist`,
+and `adjust` values needed by the next unselected interval. For a whole animation, the final
+`beats` value remains unused until another management operation moves that endpoint.
+
+Warp is different because it defines the incoming auxiliary rotation used to reach the shifted
+final frame. The final Warp must come from the rotated source interval; replacing it with the old
+final Warp can open an otherwise closed rendered seam. For a partial range, if the following
+unselected frame inherited the old resolved Warp, Shift materializes that value on the following
+frame. This preserves later inheritance without changing the reconstructed final interval. A
+no-op value is not materialized when the shifted final Warp already matches the following value.
 
 ## Move offsets
 
@@ -110,9 +119,13 @@ the outgoing state used by the following unselected interval:
 
 - `beats`
 - `scale`
+- `strength`
 - `depth`
 - `adjust`
 - cumulative `move`
+
+The final incoming Warp stays with the rotated interval. When needed, the following frame receives
+the old resolved Warp explicitly so its unselected transition keeps the same inherited value.
 
 Rotating the visible durations preserves the selection's total duration, and retaining the final
 outgoing `beats` value keeps every later frame at its original timeline time. After timing is
@@ -120,15 +133,15 @@ recalculated, the selection handles are restored to those same boundary times.
 
 ## Closure scope and unavoidable seam differences
 
-Endpoint alignment checks compiled position, base rotation, and accumulated Twist modulo 360°. It
-does not require the first and last frame to match scale, depth, adjustment, or cumulative move
-offset.
+Endpoint alignment checks canonical position, accumulated Warp position, composed orientation,
+and accumulated Twist modulo 360°. It does not require the first and last frame to match scale,
+strength, depth, adjustment, the raw Warp increment, or cumulative move offset.
 
 If those additional states differ at the original seam, no cyclic reorder can preserve both
 adjacent segments perfectly: one output frame would need to be the old final state for the segment
 arriving at it and the old first state for the segment leaving it. The current behavior rotates the
 compiled keyframe positions and rotations while preserving the selected range's outgoing boundary
-state. Authors who need a fully seamless loop should also make scale, depth, adjustment, and offset
+state. Authors who need a fully seamless loop should also make scale, strength, depth, adjustment, and offset
 agree at the original first and last frames.
 
 For mismatched position, rotation, or Twist endpoints, the same reconstruction can still be
@@ -149,4 +162,5 @@ Shift tests cover:
 - Sparse raw output.
 - Atomic multi-prop behavior.
 - Repeated shifts, dynamic Times limits, and one undo step for the complete operation.
+- Reconstructed Warp closure and partial-range following-frame inheritance.
 - A two-prop VTG pattern through query-string encode/decode.

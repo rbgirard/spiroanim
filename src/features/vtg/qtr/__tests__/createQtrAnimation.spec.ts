@@ -2,6 +2,7 @@ import { MathUtils, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { applyVtgSwap } from '@/features/vtg/applyVtgSwap'
 import { createQtrAnimation as createQtrAnimationForSelection } from '@/features/vtg/qtr/createQtrAnimation'
 import type { QtrPatternSelection, VtgCellReference } from '@/features/vtg/types'
 import { getVtgBeats } from '@/features/vtg/types'
@@ -149,7 +150,7 @@ describe('createQtrAnimation', () => {
     if (!base) throw new Error('Expected a completed Qtr animation')
 
     expect(transformed).toEqual(
-      applyPatternFinalTransforms(base, { swapProps: true, reversePlane: true }),
+      applyVtgSwap(applyPatternFinalTransforms(base, { reversePlane: true }), true),
     )
   })
 
@@ -234,7 +235,9 @@ describe('createQtrAnimation', () => {
 
     const semanticShift = shiftVtgStartingBeat(completed, beat)
     expect(shifted).toEqual(
-      semanticShift ? applyPatternFinalTransforms(semanticShift, selection) : undefined,
+      semanticShift
+        ? applyVtgSwap(applyPatternFinalTransforms(semanticShift, { reversePlane: true }), true)
+        : undefined,
     )
   })
 

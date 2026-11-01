@@ -8,7 +8,7 @@ import {
   vtgThickControl,
 } from '@/features/vtg/data/vtgPlayerSettings'
 import { isVtgSpeedRatio, vtgDefaultSpeedRatio, vtgPatternOrientations } from '@/features/vtg/types'
-import type { VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
+import type { VtgBeat, VtgPatternOrientation, VtgSpeedRatio } from '@/features/vtg/types'
 import type { PropInd } from '@/types/AnimTypes'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { COLORS, PROPSR } from '@/domain/animation/AnimStruct'
@@ -17,17 +17,26 @@ import {
   defaultPatternPropColors,
   type PatternPropColor,
 } from '@/features/concepts/patternPropColors'
+import { detectVtgTwistMode, extractVtgTwistValues } from '@/features/vtg/applyVtgTwistSettings'
 import {
-  applyVtgTwistSettings,
-  detectVtgTwistMode,
-  extractVtgTwistValues,
-} from '@/features/vtg/applyVtgTwistSettings'
-import {
-  applyVtgFoldSettings,
   detectVtgFoldSimpleSettings,
-  deriveVtgFoldSimpleSources,
   extractVtgFoldValues,
 } from '@/features/vtg/applyVtgFoldSettings'
+import {
+  detectVtgThirdOrderRelationship,
+  extractVtgThirdOrderSettings,
+  materializeVtgThirdOrderSettings,
+  updateVtgThirdOrderSettings,
+  type VtgThirdOrderInitial,
+  type VtgThirdOrderSettings,
+  type VtgThirdOrderTiming,
+} from '@/features/vtg/thirdOrder'
+import {
+  applyVtgPropertySettings,
+  createDefaultVtgPropertySettings,
+  getVtgPropertyCycleCount as getVtgPropertySettingsCycleCount,
+  type VtgPropertySettings,
+} from '@/features/vtg/propertySettings'
 
 const defaultQuickSlotCount = 0
 const restoredQuickSlotCount = 4
@@ -40,17 +49,26 @@ export interface QuickSlotSet {
   selectedSlot: number | null
 }
 
-export type VtgTwistMode = 'simple' | 'advanced'
-export type VtgTwistValues = [Record<string, number>, Record<string, number>]
-export interface VtgFoldValue {
-  yaw?: number
-  rotate?: number
-}
-export type VtgFoldValues = [Record<string, VtgFoldValue>, Record<string, VtgFoldValue>]
-export type VtgFoldMode = 'simple' | 'advanced'
-export type VtgFoldSpan = 'eighth' | 'quarter'
-export type VtgFoldSideSettings<T> = [T, T]
-export type VtgPropertyKey = 'offset' | 'axis' | 'twist' | 'turns'
+export type {
+  VtgFoldMode,
+  VtgFoldSideSettings,
+  VtgFoldSpan,
+  VtgFoldValue,
+  VtgFoldValues,
+  VtgPropertyKey,
+  VtgTwistMode,
+  VtgTwistValues,
+} from '@/features/vtg/propertyTypes'
+import type {
+  VtgFoldMode,
+  VtgFoldSideSettings,
+  VtgFoldSpan,
+  VtgFoldValue,
+  VtgFoldValues,
+  VtgPropertyKey,
+  VtgTwistMode,
+  VtgTwistValues,
+} from '@/features/vtg/propertyTypes'
 
 const quickSlotSetIdPrefix = 'quick-slot-set-'
 const defaultQuickSlotSetName = (number: number) => `Quick Slot Set #${number}`
@@ -59,6 +77,7 @@ const copyQuickSlotPaths = (paths: Array<string | null>) => [...paths]
 export const useConceptsStore = defineStore(
   'sa-concepts',
   () => {
+    const propertyDefaults = createDefaultVtgPropertySettings()
     const selectedConcept = ref<ConceptKey>('vtg')
     const quickSlotCount = ref(defaultQuickSlotCount)
     const selectedQuickSlot = ref<number | null>(null)
@@ -88,23 +107,48 @@ export const useConceptsStore = defineStore(
     const rightPropColor = ref<PatternPropColor>(defaultPatternPropColors[1])
     const prop = ref<PropInd>(2)
     const sliders = ref(!isTouchDevice())
-    const vtgTwistMode = ref<VtgTwistMode>('simple')
-    const vtgTwistValues = ref<VtgTwistValues>([{}, {}])
-    const vtgFoldValues = ref<VtgFoldValues>([{}, {}])
-    const vtgFoldValuesMaterialized = ref(false)
-    const vtgFoldMode = ref<VtgFoldMode>('simple')
-    const vtgFoldBeat = ref<VtgFoldSideSettings<number>>([2, 2])
-    const vtgFoldRepeat = ref<VtgFoldSideSettings<boolean>>([true, true])
-    const vtgFoldEvery = ref<VtgFoldSideSettings<number>>([2, 2])
-    const vtgFoldAlternate = ref<VtgFoldSideSettings<boolean>>([false, false])
-    const vtgFoldSpan = ref<VtgFoldSpan>('eighth')
-    const vtgFoldMirror = ref(true)
-    const vtgActiveProperty = ref<VtgPropertyKey | null>(null)
+    const vtgTwistMode = ref<VtgTwistMode>(propertyDefaults.twist.mode)
+    const vtgTwistValues = ref<VtgTwistValues>(propertyDefaults.twist.values)
+    const vtgThirdOrderSettings = ref<VtgThirdOrderSettings>(propertyDefaults.thirdOrder.settings)
+    const vtgThirdOrderMirror = ref(propertyDefaults.thirdOrder.mirror)
+    const vtgThirdOrderOpposed = ref(propertyDefaults.thirdOrder.opposed)
+    const vtgPropertyInitialBeat = ref<VtgBeat>(1)
+    const vtgFoldValues = ref<VtgFoldValues>(propertyDefaults.fold.values)
+    const vtgFoldValuesMaterialized = ref(propertyDefaults.fold.valuesMaterialized)
+    const vtgFoldMode = ref<VtgFoldMode>(propertyDefaults.fold.mode)
+    const vtgFoldBeat = ref<VtgFoldSideSettings<number>>(propertyDefaults.fold.beat)
+    const vtgFoldRepeat = ref<VtgFoldSideSettings<boolean>>(propertyDefaults.fold.repeat)
+    const vtgFoldEvery = ref<VtgFoldSideSettings<number>>(propertyDefaults.fold.every)
+    const vtgFoldAlternate = ref<VtgFoldSideSettings<boolean>>(propertyDefaults.fold.alternate)
+    const vtgFoldSpan = ref<VtgFoldSpan>(propertyDefaults.fold.span)
+    const vtgFoldMirror = ref(propertyDefaults.fold.mirror)
+    const vtgActiveProperty = ref<VtgPropertyKey | 'scale' | null>(null)
 
     const setVtgTwistValue = (propIndex: 0 | 1, beat: number, value?: number) => {
       const beatKey = String(beat)
       if (value === undefined) delete vtgTwistValues.value[propIndex][beatKey]
       else vtgTwistValues.value[propIndex][beatKey] = value
+    }
+    const setVtgThirdOrderInitial = (propIndex: 0 | 1, value?: VtgThirdOrderInitial) => {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderSettings(
+        vtgThirdOrderSettings.value,
+        propIndex,
+        { initial: value },
+      )
+    }
+    const setVtgThirdOrderStrength = (propIndex: 0 | 1, value?: number) => {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderSettings(
+        vtgThirdOrderSettings.value,
+        propIndex,
+        { strength: value },
+      )
+    }
+    const setVtgThirdOrderTiming = (propIndex: 0 | 1, value?: VtgThirdOrderTiming) => {
+      vtgThirdOrderSettings.value = updateVtgThirdOrderSettings(
+        vtgThirdOrderSettings.value,
+        propIndex,
+        { timing: value },
+      )
     }
     const setVtgFoldValue = (
       propIndex: 0 | 1,
@@ -121,38 +165,60 @@ export const useConceptsStore = defineStore(
       } else vtgFoldValues.value[propIndex][beatKey] = beatValue
     }
 
-    const applyVtgPropertyControls = (animation: RootDataFinal): RootDataFinal => {
-      const foldValues =
-        vtgFoldMode.value === 'simple'
-          ? deriveVtgFoldSimpleSources(
-              vtgFoldValues.value,
-              vtgFoldBeat.value,
-              vtgFoldSpan.value,
-              vtgFoldValuesMaterialized.value,
-            )
-          : vtgFoldValues.value
-      return applyVtgFoldSettings(
-        applyVtgTwistSettings(animation, vtgTwistMode.value, vtgTwistValues.value),
-        foldValues,
-        {
-          mode: vtgFoldMode.value,
-          beat: vtgFoldBeat.value,
-          repeat: vtgFoldRepeat.value,
-          every: vtgFoldEvery.value,
-          alternate: vtgFoldAlternate.value,
-          span: vtgFoldSpan.value,
-          mirror: vtgFoldMirror.value,
-        },
-      )
-    }
+    const getVtgPropertySettings = (): VtgPropertySettings => ({
+      initialBeat: vtgPropertyInitialBeat.value,
+      twist: { mode: vtgTwistMode.value, values: vtgTwistValues.value },
+      thirdOrder: {
+        settings: vtgThirdOrderSettings.value,
+        mirror: vtgThirdOrderMirror.value,
+        opposed: vtgThirdOrderOpposed.value,
+      },
+      fold: {
+        values: vtgFoldValues.value,
+        valuesMaterialized: vtgFoldValuesMaterialized.value,
+        mode: vtgFoldMode.value,
+        beat: vtgFoldBeat.value,
+        repeat: vtgFoldRepeat.value,
+        every: vtgFoldEvery.value,
+        alternate: vtgFoldAlternate.value,
+        span: vtgFoldSpan.value,
+        mirror: vtgFoldMirror.value,
+      },
+    })
 
-    const hydrateVtgPropertyControls = (animation: RootDataFinal) => {
-      const twistValues = extractVtgTwistValues(animation)
+    const applyVtgPropertyControls = (
+      animation: RootDataFinal,
+      firstEditableFrameIndex = 0,
+    ): RootDataFinal =>
+      applyVtgPropertySettings(animation, getVtgPropertySettings(), {
+        firstEditableFrameIndex,
+      })
+
+    const getVtgPropertyCycleCount = (): 1 | 2 =>
+      getVtgPropertySettingsCycleCount(getVtgPropertySettings())
+
+    const hydrateVtgPropertyControls = (
+      animation: RootDataFinal,
+      firstEditableFrameIndex = 0,
+      initialBeat: VtgBeat = 1,
+    ) => {
+      vtgPropertyInitialBeat.value = initialBeat
+      const twistValues = extractVtgTwistValues(animation, firstEditableFrameIndex)
       vtgTwistValues.value = twistValues
       vtgTwistMode.value = detectVtgTwistMode(twistValues)
+      vtgThirdOrderSettings.value =
+        firstEditableFrameIndex === 0
+          ? extractVtgThirdOrderSettings(animation)
+          : materializeVtgThirdOrderSettings(animation, firstEditableFrameIndex)
+      const thirdOrderRelationship = detectVtgThirdOrderRelationship(
+        animation,
+        firstEditableFrameIndex,
+      )
+      vtgThirdOrderMirror.value = thirdOrderRelationship.mirror
+      vtgThirdOrderOpposed.value = thirdOrderRelationship.opposed
 
-      const foldValues = extractVtgFoldValues(animation)
-      const simple = detectVtgFoldSimpleSettings(animation, foldValues)
+      const foldValues = extractVtgFoldValues(animation, firstEditableFrameIndex)
+      const simple = detectVtgFoldSimpleSettings(animation, foldValues, firstEditableFrameIndex)
       vtgFoldValues.value = foldValues
       vtgFoldValuesMaterialized.value = true
       vtgFoldMode.value = simple ? 'simple' : 'advanced'
@@ -181,6 +247,23 @@ export const useConceptsStore = defineStore(
       rightPropVisible.value = true
       leftPropColor.value = defaultPatternPropColors[0]
       rightPropColor.value = defaultPatternPropColors[1]
+      const defaults = createDefaultVtgPropertySettings()
+      vtgTwistMode.value = defaults.twist.mode
+      vtgTwistValues.value = defaults.twist.values
+      vtgThirdOrderSettings.value = defaults.thirdOrder.settings
+      vtgThirdOrderMirror.value = defaults.thirdOrder.mirror
+      vtgThirdOrderOpposed.value = defaults.thirdOrder.opposed
+      vtgPropertyInitialBeat.value = 1
+      vtgFoldValues.value = defaults.fold.values
+      vtgFoldValuesMaterialized.value = defaults.fold.valuesMaterialized
+      vtgFoldMode.value = defaults.fold.mode
+      vtgFoldBeat.value = defaults.fold.beat
+      vtgFoldRepeat.value = defaults.fold.repeat
+      vtgFoldEvery.value = defaults.fold.every
+      vtgFoldAlternate.value = defaults.fold.alternate
+      vtgFoldSpan.value = defaults.fold.span
+      vtgFoldMirror.value = defaults.fold.mirror
+      vtgActiveProperty.value = null
       sliders.value = !isTouchDevice()
     }
 
@@ -343,10 +426,18 @@ export const useConceptsStore = defineStore(
       vtgTwistMode,
       vtgTwistValues,
       setVtgTwistValue,
+      vtgThirdOrderSettings,
+      vtgThirdOrderMirror,
+      vtgThirdOrderOpposed,
+      setVtgThirdOrderInitial,
+      setVtgThirdOrderStrength,
+      setVtgThirdOrderTiming,
       vtgFoldValues,
       vtgFoldValuesMaterialized,
       setVtgFoldValue,
       applyVtgPropertyControls,
+      getVtgPropertySettings,
+      getVtgPropertyCycleCount,
       hydrateVtgPropertyControls,
       vtgFoldMode,
       vtgFoldBeat,
@@ -527,7 +618,11 @@ export const useConceptsStore = defineStore(
           store.prop = 2
         }
         if (typeof store.sliders !== 'boolean') store.sliders = !isTouchDevice()
-        if (!['offset', 'axis', 'twist', 'turns', null].includes(store.vtgActiveProperty)) {
+        if (
+          !['offset', 'scale', 'axis', 'twist', 'turns', 'third-order', null].includes(
+            store.vtgActiveProperty,
+          )
+        ) {
           store.vtgActiveProperty = null
         }
         if (typeof store.customizeExpanded !== 'boolean') store.customizeExpanded = false

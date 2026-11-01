@@ -3,7 +3,7 @@
     <span>{{ label }}</span>
     <input
       v-model="val"
-      :inputmode="float ? 'decimal' : 'numeric'"
+      :inputmode="allowsDecimal ? 'decimal' : 'numeric'"
       @focus="beginEditing"
       @blur="endEditing"
       @input="handleInput"
@@ -38,9 +38,31 @@ const neg = computed(() => vals.neg ?? false)
 const float = computed(() => vals.float ?? false)
 const posi = computed(() => vals.posi ?? false)
 const label = computed(() => vals.label ?? 'Manual')
+const displayDivisor = computed(() => vals.displayDivisor ?? 1)
+const displayMinimumFractionDigits = computed(() => vals.displayMinimumFractionDigits ?? 0)
+const displayMaximumFractionDigits = computed(
+  () => vals.displayMaximumFractionDigits ?? displayMinimumFractionDigits.value,
+)
+const allowsDecimal = computed(() => Boolean(float.value) || displayDivisor.value !== 1)
+
+const formatDisplayValue = (value: number): string => {
+  const maximumDigits = displayMaximumFractionDigits.value
+  const minimumDigits = displayMinimumFractionDigits.value
+  if (maximumDigits === 0) return String(value)
+
+  const [whole, fraction = ''] = value.toFixed(maximumDigits).split('.')
+  const retainedFraction = fraction.replace(/0+$/, '').padEnd(minimumDigits, '0')
+  return retainedFraction === '' ? whole! : `${whole}.${retainedFraction}`
+}
 
 const get = (): string => {
-  const ret = String(props.data[VALUE])
+  const raw = props.data[VALUE]
+  const ret =
+    typeof raw === 'number'
+      ? formatDisplayValue(raw / displayDivisor.value)
+      : raw === undefined
+        ? ''
+        : String(raw)
   // Allows a negative sign without updating the value
   if (neg.value && neg2)
     if (ret) neg2 = false
@@ -49,7 +71,7 @@ const get = (): string => {
     per = false
     return ret + '.'
   }
-  return ret === undefined ? '' : ret
+  return ret
 }
 
 const parse = computed(() => {
@@ -65,7 +87,7 @@ const val = computed({
     // Value must be positive?
     if (posi.value && val < 1) val = 1
 
-    if (float.value && str[str.length - 1] == '.') per = true
+    if (allowsDecimal.value && str[str.length - 1] == '.') per = true
 
     if (neg.value && str == '-') neg2 = true // Enter negative mode
 
@@ -76,14 +98,17 @@ const val = computed({
     }
     if (!neg.value && val < 0) val *= -1
 
-    props.setter?.(name.value, val)
+    props.setter?.(
+      name.value,
+      displayDivisor.value === 1 ? val : Math.round(val * displayDivisor.value),
+    )
   },
 })
 
 // Getter doesn't execute if value doesn't change, leaving trailing letters etc.
 const regex = computed(() => {
   const n = neg.value
-  const f = float.value
+  const f = allowsDecimal.value
   return f ? (n ? /^-?\d*(?:\.\d*)?$/ : /^\d*(?:\.\d*)?$/) : n ? /^-?\d*$/ : /^\d*$/
 })
 

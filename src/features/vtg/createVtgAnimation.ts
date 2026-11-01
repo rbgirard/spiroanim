@@ -1,6 +1,11 @@
 import { buildVtgPattern } from '@/features/vtg/data/vtgPatternCatalog'
 import { toConceptPreviewAnimation } from '@/features/concepts/data/toConceptPreviewAnimation'
-import { vtgPlayerSettings, vtgPropSettings } from '@/features/vtg/data/vtgPlayerSettings'
+import {
+  vtgDefaultProp,
+  vtgPlayerSettings,
+  vtgPropSettings,
+  vtgScaleControl,
+} from '@/features/vtg/data/vtgPlayerSettings'
 import type { VtgPatternSelection, VtgReadableAnimation } from '@/features/vtg/types'
 import {
   getVtgTimingCycleCount,
@@ -12,7 +17,10 @@ import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable, encodeReadable } from '@/services/animation/AnimReadableFunc'
 import type { RootDataFinal, RootReadable } from '@/types/AnimTypes'
 import { createDefaultCameraFrame } from '@/math/animation/MotionFunc'
-import { shiftVtgStartingBeat } from '@/features/vtg/math/shiftVtgStartingBeat'
+import {
+  shiftVtgStartingBeat,
+  shiftVtgStartingFrames,
+} from '@/features/vtg/math/shiftVtgStartingBeat'
 import {
   applyVtgInitialTurnsPlayback,
   withVtgInitialTurnsOffsetBeat,
@@ -25,6 +33,13 @@ import {
   applyPatternInitialArcRotation,
 } from '@/features/concepts/applyPatternFinalTransforms'
 import { applyPatternPropColors } from '@/features/concepts/patternPropColors'
+import { applyVtgScaleSettings } from '@/features/vtg/scaleSettings'
+import { applyVtgSwap } from '@/features/vtg/applyVtgSwap'
+import {
+  applyVtgPropertySettings,
+  hasVtgPropertySettings,
+  type VtgPropertySettings,
+} from '@/features/vtg/propertySettings'
 
 const axesPointInSameDirection = (first: readonly number[], second: readonly number[]) =>
   (first[0] ?? 0) * (second[0] ?? 0) +
@@ -33,6 +48,20 @@ const axesPointInSameDirection = (first: readonly number[], second: readonly num
   0
 
 const vtgIntervalsPerHandRotation = 8
+
+export interface CreateVtgAnimationOptions {
+  minimumCycleCount?: 1 | 2
+  properties?: VtgPropertySettings
+}
+
+/** Hydrated properties describe the matched start, not necessarily catalog beat 1. */
+export const getVtgPropertyAuthoringBeat = (
+  selection: VtgPatternSelection,
+  options: CreateVtgAnimationOptions,
+) =>
+  (options.properties && hasVtgPropertySettings(options.properties)) || selection.scaleSettings
+    ? (options.properties?.initialBeat ?? selection.initialTurnsOffsetBeat ?? vtgDefaultBeat)
+    : (selection.beat ?? vtgDefaultBeat)
 
 export const applyVtgPropRotationOffsets = (
   animation: RootDataFinal,
@@ -77,11 +106,13 @@ export const applyVtgPropRotationOffsets = (
 const addDefaultFrames = (
   pattern: VtgReadableAnimation,
   speedRatio: VtgPatternSelection['speedRatio'],
+  options: CreateVtgAnimationOptions,
 ): VtgReadableAnimation => ({
   ...pattern,
   props: pattern.props.map((prop, index) => {
     const defaults = vtgPropSettings[index]
-    const frameCount = getVtgTimingCycleCount(speedRatio) * vtgIntervalsPerHandRotation + 1
+    const cycleCount = Math.max(getVtgTimingCycleCount(speedRatio), options.minimumCycleCount ?? 1)
+    const frameCount = cycleCount * vtgIntervalsPerHandRotation + 1
 
     return {
       ...defaults,
@@ -122,7 +153,6 @@ export const applyVtgPlaybackControls = (
     | 'transitionAfterBeat'
     | 'transitionQuad'
     | 'transitionSecond'
-    | 'swapProps'
   >,
 ): RootDataFinal | undefined => {
   const shifted = shiftVtgStartingBeat(animation, selection.beat ?? vtgDefaultBeat)
@@ -130,15 +160,10 @@ export const applyVtgPlaybackControls = (
   if (!shifted || !transition) return shifted
 
   const selectedPropIndex = selection.transitionQuad && selection.transitionSecond ? 1 : 0
-  const playbackPropIndex = selection.swapProps
-    ? selectedPropIndex === 0
-      ? 1
-      : 0
-    : selectedPropIndex
   return alternatePatternPlayback(
     shifted,
     selection.transitionBeats ?? vtgDefaultTransitionBeats,
-    playbackPropIndex,
+    selectedPropIndex,
     selection.transitionQuad,
     selection.transitionAfterBeat,
   )
@@ -151,7 +176,20 @@ export const applyVtgPlaybackControls = (
 export const createVtgAnimation = (
   current: RootDataFinal,
   selection: VtgPatternSelection,
+  options: CreateVtgAnimationOptions = {},
 ): RootDataFinal | undefined => {
+  const authoringBeat = getVtgPropertyAuthoringBeat(selection, options)
+  const requestedBeat = selection.beat ?? vtgDefaultBeat
+  if (requestedBeat !== authoringBeat) {
+    const configured = createVtgAnimation(current, { ...selection, beat: authoringBeat }, options)
+    return (
+      configured &&
+      shiftVtgStartingFrames(configured, (requestedBeat - authoringBeat) * 2, {
+        allowEndpointMismatch: true,
+        preserveFinalOutgoing: true,
+      })
+    )
+  }
   const selectedPattern = buildVtgPattern(selection)
   if (!selectedPattern) return undefined
 
@@ -164,6 +202,7 @@ export const createVtgAnimation = (
       arms: selection.arms ?? vtgPlayerSettings.arms,
     },
     selection.speedRatio,
+    options,
   )
   const pattern = {
     ...patternWithDefaults,
@@ -176,7 +215,7 @@ export const createVtgAnimation = (
 
   const animation = {
     ...rootFinal(decoded),
-    ...(selection.prop === undefined ? undefined : { prop: selection.prop }),
+    prop: selection.prop ?? vtgDefaultProp,
     camera: [createDefaultCameraFrame(pattern.distance ?? vtgPlayerSettings.distance)],
     speed: current.speed,
     type: pattern.type ?? current.type,
@@ -190,15 +229,40 @@ export const createVtgAnimation = (
     return undefined
   }
 
-  const transformed = applyPatternFinalTransforms(completed, selection)
-  const offsetReference = applyPatternFinalTransforms(oriented, selection)
+  return finalizeVtgAnimation(completed, oriented, selection, options)
+}
+
+/** Finishes every path-shaping operation in authoring order, then assigns paths to props once. */
+export const finalizeVtgAnimation = (
+  completed: RootDataFinal,
+  oriented: RootDataFinal,
+  selection: VtgPatternSelection,
+  options: CreateVtgAnimationOptions = {},
+): RootDataFinal | undefined => {
+  const planeTransform = { reversePlane: selection.reversePlane }
+  const transformed = applyPatternFinalTransforms(completed, planeTransform)
+  const offsetReference = applyPatternFinalTransforms(oriented, planeTransform)
   const aligned = applyVtgPropRotationOffsets(
     transformed,
     selection.propRotationOffsets,
     offsetReference,
   )
   const playback = applyVtgInitialTurnsPlayback(aligned, selection)
-  return playback ? applyPatternPropColors(playback, selection) : undefined
+  if (!playback) return undefined
+  const scaled = selection.scaleSettings
+    ? applyVtgScaleSettings(playback, selection.scaleSettings, selection.speedRatio)
+    : {
+        ...playback,
+        vtgScale: {
+          auto: true,
+          base: selection.scale ?? vtgScaleControl.default,
+          mode: 'simple' as const,
+        },
+      }
+  const configured = options.properties
+    ? applyVtgPropertySettings(scaled, options.properties)
+    : scaled
+  return applyPatternPropColors(applyVtgSwap(configured, selection.swapProps), selection)
 }
 
 /**
@@ -206,7 +270,8 @@ export const createVtgAnimation = (
  */
 export const createDefaultVtgAnimation = (
   selection: VtgPatternSelection,
-): RootDataFinal | undefined => createVtgAnimation(vtgStandaloneBase, selection)
+  options: CreateVtgAnimationOptions = {},
+): RootDataFinal | undefined => createVtgAnimation(vtgStandaloneBase, selection, options)
 
 /**
  * Builds VTG data without inheriting settings from the active player.
@@ -217,5 +282,9 @@ export const createVtgPreviewAnimation = (
   selection: VtgPatternSelection,
 ): RootDataFinal | undefined => {
   const animation = createDefaultVtgAnimation(selection)
-  return animation ? toVtgPreviewAnimation(animation) : undefined
+  return animation
+    ? toVtgPreviewAnimation(animation, {
+        hands: selection.hands ?? vtgPlayerSettings.hands,
+      })
+    : undefined
 }

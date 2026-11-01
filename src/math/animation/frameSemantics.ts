@@ -7,6 +7,8 @@ import type {
   TypeInd,
   TypeStr,
 } from '@/types/AnimTypes'
+import { SCALE_DEFAULT } from '@/domain/animation/scale'
+import { STRENGTH_DEFAULT } from '@/domain/animation/strength'
 
 export const ANIMATION_INHERITED_KEYS = [
   'turns',
@@ -14,6 +16,8 @@ export const ANIMATION_INHERITED_KEYS = [
   'yaw',
   'beats',
   'scale',
+  'warp',
+  'strength',
   'depth',
   'type',
   'adjust',
@@ -41,6 +45,8 @@ export interface ResolvedAnimationFrame<TType extends number | string = TypeInd>
   rotate: number
   beats: number
   scale: number
+  warp: number
+  strength: number
   depth: number
   type: TType
   adjust: number
@@ -57,7 +63,9 @@ const createInitialAnimationFrame = <TType extends number | string>(
   yaw: 90,
   rotate: 0,
   beats: 1,
-  scale: 10,
+  scale: SCALE_DEFAULT,
+  warp: 0,
+  strength: STRENGTH_DEFAULT,
   depth: 0,
   type,
   adjust: 0,
@@ -84,6 +92,8 @@ const resolveAnimationFrame = <TType extends number | string>(
     rotate: frame.rotate ?? 0,
     beats: frame.beats ?? previous.beats,
     scale: frame.scale ?? previous.scale,
+    warp: frame.warp ?? previous.warp,
+    strength: frame.strength ?? previous.strength,
     depth: frame.depth ?? previous.depth,
     type: frame.type ?? previous.type,
     adjust: frame.adjust ?? previous.adjust,

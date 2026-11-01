@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { MathUtils, Quaternion, Vector3 } from 'three'
 
+import { toScaleMultiplier } from '@/domain/animation/scale'
+import { toStrengthRatio } from '@/domain/animation/strength'
 import { TTYPE } from '@/domain/animation/AnimStruct'
 import {
   animationEndpointsAlign,
@@ -10,6 +12,7 @@ import {
 } from '@/math/animation/shiftAnimationFrames'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { rootFinal } from '@/math/animation/PlayerFunc'
+import { applyWarpPath } from '@/math/animation/warpPathInterpolation'
 import { useSpiroAnimQS } from '@/composables/useSpiroAnimQS'
 import { useBaseQS } from '@/services/query/createBaseQS'
 import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv11'
@@ -46,6 +49,15 @@ const expectQuaternionClose = (actual: readonly number[], expected: readonly num
   expect(Math.abs(dot)).toBeCloseTo(1, 9)
 }
 
+const renderedHandPosition = (frame: ReturnType<typeof compileFrames>[number]) =>
+  applyWarpPath(
+    new Vector3().fromArray(frame.pos),
+    new Vector3().fromArray(frame.warpPos),
+    toScaleMultiplier(frame.scale),
+    toStrengthRatio(frame.strength),
+    new Vector3(),
+  ).toArray()
+
 const sampleOrientation = (
   frames: ReturnType<typeof compileFrames>,
   targetIndex: number,
@@ -75,9 +87,18 @@ const sampleOrientation = (
 }
 
 const closedFrames: AnimData[] = [
-  { arc: 0, twist: 0, beats: 2, scale: 8, depth: 1, move: [1, 0, 0] },
-  { arc: 90, twist: 90, beats: 3, scale: 9, depth: 2, move: [2, 0, 0] },
-  { arc: 90, twist: -90, plane: 180, beats: 4, scale: 10, depth: 3, move: [3, 0, 0] },
+  { arc: 0, twist: 0, beats: 2, scale: 80, warp: 0, depth: 1, move: [1, 0, 0] },
+  { arc: 90, twist: 90, beats: 3, scale: 90, warp: -45, depth: 2, move: [2, 0, 0] },
+  {
+    arc: 90,
+    twist: -90,
+    plane: 180,
+    beats: 4,
+    scale: 100,
+    warp: 315,
+    depth: 3,
+    move: [3, 0, 0],
+  },
 ]
 
 describe('shared shiftAnimationFrames', () => {
@@ -109,6 +130,7 @@ describe('shared shiftAnimationFrames', () => {
       expectVectorClose(frame.pos, expected.pos)
       expectVectorClose(frame.rot, expected.rot)
       expect(frame.scale).toBe(expected.scale)
+      expect(frame.warp).toBe(expected.warp)
       expect(frame.depth).toBe(expected.depth)
       expect(frame.twistRoll).toBe(expected.twistRoll)
     }
@@ -131,10 +153,38 @@ describe('shared shiftAnimationFrames', () => {
       arc: 0,
       twist: 0,
       beats: 2,
-      scale: 8,
+      scale: 80,
+      warp: 0,
       depth: 1,
       move: [1, 0, 0],
     })
+  })
+
+  it('keeps the reconstructed Warp on the final shifted seam', () => {
+    const frames: AnimData[] = [
+      { arc: 0, warp: 0, scale: 80, strength: 800 },
+      { arc: 45, warp: 180 },
+      {},
+      {},
+      {},
+      {},
+      {},
+      { warp: 0 },
+      {},
+    ]
+    const compiled = compileFrames(frames)
+    expect(animationEndpointsAlign(compiled)).toBe(true)
+
+    const shifted = shiftAnimationFrameRange(frames, compiled, 0, frames.length - 1, {
+      allowEndpointMismatch: true,
+      preserveFinalOutgoing: true,
+    })
+
+    expect(shifted).toBeDefined()
+    expect(shifted?.at(-1)?.warp).toBe(180)
+    const result = compileFrames(shifted!)
+    expect(animationEndpointsAlign(result)).toBe(true)
+    expectVectorClose(renderedHandPosition(result.at(-1)!), renderedHandPosition(result[0]!))
   })
 
   it('reconstructs accumulated Twist as a carried roll gauge', () => {
@@ -167,11 +217,11 @@ describe('shared shiftAnimationFrames', () => {
 
   it('produces the same compiled result for a direct offset as repeated single shifts', () => {
     const frames: AnimData[] = [
-      { arc: 0, beats: 1, scale: 8, depth: 1 },
-      { arc: 90, beats: 2, scale: 9, depth: 2 },
-      { arc: 90, beats: 3, scale: 10, depth: 3 },
-      { arc: 90, beats: 4, scale: 11, depth: 4 },
-      { arc: 90, beats: 5, scale: 12, depth: 5 },
+      { arc: 0, beats: 1, scale: 80, depth: 1 },
+      { arc: 90, beats: 2, scale: 90, depth: 2 },
+      { arc: 90, beats: 3, scale: 100, depth: 3 },
+      { arc: 90, beats: 4, scale: 110, depth: 4 },
+      { arc: 90, beats: 5, scale: 120, depth: 5 },
     ]
 
     for (let shiftCount = 1; shiftCount <= 7; shiftCount += 1) {
@@ -502,9 +552,9 @@ describe('shared shiftAnimationFrames', () => {
 
   it('can shift unmatched endpoints when explicitly allowed', () => {
     const frames: AnimData[] = [
-      { arc: 0, beats: 2, scale: 8 },
-      { arc: 45, beats: 3, scale: 9 },
-      { arc: 45, beats: 4, scale: 10 },
+      { arc: 0, beats: 2, scale: 80 },
+      { arc: 45, beats: 3, scale: 90 },
+      { arc: 45, beats: 4, scale: 100 },
     ]
     const compiled = compileFrames(frames)
 

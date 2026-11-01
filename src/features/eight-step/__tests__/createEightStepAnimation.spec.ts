@@ -7,13 +7,19 @@ import {
   eightStepPlaybackMultiplier,
 } from '@/features/eight-step/createEightStepAnimation'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
+import { eightStepShapes } from '@/features/eight-step/types'
 import { vtgPlayerSettings } from '@/features/vtg/data/vtgPlayerSettings'
 import { rootFinal } from '@/math/animation/PlayerFunc'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { decodeReadable } from '@/services/animation/AnimReadableFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv6'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv12'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
+import { halveEightStepTurns } from '@/features/eight-step/halveEightStepTurns'
+import {
+  consolidateAnimationPlayback,
+  doubleAnimationPlayback,
+} from '@/math/animation/subdivideAnimationPlayback'
 
 const current = rootFinal(
   decodeReadable({
@@ -76,6 +82,53 @@ describe('createEightStepAnimation', () => {
     ).toBe(true)
   })
 
+  it('halves every compiled pattern Turn while preserving zero and Viewer Offset', () => {
+    const normal = createDefaultEightStepAnimation({ concept: '8stp', reference: '7-IE' })
+    const halved = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '7-IE',
+      halve: true,
+    })
+    const offset = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '7-IE',
+      halve: true,
+      propRotationOffsets: [90, -90],
+    })
+    if (!normal || !halved || !offset) throw new Error('Expected supported Eight Step animations')
+
+    const normalCompiled = rootCompile(normal)
+    const halvedCompiled = rootCompile(halved)
+    for (const [propIndex, prop] of normalCompiled.props.entries()) {
+      for (const [frameIndex, frame] of prop.anim.entries()) {
+        const halvedFrame = halvedCompiled.props[propIndex]?.anim[frameIndex]
+        expect(halvedFrame?.turns).toBe(frame.turns === 0 ? 0 : frame.turns / 2)
+      }
+    }
+    expect(
+      halved.props.flatMap((prop) => prop.anim).every((frame) => !Object.is(frame.turns, -0)),
+    ).toBe(true)
+    expect((offset.props[0]?.anim[0]?.turns ?? 0) - (halved.props[0]?.anim[0]?.turns ?? 0)).toBe(90)
+    expect((offset.props[1]?.anim[0]?.turns ?? 0) - (halved.props[1]?.anim[0]?.turns ?? 0)).toBe(
+      -90,
+    )
+  })
+
+  it('produces the same choreography whether Turns are halved before or after subdivision', () => {
+    for (const { reference } of eightStepPatternDefinitions) {
+      const normal = createDefaultEightStepAnimation({ concept: '8stp', reference })
+      const halved = createDefaultEightStepAnimation({ concept: '8stp', reference, halve: true })
+      if (!normal || !halved) throw new Error(`Expected supported Eight Step pattern ${reference}`)
+
+      const source = consolidateAnimationPlayback(normal, eightStepPlaybackMultiplier)
+      const halvedBeforeSubdivision = source
+        ? doubleAnimationPlayback(halveEightStepTurns(source))
+        : undefined
+
+      expect(halvedBeforeSubdivision).toEqual(halved)
+    }
+  })
+
   it('applies shared player controls and swaps complete tracks', () => {
     const base = createDefaultEightStepAnimation({ concept: '8stp', reference: '5-II' })
     const transformed = createEightStepAnimation(current, {
@@ -101,7 +154,7 @@ describe('createEightStepAnimation', () => {
       arms: false,
     })
     expect(transformed?.props.map(({ color }) => color)).toEqual([4, 1])
-    expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(transformed?.props.every(({ anim }) => anim[0]?.scale === 120)).toBe(true)
     expect(rootCompile(transformed!).camera[0]!.orbit.offset).toEqual([0, 0, -23])
     expect(transformed?.props[0]?.anim).not.toEqual(base?.props[1]?.anim)
   })
@@ -167,8 +220,8 @@ describe('createEightStepAnimation', () => {
     })
     const second = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
 
-    expect(first?.props[0]?.anim[0]?.scale).toBe(14)
-    expect(second?.props[0]?.anim[0]?.scale).toBe(8)
+    expect(first?.props[0]?.anim[0]?.scale).toBe(140)
+    expect(second?.props[0]?.anim[0]?.scale).toBe(80)
   })
 
   it('adds 45 degrees only to both initial arcs in Box mode', () => {
@@ -203,6 +256,29 @@ describe('createEightStepAnimation', () => {
     )
     expect(boxSwapped?.props.map((prop) => prop.anim[0]?.arc)).toEqual(
       box.props.map((prop) => prop.anim[0]?.arc).reverse(),
+    )
+  })
+
+  it('adds 90 degrees only to both initial arcs in Turned mode', () => {
+    const diamond = createDefaultEightStepAnimation({ concept: '8stp', reference: '1-AI' })
+    const turned = createDefaultEightStepAnimation({
+      concept: '8stp',
+      reference: '1-AI',
+      shape: 'turned',
+    })
+    if (!diamond || !turned) throw new Error('Expected supported Eight Step animations')
+
+    const diamondCompiled = rootCompile(diamond)
+    const turnedCompiled = rootCompile(turned)
+    expect(turnedCompiled.props.map((prop) => prop.anim[0]!.arc)).toEqual(
+      diamondCompiled.props.map((prop) => {
+        const initial = prop.anim[0]!
+        const delta = Math.abs(initial.plane) === 180 ? -90 : 90
+        return (initial.arc + delta + 360) % 360
+      }),
+    )
+    expect(turnedCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc))).toEqual(
+      diamondCompiled.props.map((prop) => prop.anim.slice(1).map(({ arc }) => arc)),
     )
   })
 
@@ -253,11 +329,11 @@ describe('createEightStepAnimation', () => {
     expect(animation).toBeDefined()
     if (!animation) return
 
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
     const query = codec.encodeQS(animation, false)
     const decoded = await codec.decodeVer(query)
 
-    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(220)
+    expect(new URLSearchParams(query).toString().length).toBeLessThanOrEqual(225)
     expect(decoded).toMatchObject({
       bpm: animation.bpm,
       thick: animation.thick,
@@ -275,12 +351,12 @@ describe('createEightStepAnimation', () => {
   })
 
   it('round-trips every Eight Step cell and transform without changing playback', async () => {
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
 
     for (const definition of eightStepPatternDefinitions) {
       for (const swapProps of [false, true]) {
         for (const reversePlane of [false, true]) {
-          for (const shape of ['diamond', 'box'] as const) {
+          for (const shape of eightStepShapes) {
             const label = `${definition.reference}, Swap ${swapProps}, 180° ${reversePlane}, ${shape}`
             const animation = createDefaultEightStepAnimation({
               concept: '8stp',

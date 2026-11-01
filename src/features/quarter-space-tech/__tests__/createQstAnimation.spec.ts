@@ -11,7 +11,7 @@ import { qstPatternDefinitions } from '@/features/quarter-space-tech/data/qstPat
 import { analyzeQstPositionPairs } from '@/features/quarter-space-tech/math/analyzeQstAnimation'
 import { rootCompile } from '@/math/animation/AnimFunc'
 import { useBaseQS } from '@/services/query/createBaseQS'
-import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv6'
+import { CHARSET, VDEF } from '@/services/query/versions/SpiroAnimQSv12'
 import { applyPatternFinalTransforms } from '@/features/concepts/applyPatternFinalTransforms'
 
 describe('createQstAnimation', () => {
@@ -53,7 +53,7 @@ describe('createQstAnimation', () => {
       hands: true,
       arms: false,
     })
-    expect(transformed.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(transformed.props.every(({ anim }) => anim[0]?.scale === 120)).toBe(true)
     expect(transformed.props[0]?.motion).toHaveLength(1)
     expect(transformed.props[1]).toMatchObject({
       paths: false,
@@ -64,7 +64,7 @@ describe('createQstAnimation', () => {
     expect(rootCompile(transformed).props[0]?.anim).not.toEqual(
       rootCompile(original).props[0]?.anim,
     )
-    expect(original.props.every(({ anim }) => anim[0]?.scale === 8)).toBe(true)
+    expect(original.props.every(({ anim }) => anim[0]?.scale === 80)).toBe(true)
   })
 
   it('applies Swap and 180 only after the QST pattern is complete', () => {
@@ -123,9 +123,9 @@ describe('createQstAnimation', () => {
     )
     if (!preview) throw new Error('Missing scaled advanced-1 line preview')
 
-    expect(preview.props.every(({ anim }) => anim[0]?.scale === 12)).toBe(true)
+    expect(preview.props.every(({ anim }) => anim[0]?.scale === 120)).toBe(true)
     expect(
-      rootCompile(preview).props.every(({ anim }) => anim.every(({ scale }) => scale === 12)),
+      rootCompile(preview).props.every(({ anim }) => anim.every(({ scale }) => scale === 120)),
     ).toBe(true)
     expect(rootCompile(preview).camera[0]?.orbit.offset).toEqual([0, 0, -23])
   })
@@ -160,7 +160,7 @@ describe('createQstAnimation', () => {
   })
 
   it('removes inherited frame values and round-trips every pattern through a compact URL', async () => {
-    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 6)
+    const codec = await useSpiroAnimQS(VDEF, useBaseQS(VDEF, { charset: CHARSET }), 12)
 
     for (const definition of qstPatternDefinitions) {
       const animation = createDefaultQstAnimation({

@@ -25,14 +25,17 @@
 </template>
 
 <script setup lang="ts">
+// Element artwork by Austen Cloud, The Kinetic Alphabet (https://tkaflowarts.com),
+// CC BY 4.0. Sun and Moon (quarter-time relationships) are Austen's extension
+// of the elemental model. See ATTRIBUTION.md.
 import { mdiCancel } from '@mdi/js'
 
-import airIconUrl from '@/assets/icons/elements/air.svg'
-import earthIconUrl from '@/assets/icons/elements/earth.svg'
-import fireIconUrl from '@/assets/icons/elements/fire.svg'
-import moonIconUrl from '@/assets/icons/elements/moon.svg'
-import sunIconUrl from '@/assets/icons/elements/sun.svg'
-import waterIconUrl from '@/assets/icons/elements/water.svg'
+import airIconUrl from '@/assets/icons/elements/air.webp'
+import earthIconUrl from '@/assets/icons/elements/earth.webp'
+import fireIconUrl from '@/assets/icons/elements/fire.webp'
+import moonIconUrl from '@/assets/icons/elements/moon.webp'
+import sunIconUrl from '@/assets/icons/elements/sun.webp'
+import waterIconUrl from '@/assets/icons/elements/water.webp'
 import BaseIcon from '@/components/icons/BaseIcon.vue'
 import {
   relationshipElement,

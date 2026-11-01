@@ -235,18 +235,24 @@
                 @pointercancel="cancelBuilderPointerDrag"
                 @lostpointercapture="cancelBuilderPointerDrag"
               >
-                <span class="vtg-tile__label">
-                  <span v-if="elementalLayout" class="vtg-tile__label-text vtg-tile__elements">
-                    <span v-if="compactBuilder">{{ getBuilderSpinLabel(tile) }} /</span>
-                    <ElementalRelationshipIcons
-                      responsive
-                      :hands="tile.hands"
-                      :props="tile.props"
-                      :hands-indeterminate="tile.handsIndeterminate"
-                      :props-indeterminate="tile.propsIndeterminate"
-                    />
-                  </span>
-                  <span v-else class="vtg-tile__label-text">{{ tile.label }}</span>
+                <span class="vtg-tile__label" :style="getTileLabelSwapStyle(tile)">
+                  <Transition name="vtg-label-swap">
+                    <span
+                      v-if="elementalLayout"
+                      key="elemental"
+                      class="vtg-tile__label-text vtg-tile__elements"
+                    >
+                      <span v-if="compactBuilder">{{ getBuilderSpinLabel(tile) }} /</span>
+                      <ElementalRelationshipIcons
+                        responsive
+                        :hands="tile.hands"
+                        :props="tile.props"
+                        :hands-indeterminate="tile.handsIndeterminate"
+                        :props-indeterminate="tile.propsIndeterminate"
+                      />
+                    </span>
+                    <span v-else key="classic" class="vtg-tile__label-text">{{ tile.label }}</span>
+                  </Transition>
                 </span>
               </button>
               <AppTooltip
@@ -302,7 +308,7 @@
       </div>
     </div>
 
-    <ConceptAnimationControls :animation="animation">
+    <ConceptAnimationControls :animation="animation" :show-scale="builderActive || scaleAuto">
       <template #before-controls="{ beginSliderHistory, endSliderHistory }">
         <PatternPlaybackControls
           v-if="vtgAdvanced && (!builderActive || builderFullCatalogForced)"
@@ -372,11 +378,19 @@
         <PatternPropertyControls
           v-if="vtgAdvanced && !builderActive"
           context="vtg"
+          :scale-auto="scaleAuto"
+          :scale-mode="scaleMode"
+          :scale-values="scaleValues"
+          :scale-display-values="scaleDisplayValues"
           :show-turns="showVtgTurns"
-          :animation="animation"
+          :animation="propertyAnimation"
           :offset-values="propRotationOffsets"
           :twist-mode="vtgTwistMode"
           :twist-values="vtgTwistValues"
+          :third-order-settings="vtgThirdOrderSettings"
+          :third-order-display-settings="vtgThirdOrderDisplaySettings"
+          :third-order-mirror="vtgThirdOrderMirror"
+          :third-order-opposed="vtgThirdOrderOpposed"
           :fold-values="vtgFoldValues"
           :fold-values-materialized="vtgFoldValuesMaterialized"
           :fold-mode="vtgFoldMode"
@@ -389,7 +403,15 @@
           :active-property="vtgActiveProperty"
           :sliders="sliders"
           @offset-update="updatePropRotationOffset"
+          @update:scale-auto="updateScaleAuto"
+          @update:scale-mode="updateScaleMode"
+          @scale-update="updateScaleValue"
           @twist-update="updateTwistSetting"
+          @third-order-initial-update="updateThirdOrderInitial"
+          @third-order-strength-update="updateThirdOrderStrength"
+          @third-order-timing-update="updateThirdOrderTiming"
+          @update:third-order-mirror="updateThirdOrderMirror"
+          @update:third-order-opposed="updateThirdOrderOpposed"
           @fold-update="updateFoldSetting"
           @update:twist-mode="updateTwistMode"
           @update:fold-mode="updateFoldMode"
@@ -414,6 +436,8 @@ import ElementalRelationshipIcons from '@/features/concepts/components/Elemental
 import AppTooltip from '@/components/AppTooltip.vue'
 import BaseTooltip from '@/components/ui/BaseTooltip.vue'
 import PatternPropertyControls from '@/components/pattern/PatternPropertyControls.vue'
+import { useVtgScaleControls } from '@/features/vtg/composables/useVtgScaleControls'
+import { applyVtgSwap } from '@/features/vtg/applyVtgSwap'
 import { COLORS, COLSET, PROPSR } from '@/domain/animation/AnimStruct'
 import ConceptAnimationControls from '@/features/concepts/components/ConceptAnimationControls.vue'
 import PatternPlaybackControls from '@/features/concepts/components/PatternPlaybackControls.vue'
@@ -457,14 +481,21 @@ import {
 import { qtrColumnRuleLabels, qtrSideRuleLabels } from '@/features/vtg/qtr/data/qtrLabels'
 import { createDefaultQtrAnimation } from '@/features/vtg/qtr/createQtrAnimation'
 import { exactlyMatchesQtrSelection } from '@/features/vtg/qtr/matchQtrAnimation'
-import { createDefaultVtgAnimation, toVtgPreviewAnimation } from '@/features/vtg/createVtgAnimation'
+import {
+  createDefaultVtgAnimation,
+  createVtgAnimation,
+  toVtgPreviewAnimation,
+} from '@/features/vtg/createVtgAnimation'
 import { createVtgBuilderDropPreview } from '@/features/builder/createVtgBuilderDropPreview'
+import { createVtgPreviewCandidate } from '@/features/concepts/createVtgPreviewCandidate'
+import { resolveVtgCompactBuilderSelection } from '@/features/concepts/resolveVtgCompactBuilderSelection'
 import { describeVtgBuilderPreviewRelationship } from '@/features/builder/describeVtgBuilderPreviewRelationships'
 import { exactlyMatchesVtgSelection } from '@/features/vtg/matchVtgAnimation'
 import { stripVtgPropertySettings } from '@/features/vtg/stripVtgPropertySettings'
 import { createQtrSideDiagram, vtgPropBounds } from '@/features/vtg/qtr/math/createQtrHeaderDiagram'
 import VtgRuleCard from '@/features/vtg/components/VtgRuleCard.vue'
 import {
+  builderPatternCellReferences,
   builderPatternPreviewReferences,
   pairedPatternPreviewReferences,
   patternPreviewReferences,
@@ -488,6 +519,7 @@ import type {
   VtgRuleDiagram,
   VtgRuleNumber,
   VtgRuleSpec,
+  VtgPatternMatch,
   VtgPatternSelection,
   VtgPatternOrientation,
   VtgTransitionInitialTurnsOffset,
@@ -502,17 +534,18 @@ import {
   getDefaultVtgPatternOrientation,
   getVtgTimingCycleCount,
   getVtgPatternOrientations,
-  requiresPairedVtgPreviewLayout,
   vtgDefaultTransitionBeats,
-  vtgRatioPickerRatios,
+  vtgMoreRatioPickerRatios,
   vtgSpeedRatioRows,
 } from '@/features/vtg/types'
 import {
   createVtgTransitionPreviewAnimations,
   createVtgTransitionQuickSlotAnimationCandidates,
+  getVtgTransitionPreviewCount,
   resolveVtgTransitionQuickSlotAnimations,
 } from '@/features/vtg/math/createVtgTransitionQuickSlotAnimations'
 import { prepareVtg45TransitionPattern } from '@/features/vtg/math/prepareVtg45TransitionPattern'
+import { cloneVtgPropertySettings } from '@/features/vtg/propertySettings'
 import type { RootDataFinal } from '@/types/AnimTypes'
 import { PRODUCTION_PWA_HOSTNAME } from '@/sys/pwaManifest'
 import { toColor } from '@/utils/UtilFunc'
@@ -576,7 +609,7 @@ const emit = defineEmits<{
 const showVtgTurns = ref(false)
 
 const basicHiddenSpeedRatios = new Set<VtgSpeedRatio>(['2:1', '1:2', '2:3', '1:4', '2:5'])
-const ratioPickerRatios = vtgRatioPickerRatios
+const ratioPickerRatios = vtgMoreRatioPickerRatios
 const touchDevice = typeof navigator !== 'undefined' && isTouchDevice()
 const conceptsStore = useConceptsStore()
 const {
@@ -602,9 +635,41 @@ const {
   elementalLayout,
   qtrEnabled: isQtr,
 } = storeToRefs(conceptsStore)
+// Property controls always read and edit the original path order. Swap only assigns finished paths.
+const propertyAnimation = computed(() =>
+  props.animation
+    ? applyVtgSwap(props.animation, !props.builderActive && swapProps.value)
+    : undefined,
+)
+const emitPropertyAnimation = (animation: RootDataFinal) =>
+  emit('animationUpdate', applyVtgSwap(animation, !props.builderActive && swapProps.value))
+const {
+  auto: scaleAuto,
+  mode: scaleMode,
+  values: scaleValues,
+  displayValues: scaleDisplayValues,
+  settings: scaleSettings,
+  hydrating: scaleHydrating,
+  reset: resetScaleControls,
+  updateAuto: updateScaleAuto,
+  updateMode: updateScaleMode,
+  updateValue: updateScaleValue,
+  apply: applyScaleControls,
+} = useVtgScaleControls({
+  animation: propertyAnimation,
+  revision: toRef(props, 'animationRevision'),
+  enabled: computed(() => !props.builderActive),
+  base: scale,
+  ratio: speedRatio,
+  onAnimationUpdate: emitPropertyAnimation,
+})
 const {
   vtgTwistMode,
   vtgTwistValues,
+  vtgThirdOrderSettings,
+  vtgThirdOrderDisplaySettings,
+  vtgThirdOrderMirror,
+  vtgThirdOrderOpposed,
   vtgFoldValues,
   vtgFoldValuesMaterialized,
   vtgFoldMode,
@@ -617,6 +682,11 @@ const {
   vtgActiveProperty,
   updateTwistSetting,
   updateTwistMode,
+  updateThirdOrderInitial,
+  updateThirdOrderStrength,
+  updateThirdOrderTiming,
+  updateThirdOrderMirror,
+  updateThirdOrderOpposed,
   updateFoldSetting,
   updateFoldMode,
   updateFoldBeat,
@@ -626,8 +696,21 @@ const {
   updateFoldSpan,
   updateFoldMirror,
 } = usePatternPropertyControls({
-  animation: toRef(props, 'animation'),
-  onAnimationUpdate: (animation) => emit('animationUpdate', animation),
+  animation: propertyAnimation,
+  onAnimationUpdate: emitPropertyAnimation,
+  rebuildAnimationForThirdOrderCycle: (minimumCycleCount) => {
+    if (props.builderActive || !props.animation || isQtr.value) return undefined
+    const tile = matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value)
+    if (!tile) return undefined
+    const selection = createVtgPatternSelection(tile)
+    return 'quarters' in selection
+      ? undefined
+      : createVtgAnimation(
+          props.animation,
+          { ...selection, swapProps: false },
+          { minimumCycleCount },
+        )
+  },
 })
 const isAnti = ref(false)
 const speedRatioRows = computed(() =>
@@ -641,7 +724,7 @@ const visibleSpeedRatios = computed<ReadonlySet<VtgSpeedRatio>>(
   () => new Set<VtgSpeedRatio>(speedRatioRows.value.flat()),
 )
 const updateVtgActiveProperty = (property: VtgPropertyKey | 'scale' | null) => {
-  if (property !== 'scale') vtgActiveProperty.value = property
+  vtgActiveProperty.value = property
 }
 const updatePropRotationOffset = (propIndex: 0 | 1, value?: number) => {
   const offsets: [number, number] = [
@@ -702,9 +785,175 @@ const compactBuilder = computed(() => props.builderActive && !props.builderFullC
 const usesClassicLayout = computed(
   () => (vtgAdvanced.value ? classicLayout.value : true) && !compactBuilder.value,
 )
-const usesPairedPreviewLayout = computed(
-  () => compactBuilder.value || requiresPairedVtgPreviewLayout(speedRatio.value),
+const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
+const createScaleIndependentPreviewSelection = (
+  reference: VtgCellReference,
+): VtgPatternSelection | QtrPatternSelection => {
+  const selection: VtgPatternSelection = {
+    reference,
+    speedRatio: speedRatio.value,
+    spacing: spacing.value,
+    propColors: [leftPropColor.value, rightPropColor.value],
+    prop: prop.value,
+    hands: hands.value,
+    ...(spinToggleCells.has(reference) ? { isAnti: isAnti.value } : undefined),
+    ...(swapProps.value ? { swapProps: true } : undefined),
+    ...(reversePlane.value ? { reversePlane: true } : undefined),
+    ...(beat.value === 1 ? undefined : { beat: beat.value }),
+    ...(transition.value ? { transition: true } : undefined),
+    ...(transition.value && transitionAfterBeat.value ? { transitionAfterBeat: true } : undefined),
+    ...(initialTurnsOffset.value === undefined
+      ? undefined
+      : {
+          initialTurnsOffset: initialTurnsOffset.value,
+          initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
+        }),
+    ...(orientation.value !== 0 ? { orientation: orientation.value } : undefined),
+    ...(propRotationOffsets.value === undefined
+      ? undefined
+      : { propRotationOffsets: [...propRotationOffsets.value] as readonly [number, number] }),
+  }
+  return isQtr.value ? { ...selection, quarters: 1 } : selection
+}
+const createVtgPreviewSelection = (
+  reference: VtgCellReference,
+): VtgPatternSelection | QtrPatternSelection => ({
+  ...createScaleIndependentPreviewSelection(reference),
+  scale: scale.value,
+  ...(scaleAuto.value ? undefined : { scaleSettings: scaleSettings.value }),
+})
+const createBuilderPreviewSelection = createScaleIndependentPreviewSelection
+const createPreviewSelection = (reference: VtgCellReference) =>
+  props.builderActive
+    ? createBuilderPreviewSelection(reference)
+    : createVtgPreviewSelection(reference)
+const createThumbnailSelection = (reference: VtgCellReference) => {
+  const selection = createPreviewSelection(reference)
+
+  // Catalog thumbnails show the base cycle with its current properties. Trans/45 expands player
+  // playback only; retained initial Turns offsets still belong to the extracted pattern geometry.
+  const thumbnail = { ...selection }
+  delete thumbnail.transition
+  delete thumbnail.transitionAfterBeat
+  return thumbnail
+}
+const previewScale = computed(() => (props.builderActive ? vtgScaleControl.default : scale.value))
+const appliesPropertiesToPreviews = computed(
+  () => !props.builderActive || props.builderMatchAnimation !== undefined,
 )
+const previewPropertySettings = computed(() =>
+  appliesPropertiesToPreviews.value ? conceptsStore.getVtgPropertySettings() : undefined,
+)
+const previewBuilderContext = computed(() => {
+  if (!props.builderActive || props.builderInsertionIndex === undefined) return undefined
+  if (compactBuilder.value && props.animation !== undefined) {
+    return { source: props.animation, builderInsertionIndex: props.builderInsertionIndex }
+  }
+  if (props.builderMatchAnimation === undefined) return undefined
+
+  // The selected portion is already rebased to its effective starting state. Appending to that
+  // short cycle produces the same prospective piece without rebuilding the complete pattern.
+  return {
+    source: props.builderMatchAnimation,
+    builderInsertionIndex: props.builderInsertionIndex === 0 ? 0 : 1,
+  }
+})
+const createPreviewCandidate = (selection: VtgPatternSelection | QtrPatternSelection) =>
+  createVtgPreviewCandidate(selection, {
+    ...previewBuilderContext.value,
+    ...(previewPropertySettings.value ? { properties: previewPropertySettings.value } : undefined),
+  })
+const candidatePairing = ref<boolean>()
+const layoutComparisonPending = ref(false)
+const layoutComparisonKey = computed(() =>
+  JSON.stringify([
+    speedRatio.value,
+    previewScale.value,
+    props.builderActive ? undefined : scaleSettings.value,
+    spacing.value,
+    swapProps.value,
+    reversePlane.value,
+    beat.value,
+    transition.value,
+    transitionAfterBeat.value,
+    initialTurnsOffset.value,
+    initialTurnsOffsetBeat.value,
+    orientation.value,
+    propRotationOffsets.value,
+    previewPropertySettings.value,
+    previewBuilderContext.value,
+    hands.value,
+    prop.value,
+  ]),
+)
+let layoutComparisonRevision = 0
+let layoutComparisonTimer: ReturnType<typeof setTimeout> | undefined
+const compareCandidateLayout = async (
+  request: Parameters<NonNullable<PatternMatchingClient['compareVtgCandidateLayout']>>[0],
+) => {
+  if (props.patternMatcher?.compareVtgCandidateLayout) {
+    return props.patternMatcher.compareVtgCandidateLayout(request)
+  }
+  const { compareVtgCandidateLayoutRequest } =
+    await import('@/workers/pattern-matching/handlePatternMatchingRequest')
+  return compareVtgCandidateLayoutRequest(request)
+}
+watch(
+  [layoutComparisonKey, isQtr, compactBuilder],
+  () => {
+    const revision = ++layoutComparisonRevision
+    if (layoutComparisonTimer !== undefined) {
+      clearTimeout(layoutComparisonTimer)
+      layoutComparisonTimer = undefined
+    }
+    const activeProperties = previewPropertySettings.value
+    if (compactBuilder.value) {
+      candidatePairing.value = undefined
+      layoutComparisonPending.value = false
+      return
+    }
+    layoutComparisonPending.value = true
+    const properties = activeProperties && cloneVtgPropertySettings(activeProperties)
+    layoutComparisonTimer = setTimeout(() => {
+      layoutComparisonTimer = undefined
+      const request = {
+        selections: [createThumbnailSelection('1-6'), createThumbnailSelection('2-6')],
+        options: {
+          properties,
+          ...(previewBuilderContext.value
+            ? {
+                source: toRaw(previewBuilderContext.value.source),
+                builderInsertionIndex: previewBuilderContext.value.builderInsertionIndex,
+              }
+            : undefined),
+        },
+      } as const
+      void compareCandidateLayout(request).then(
+        (paired) => {
+          if (revision === layoutComparisonRevision) {
+            candidatePairing.value = paired
+            layoutComparisonPending.value = false
+          }
+        },
+        () => {
+          if (revision === layoutComparisonRevision) {
+            candidatePairing.value = true
+            layoutComparisonPending.value = false
+          }
+        },
+      )
+    }, 50)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  layoutComparisonRevision += 1
+  if (layoutComparisonTimer !== undefined) clearTimeout(layoutComparisonTimer)
+})
+const usesPairedPreviewLayout = computed(() => {
+  if (compactBuilder.value) return true
+  return candidatePairing.value === true
+})
 const topHeaderRule = computed(() => getVtgTopHeaderRule(speedRatio.value))
 const hideColumnHeaderDetails = computed(
   () => compactBuilder.value || isQtr.value || !topHeaderRule.value.showDetails,
@@ -735,7 +984,6 @@ const vtgHeaderPropColors = vtgPropSettings.map(({ color }) => {
     tether: toColor(colorSet[2]),
   }
 })
-const spinToggleCells: ReadonlySet<VtgCellReference> = new Set(['5-6', '6-6', '5-5', '6-5'])
 const createQSlots = async () => {
   quickSlotCreationError.value = undefined
   if (!props.animation) return
@@ -781,6 +1029,14 @@ let componentMounted = false
 let initialAnimationHandled = false
 let ratioOrientationChangeActive = false
 const previewsReady = ref(false)
+watch(
+  scale,
+  () => {
+    if (!suppressPatternEmit && !scaleHydrating.value && !props.builderActive && scaleAuto.value)
+      applyScaleControls()
+  },
+  { flush: 'sync' },
+)
 
 const beginPatternEmitSuppression = () => {
   suppressPatternEmit = true
@@ -818,49 +1074,47 @@ const matrixTiles = computed<readonly VtgMatrixTile[]>(() =>
         !compactBuilder.value || ((address.row === 1 || address.row === 6) && address.column <= 4),
     )
     .map((address) => {
-      const baseSelection: VtgPatternSelection = {
-        reference: address.reference,
-        speedRatio: speedRatio.value,
-        ...(spinToggleCells.has(address.reference) ? { isAnti: isAnti.value } : undefined),
-        ...(swapProps.value ? { swapProps: true } : undefined),
-        ...(reversePlane.value ? { reversePlane: true } : undefined),
-        ...(beat.value === 1 ? undefined : { beat: beat.value }),
-        ...(transition.value ? { transition: true } : undefined),
-        ...(transition.value && transitionAfterBeat.value
-          ? { transitionAfterBeat: true }
-          : undefined),
-        ...(initialTurnsOffset.value === undefined
-          ? undefined
-          : {
-              initialTurnsOffset: initialTurnsOffset.value,
-              initialTurnsOffsetBeat: initialTurnsOffsetBeat.value,
-            }),
-        ...(orientation.value !== 0 ? { orientation: orientation.value } : undefined),
-        ...(propRotationOffsets.value === undefined
-          ? undefined
-          : { propRotationOffsets: propRotationOffsets.value }),
-      }
-      const selection: VtgPatternSelection | QtrPatternSelection = isQtr.value
-        ? { ...baseSelection, quarters: 1 }
-        : baseSelection
+      const selection = createPreviewSelection(address.reference)
 
       const relationships = describePatternSelectionRelationshipsAcrossBeats(selection)
-      const builderAnimation =
-        props.builderActive && props.builderInsertionIndex !== undefined && props.animation
-          ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
+      const contextualLabelAnimation =
+        !compactBuilder.value &&
+        previewBuilderContext.value !== undefined &&
+        previewBuilderContext.value.builderInsertionIndex > 0
+          ? createPreviewCandidate(selection)
           : undefined
-      const displayedRelationships =
-        builderAnimation && (props.builderInsertionIndex ?? 0) > 0
-          ? describeVtgBuilderPreviewRelationship(builderAnimation, selection.speedRatio)
-          : relationships
-      if (!compactBuilder.value) return { ...address, ...displayedRelationships }
-
-      const animation = isQtr.value
-        ? createDefaultQtrAnimation(selection as QtrPatternSelection)
-        : (builderAnimation ?? createDefaultVtgAnimation(selection as VtgPatternSelection))
+      const builderAnimation =
+        compactBuilder.value && props.builderInsertionIndex !== undefined && props.animation
+          ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex, {
+              minimumCycleCount: conceptsStore.getVtgPropertyCycleCount(),
+            })
+          : undefined
+      const labelAnimation =
+        (props.builderInsertionIndex ?? 0) > 0
+          ? (contextualLabelAnimation ?? builderAnimation)
+          : undefined
+      const displayedRelationships = labelAnimation
+        ? describeVtgBuilderPreviewRelationship(labelAnimation, selection.speedRatio)
+        : relationships
+      const animation =
+        (!compactBuilder.value ? labelAnimation : undefined) ??
+        (isQtr.value
+          ? createDefaultQtrAnimation(selection as QtrPatternSelection)
+          : (builderAnimation ?? createDefaultVtgAnimation(selection as VtgPatternSelection)))
       if (!animation) throw new Error(`Missing Builder animation for ${selection.reference}`)
 
       const label = describeVtgBuilderMotion(animation)
+      if (!compactBuilder.value) {
+        const spins = [label[0], label[1]]
+          .map((spin) => (spin === 'A' ? 'Anti' : spin === 'I' ? 'Spin' : 'Indeterminate'))
+          .join(' / ')
+        return {
+          ...address,
+          ...displayedRelationships,
+          description: `${displayedRelationships.description}\n${spins}`,
+        }
+      }
+
       return {
         ...address,
         ...displayedRelationships,
@@ -908,6 +1162,16 @@ const getTileGridStyle = (tile: VtgMatrixTile) => {
   if (!compactBuilder.value && !usesClassicLayout.value) return undefined
   const position = getTileGridPosition(tile)
   return { gridColumn: String(position.column), gridRow: String(position.row) }
+}
+
+/**
+ * Staggers the classic/elemental label crossfade so the swap ripples across the
+ * board instead of every tile flipping on the same frame.
+ */
+const getTileLabelSwapStyle = (tile: VtgMatrixTile) => {
+  const topRow = Math.max(...matrixTiles.value.map(getTileBoardRow))
+  const wave = topRow - getTileBoardRow(tile) + getTileBoardColumn(tile) - 1
+  return { '--vtg-label-swap-delay': `calc(${wave} * var(--delay-label-swap-step))` }
 }
 
 const getTileBoardColumn = (tile: VtgMatrixTile) =>
@@ -1008,7 +1272,7 @@ const isSpinToggleCell = (reference: VtgCellReference) => spinToggleCells.has(re
  * `suppressPatternEmit`, which exists to stop hydration from re-applying a pattern.
  *
  * Anti is only part of a cell's identity on the spin-toggle cells, matching
- * `createPatternSelection`. The 2:1 ratio has no bridge entry (its prop rotation has no Kinetic
+ * `createScaleIndependentPatternSelection`. The 2:1 ratio has no bridge entry (its prop rotation has no Kinetic
  * Alphabet reading), so it reports no cell rather than a link that would resolve to nothing. The displayed pattern
  * orientation travels with the cell so the Composer renders the flower the viewer is looking at;
  * an orientation outside the Composer's grammar (a hydration-inferred in-between angle) means the
@@ -1037,7 +1301,9 @@ watch(
   { immediate: true },
 )
 
-const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrPatternSelection => {
+const createScaleIndependentPatternSelection = (
+  tile: VtgMatrixTile,
+): VtgPatternSelection | QtrPatternSelection => {
   if (!suppressPatternEmit) hydrationVersion++
 
   const baseSelection: VtgPatternSelection = {
@@ -1072,7 +1338,6 @@ const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrP
     baseSelection.propRotationOffsets = propRotationOffsets.value
   }
   if (bpm.value !== vtgBpmControl.default) baseSelection.bpm = bpm.value
-  if (scale.value !== vtgScaleControl.default) baseSelection.scale = scale.value
   if (thick.value !== vtgThickControl.default) baseSelection.thick = thick.value
   if (spacing.value !== vtgSpacingControl.default) baseSelection.spacing = spacing.value
   if (paths.value !== vtgPlayerSettings.paths) baseSelection.paths = paths.value
@@ -1092,16 +1357,30 @@ const createPatternSelection = (tile: VtgMatrixTile): VtgPatternSelection | QtrP
   return selection
 }
 
+const createVtgPatternSelection = (
+  tile: VtgMatrixTile,
+): VtgPatternSelection | QtrPatternSelection => {
+  const selection = createScaleIndependentPatternSelection(tile)
+  return {
+    ...selection,
+    ...(scale.value === vtgScaleControl.default ? undefined : { scale: scale.value }),
+    ...(scaleAuto.value ? undefined : { scaleSettings: scaleSettings.value }),
+  }
+}
+
+const createBuilderPatternSelection = createScaleIndependentPatternSelection
+
 const createCustomizationSelection = () => {
   const tile =
     matrixTiles.value.find(({ reference }) => reference === matchedCellReference.value) ??
     matrixTiles.value[0]
-  return tile === undefined ? undefined : createPatternSelection(tile)
+  if (tile === undefined) return undefined
+  return createScaleIndependentPatternSelection(tile)
 }
 
 const emitPatternSelection = (tile: VtgMatrixTile) => {
   if (props.builderActive) return
-  const selection = createPatternSelection(tile)
+  const selection = createVtgPatternSelection(tile)
   lastEmittedSelection = selection
   emit('patternSelect', selection)
 }
@@ -1117,7 +1396,7 @@ const emitBuilderPreview = (tile?: VtgMatrixTile) => {
     )
   if (!activeTile) return
 
-  emit('patternPreview', createPatternSelection(activeTile))
+  emit('patternPreview', createBuilderPatternSelection(activeTile))
 }
 
 // Full Grid thumbnails sit at the shared corner of each 2x2 tile group. Paired layouts share
@@ -1198,7 +1477,7 @@ const setBuilderDragImage = (
 
 const startBuilderDrag = (tile: VtgMatrixTile, event: DragEvent) => {
   if (!props.builderActive || !event.dataTransfer) return
-  const selection = createPatternSelection(tile)
+  const selection = createBuilderPatternSelection(tile)
   event.dataTransfer.effectAllowed = 'copy'
   event.dataTransfer.setData(builderPatternDragType, JSON.stringify(selection))
   event.dataTransfer.setData('text/plain', `VTG ${tile.reference}`)
@@ -1237,7 +1516,7 @@ const startBuilderPointerDrag = (tile: VtgMatrixTile, event: PointerEvent) => {
     pointerId: event.pointerId,
     startX: event.clientX,
     startY: event.clientY,
-    selection: createPatternSelection(tile),
+    selection: createBuilderPatternSelection(tile),
     tile,
     source,
     active: false,
@@ -1311,11 +1590,6 @@ const selectTile = (tile: VtgMatrixTile) => {
     emitBuilderPreview(tile)
     return
   }
-  const changesPattern = tile.reference !== selectedCellReference.value
-  if (changesPattern) {
-    initialTurnsOffset.value = undefined
-    initialTurnsOffsetBeat.value = undefined
-  }
   selectedCell.value = {
     column: tile.column,
     row: tile.row,
@@ -1374,6 +1648,7 @@ const resetPatternControls = async () => {
   const tile = matrixTiles.value.find(({ reference }) => reference === activeReference)
   const suppressionOwner = beginPatternEmitSuppression()
   conceptsStore.resetPatternControls()
+  if (!props.builderActive) resetScaleControls()
   moreRatios.value = false
   isQtr.value = false
   isAnti.value = false
@@ -1451,7 +1726,6 @@ watch(
 watch(
   [
     bpm,
-    scale,
     thick,
     spacing,
     paths,
@@ -1525,9 +1799,58 @@ const hasMultipleVtgBuilderPortions = (animation: RootDataFinal): boolean => {
   )
 }
 
+const builderDropSelected = computed(() => {
+  if (
+    !props.builderActive ||
+    props.animation === undefined ||
+    props.builderInsertionIndex === undefined
+  ) {
+    return false
+  }
+  if (props.animation.props.length === 0) return props.builderInsertionIndex === 0
+  const prepared = prepareVtg45TransitionPattern(props.animation)
+  return (
+    prepared.supported &&
+    props.builderInsertionIndex === getVtgTransitionPreviewCount(prepared.pattern)
+  )
+})
+
+const hydrateSharedCustomizationControls = (animation: RootDataFinal) => {
+  thick.value = animation.thick
+  paths.value = animation.paths
+  hands.value = animation.hands ?? vtgPlayerSettings.hands
+  arms.value = animation.arms
+  leftPropVisible.value = isPatternPropVisible(animation.props[0])
+  rightPropVisible.value = isPatternPropVisible(animation.props[1])
+  leftPropColor.value =
+    animation.props[0]?.color === undefined
+      ? defaultPatternPropColors[0]
+      : COLORS[animation.props[0].color]
+  rightPropColor.value =
+    animation.props[1]?.color === undefined
+      ? defaultPatternPropColors[1]
+      : COLORS[animation.props[1].color]
+  prop.value = animation.prop
+}
+
+const hydrateVtgCustomizationControls = (animation: RootDataFinal, match: VtgPatternMatch) => {
+  bpm.value = match.bpm
+  scale.value = animation.vtgScale?.base ?? match.scale
+  hydrateSharedCustomizationControls(animation)
+}
+
+const hydrateBuilderCustomizationControls = (animation: RootDataFinal) => {
+  hydrateSharedCustomizationControls(animation)
+}
+
 const hydratePatternControls = async (animation: RootDataFinal) => {
   const version = ++hydrationVersion
-  conceptsStore.hydrateVtgPropertyControls(animation)
+  if (props.builderActive && !builderDropSelected.value) {
+    conceptsStore.hydrateVtgPropertyControls(
+      animation,
+      props.builderActive && (props.builderInsertionIndex ?? 0) > 0 ? 1 : 0,
+    )
+  }
   const patternAnimation = stripVtgPropertySettings(animation)
   // The parent suppresses revisions produced by this pane. A supplied revision therefore marks
   // an external change (Editor, Timeline, Quick Slots, or another control surface) and must be
@@ -1564,6 +1887,13 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const evaluateAutoBuilderOpen = !props.builderActive && shouldEvaluateAutoBuilderOpen(animation)
   if (evaluateAutoBuilderOpen) markAutoBuilderOpenEvaluated(animation)
   if (result.status === 'unchanged') {
+    if (!props.builderActive) {
+      conceptsStore.hydrateVtgPropertyControls(
+        applyVtgSwap(animation, swapProps.value),
+        0,
+        beat.value,
+      )
+    }
     previewsReady.value = true
     return
   }
@@ -1572,11 +1902,35 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
   const suppressionOwner = beginPatternEmitSuppression()
 
   if (match) {
-    speedRatio.value = match.speedRatio
-    isAnti.value = match.isAnti
-    swapProps.value = match.swapProps
-    reversePlane.value = match.reversePlane
-    beat.value = match.beat ?? 1
+    const builderSelection =
+      props.builderActive &&
+      result.status === 'matched' &&
+      result.source === 'vtg' &&
+      props.animation !== undefined &&
+      props.builderInsertionIndex !== undefined
+        ? resolveVtgCompactBuilderSelection({
+            source: props.animation,
+            target: animation,
+            targetIndex: props.builderInsertionIndex,
+            references: builderPatternCellReferences,
+            baseSelection: match,
+            properties: conceptsStore.getVtgPropertySettings(),
+            preferBaseTransforms: !compactBuilder.value,
+          })
+        : undefined
+    const controls = compactBuilder.value ? (builderSelection ?? match) : match
+    speedRatio.value = controls.speedRatio
+    isAnti.value = controls.isAnti ?? false
+    swapProps.value = controls.swapProps === true
+    if (!props.builderActive) {
+      conceptsStore.hydrateVtgPropertyControls(
+        applyVtgSwap(animation, swapProps.value),
+        0,
+        controls.beat ?? 1,
+      )
+    }
+    reversePlane.value = controls.reversePlane === true
+    beat.value = controls.beat ?? 1
     transition.value = match.transition ?? false
     transitionAfterBeat.value = match.transitionAfterBeat ?? false
     transitionBeats.value = match.transitionBeats ?? vtgDefaultTransitionBeats
@@ -1602,26 +1956,12 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
       (exactPatternMatch
         ? undefined
         : inferPatternRelationshipPropRotationOffsets(patternAnimation, relationshipSelection))
-    bpm.value = match.bpm
-    scale.value = match.scale
-    thick.value = animation.thick
-    paths.value = animation.paths
-    hands.value = animation.hands ?? vtgPlayerSettings.hands
-    arms.value = animation.arms
-    leftPropVisible.value = isPatternPropVisible(animation.props[0])
-    rightPropVisible.value = isPatternPropVisible(animation.props[1])
-    leftPropColor.value =
-      animation.props[0]?.color === undefined
-        ? defaultPatternPropColors[0]
-        : COLORS[animation.props[0].color]
-    rightPropColor.value =
-      animation.props[1]?.color === undefined
-        ? defaultPatternPropColors[1]
-        : COLORS[animation.props[1].color]
-    prop.value = animation.prop
+    if (props.builderActive) hydrateBuilderCustomizationControls(animation)
+    else hydrateVtgCustomizationControls(animation, match)
     isQtr.value = result.status === 'matched' && result.source === 'qtr'
+    const selectedReference = builderSelection?.reference ?? controls.reference
     const tile =
-      matrixTiles.value.find(({ reference }) => reference === match.reference) ??
+      matrixTiles.value.find(({ reference }) => reference === selectedReference) ??
       (compactBuilder.value
         ? matrixTiles.value.find(
             ({ label }) => label === describeVtgBuilderMotion(patternAnimation),
@@ -1629,6 +1969,7 @@ const hydratePatternControls = async (animation: RootDataFinal) => {
         : undefined)
     selectedCell.value = tile ? { column: tile.column, row: tile.row } : undefined
   } else {
+    if (!props.builderActive) conceptsStore.hydrateVtgPropertyControls(animation)
     selectedCell.value = undefined
     isQtr.value = false
     isAnti.value = false
@@ -1721,6 +2062,26 @@ const syncPatternControls = () => {
   previewsReady.value = false
   void hydratePatternControls(animation)
 }
+
+// Internally generated updates intentionally skip catalog matching. Still capture their shifted
+// property values, just as Scale does, so a subsequent edit cannot restore the previous start.
+watch(
+  [() => props.animation, () => props.animationRevision],
+  ([animation, revision], [, previousRevision]) => {
+    if (
+      !animation ||
+      props.builderActive ||
+      revision === undefined ||
+      revision !== previousRevision
+    )
+      return
+    conceptsStore.hydrateVtgPropertyControls(
+      applyVtgSwap(animation, swapProps.value),
+      0,
+      beat.value,
+    )
+  },
+)
 
 watch(
   [
@@ -1987,8 +2348,9 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   swapProps,
   reversePlane,
   beat,
-  scale,
+  scale: previewScale,
   spacing,
+  hands,
   quarters: activeQtrMode,
   leftPropColor,
   rightPropColor,
@@ -1998,16 +2360,40 @@ const { previewUrls, requestPreviews } = usePatternPreviews({
   initialTurnsOffset,
   initialTurnsOffsetBeat,
   activeReferences: computed(() => displayedPreviews.value.map(({ reference }) => reference)),
-  active: previewsReady,
-  previewContext: computed(() => [props.animationRevision, props.builderInsertionIndex]),
+  active: computed(() => previewsReady.value && !layoutComparisonPending.value),
+  createSelection: createThumbnailSelection,
+  previewContext: computed(() => [
+    props.builderActive ? undefined : scaleSettings.value,
+    props.builderInsertionIndex,
+    previewBuilderContext.value?.source,
+    transition.value,
+    transitionAfterBeat.value,
+    JSON.stringify(previewPropertySettings.value),
+  ]),
+  createVtgPreviews: async (selections) => {
+    const activeProperties = previewPropertySettings.value
+    const options = {
+      ...(previewBuilderContext.value
+        ? {
+            source: toRaw(previewBuilderContext.value.source),
+            builderInsertionIndex: previewBuilderContext.value.builderInsertionIndex,
+          }
+        : undefined),
+      ...(activeProperties === undefined
+        ? undefined
+        : { properties: cloneVtgPropertySettings(activeProperties) }),
+    }
+    const candidates = props.patternMatcher?.createVtgPreviewCandidates
+      ? await props.patternMatcher.createVtgPreviewCandidates({ selections, options })
+      : selections.map((selection) => createVtgPreviewCandidate(selection, options))
+    return candidates.map((animation) =>
+      animation ? toVtgPreviewAnimation(animation, { hands: hands.value }) : undefined,
+    )
+  },
   createVtgPreview: (selection) => {
-    const animation =
-      props.builderActive && props.builderInsertionIndex !== undefined && props.animation
-        ? createVtgBuilderDropPreview(props.animation, selection, props.builderInsertionIndex)
-        : 'quarters' in selection
-          ? createDefaultQtrAnimation(selection)
-          : createDefaultVtgAnimation(selection)
-    return animation ? toVtgPreviewAnimation(animation) : undefined
+    const animation = createPreviewCandidate(selection)
+    if (!animation) return undefined
+    return toVtgPreviewAnimation(animation, { hands: hands.value })
   },
 })
 
@@ -2030,6 +2416,7 @@ onMounted(() => {
   if (typeof ResizeObserver === 'undefined') return
 
   const observer = new ResizeObserver((entries) => {
+    let renderDimensionsChanged = false
     for (const entry of entries) {
       if (!(entry.target instanceof HTMLElement)) continue
 
@@ -2037,12 +2424,17 @@ onMounted(() => {
       const dimensions = blankDimensions[index]
       if (!dimensions) continue
 
-      dimensions.width = roundDimension(entry.contentRect.width)
-      dimensions.height = roundDimension(entry.contentRect.height)
+      const width = roundDimension(entry.contentRect.width)
+      const height = roundDimension(entry.contentRect.height)
+      renderDimensionsChanged ||=
+        Math.round(dimensions.width) !== Math.round(width) ||
+        Math.round(dimensions.height) !== Math.round(height)
+      dimensions.width = width
+      dimensions.height = height
       blankWidth.value = dimensions.width
       blankHeight.value = dimensions.height
     }
-    requestPreviews()
+    if (renderDimensionsChanged) requestPreviews()
   })
   blankObserver = observer
 
@@ -2606,6 +2998,30 @@ defineExpose({
   white-space: nowrap;
 }
 
+.vtg-tile__label {
+  display: grid;
+  place-items: center;
+}
+
+.vtg-tile__label > .vtg-tile__label-text {
+  grid-area: 1 / 1;
+}
+
+.vtg-label-swap-enter-active,
+.vtg-label-swap-leave-active {
+  transition:
+    opacity var(--transition-label-swap) var(--vtg-label-swap-delay, 0ms),
+    scale var(--transition-label-swap) var(--vtg-label-swap-delay, 0ms),
+    filter var(--transition-label-swap) var(--vtg-label-swap-delay, 0ms);
+}
+
+.vtg-label-swap-enter-from,
+.vtg-label-swap-leave-to {
+  opacity: 0;
+  scale: 0.72;
+  filter: blur(3px);
+}
+
 .vtg-tile__elements {
   display: inline-flex;
   align-items: center;
@@ -2712,5 +3128,12 @@ defineExpose({
   white-space: nowrap;
   border: 0;
   clip-path: inset(50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vtg-label-swap-enter-active,
+  .vtg-label-swap-leave-active {
+    transition: none;
+  }
 }
 </style>
