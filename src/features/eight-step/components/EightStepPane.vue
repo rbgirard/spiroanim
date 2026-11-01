@@ -261,6 +261,7 @@ import {
   useEightStepPreviews,
 } from '@/features/eight-step/composables/useEightStepPreviews'
 import PatternShapeControls from '@/features/concepts/components/PatternShapeControls.vue'
+import type { ComposerCell } from '@/features/kinetic-alphabet/composerBridge'
 import { eightStepPatternDefinitions } from '@/features/eight-step/data/eightStepPatternDefinitions'
 import { eightStepRows } from '@/features/eight-step/types'
 import type {
@@ -300,6 +301,7 @@ const emit = defineEmits<{
   animationUpdate: [animation: RootDataFinal]
   builderOpen: [source: 'manual']
   patternMatched: []
+  composerCellChange: [cell: ComposerCell | null]
 }>()
 
 interface EightStepCell extends EightStepPatternDefinition {
@@ -391,6 +393,32 @@ const selectedCell = ref<EightStepPatternDefinition>()
 const shape = ref<EightStepShape>('diamond')
 const halve = ref(false)
 const propRotationOffsets = ref<EightStepPatternSelection['propRotationOffsets']>()
+
+/**
+ * Cell identity for the Flow Arts Composer bridge. This describes which catalog cell the loaded
+ * animation is, so it is reported for hydration-driven matches too and is deliberately outside
+ * `suppressPatternEmit`, which exists to stop hydration from re-applying a pattern.
+ *
+ * The Composer transcription covers the diamond and box cells as catalogued. The turned shape,
+ * halved turns and per-prop rotation offsets each change the motion away from that cell, so they
+ * report no cell rather than a link that would resolve to the wrong pattern.
+ */
+const composerCell = computed<ComposerCell | null>(() => {
+  const cell = selectedCell.value
+  if (!cell) return null
+  const cellShape = shape.value
+  if (cellShape === 'turned') return null
+  if (halve.value) return null
+  if (propRotationOffsets.value?.some((offset) => offset !== 0)) return null
+
+  return { concept: '8stp', reference: cell.reference, shape: cellShape }
+})
+
+watch(
+  () => JSON.stringify(composerCell.value),
+  () => emit('composerCellChange', composerCell.value),
+  { immediate: true },
+)
 
 let suppressPatternEmit = false
 let hydrationVersion = 0
