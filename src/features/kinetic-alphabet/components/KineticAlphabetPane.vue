@@ -12,11 +12,12 @@
       </div>
 
       <div class="kinetic-alphabet-pane__copy">
-        <span class="kinetic-alphabet-pane__eyebrow">Concept in development</span>
+        <span class="kinetic-alphabet-pane__eyebrow">Notation</span>
         <h1 id="kinetic-alphabet-title">The Kinetic Alphabet</h1>
-        <p class="kinetic-alphabet-pane__lede">Possibly coming soon</p>
+        <p class="kinetic-alphabet-pane__lede">Write and share flow sequences, by Austen Cloud</p>
         <p class="kinetic-alphabet-pane__note" data-role="tka-development-note">
-          Austin might be working on something for us...
+          Try it in
+          <a href="https://tkaflowarts.com" target="_blank" rel="noopener">Flow Arts Composer</a>
         </p>
       </div>
     </div>

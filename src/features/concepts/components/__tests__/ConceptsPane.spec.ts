@@ -372,7 +372,7 @@ describe('ConceptsPane', () => {
     ])
   })
 
-  it('shows The Kinetic Alphabet placeholder last without selecting a pattern', async () => {
+  it('shows The Kinetic Alphabet pane last without selecting a pattern', async () => {
     const wrapper = mount(ConceptsPane)
     const selector = wrapper.get<HTMLSelectElement>('[data-role="concept-selector"]')
 
@@ -382,9 +382,9 @@ describe('ConceptsPane', () => {
     expect(wrapper.find('[data-role="vtg-pane"]').exists()).toBe(false)
     expect(wrapper.find('[data-role="eight-step-pane"]').exists()).toBe(false)
     expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('The Kinetic Alphabet')
-    expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('Possibly coming soon')
-    expect(wrapper.get('[data-role="tka-development-note"]').text()).toBe(
-      'Austin might be working on something for us...',
+    expect(wrapper.get('[data-role="tka-pane"]').text()).toContain('Austen Cloud')
+    expect(wrapper.get('[data-role="tka-development-note"] a').attributes('href')).toBe(
+      'https://tkaflowarts.com',
     )
     expect(wrapper.emitted('patternSelect')).toBeUndefined()
   })
